@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pruebas — Finanzas</title>
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+  body{ font-family:var(--fuente); background:var(--bg); color:var(--fg);
+        margin:0; padding:24px; max-width:640px; }
+  h1{ font-size:20px; letter-spacing:-0.02em; margin:0 0 16px; }
+  h2{ font-size:13px; text-transform:uppercase; letter-spacing:0.05em;
+      color:var(--fg-3); margin:22px 0 8px; }
+  ul{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+  li{ font-size:14px; }
+  small{ color:var(--fg-2); }
+  .ok{ color:var(--pos); }
+  .mal{ color:var(--neg); }
+  .marcador{ font-size:17px; font-weight:600; margin:0; }
+</style>
+</head>
+<body>
+<h1>Pruebas de <code>js/calc/</code></h1>
+<div id="resultado">Corriendo…</div>
+
+<script type="module">
+  /* Cada módulo de pruebas se registra al importarse. Agregar suite = agregar import. */
+  import './js/pruebas/dinero.js';
+  import './js/pruebas/fechas.js';
+  import './js/pruebas/saldos.js';
+  import './js/pruebas/ciclo-tarjeta.js';
+  import './js/pruebas/deuda-tarjeta.js';
+  import './js/pruebas/cuotas.js';
+  import './js/pruebas/plan-linea-tiempo.js';
+  import './js/pruebas/plan-asignar.js';
+  import './js/pruebas/plan-veredicto.js';
+  import './js/pruebas/vencimientos.js';
+  import { correr } from './js/pruebas/marco.js';
+  correr(document.getElementById('resultado'));
+</script>
+</body>
+</html>

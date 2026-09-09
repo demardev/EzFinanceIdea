@@ -1,0 +1,50 @@
+/* Filas de lista: el cuerpo tocable, las acciones de reordenar y el gesto
+   de deslizar para descubrir el botón de eliminar. */
+
+/* ----------------------------------------------------------- lista/fila --- */
+.lista{ border:1px solid var(--line); border-radius:var(--r); overflow:hidden; background:var(--bg-2); }
+.lista-fila{
+  display:flex; align-items:center; gap:12px;
+  width:100%; min-height:var(--toque);
+  padding:11px var(--sep);
+  border:none; border-bottom:1px solid var(--line);
+  background:none; text-align:left; cursor:pointer;
+  transition:background var(--transicion);
+}
+.lista-fila:last-child{ border-bottom:none; }
+.lista-fila:active{ background:var(--bg-3); }
+.lista-fila .icono-caja{
+  display:grid; place-items:center; flex:none;
+  width:34px; height:34px; border-radius:10px;
+  background:var(--bg-3); color:var(--fg-2);
+}
+.lista-fila .titulo{ font-size:15px; font-weight:520; }
+.lista-fila .sub{ font-size:12.5px; color:var(--fg-2); }
+
+/* ------------------------------------------------- fila con acciones ----- */
+/* .lista-fila pasa a ser contenedor; el cuerpo tocable va dentro. */
+.lista-fila{ padding-right:6px; }
+.fila-cuerpo{
+  display:flex; align-items:center; gap:12px;
+  flex:1; min-width:0; min-height:var(--toque);
+  padding:0; border:none; background:none;
+  color:inherit; text-align:left; font:inherit; cursor:pointer;
+}
+.fila-acciones{ display:flex; align-items:center; gap:0; flex:none; }
+.fila-acciones .icono-btn{ margin-right:0; }
+
+/* ----------------------------------------------------- fila deslizable --- */
+/* El botón vive detrás; la fila se desplaza encima para descubrirlo. */
+.fila-deslizable{ position:relative; overflow:hidden; }
+.fila-deslizable .lista-fila{
+  position:relative; background:var(--bg-2);
+  touch-action:pan-y;                 /* el scroll vertical sigue siendo del navegador */
+  transition:transform 180ms cubic-bezier(0.22,0.9,0.3,1);
+}
+.fila-deslizable .lista-fila.arrastrando{ transition:none; }
+.borrar-deslizado{
+  position:absolute; top:0; right:0; bottom:0;
+  width:92px; display:grid; place-items:center; gap:2px;
+  border:none; background:var(--neg); color:#fff;
+  font-size:12.5px; font-weight:600; cursor:pointer;
+}

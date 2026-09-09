@@ -1,0 +1,50 @@
+/* Estilos de la pantalla Plan: veredicto, sobres, alertas y la gráfica SVG. */
+
+/* -------------------------------------------------------------- gráfica --- */
+.grafica{ display:block; width:100%; height:auto; overflow:visible; }
+.g-area{ fill:color-mix(in srgb, var(--fg) 8%, transparent); }
+.g-area-neg{ fill:color-mix(in srgb, var(--neg) 22%, transparent); }
+.g-linea{ fill:none; stroke:var(--fg); stroke-width:1.5; stroke-linejoin:round; }
+.g-linea-neg{ fill:none; stroke:var(--neg); stroke-width:1.5; stroke-linejoin:round; }
+.g-cero{ stroke:var(--line); stroke-width:1; stroke-dasharray:3 3; }
+.g-marca{ fill:var(--bg); stroke:var(--warn); stroke-width:2; }
+
+/* --------------------------------------------------------- veredicto ----- */
+.veredicto{ padding:18px var(--sep); border-radius:var(--r); border:1px solid var(--line); }
+.veredicto h2{ font-size:22px; font-weight:660; letter-spacing:-0.02em; margin-bottom:4px; }
+.veredicto.alcanza{ border-color:color-mix(in srgb, var(--pos) 45%, transparent); }
+.veredicto.alcanza h2{ color:var(--pos); }
+.veredicto.justo{ border-color:color-mix(in srgb, var(--warn) 45%, transparent); }
+.veredicto.justo h2{ color:var(--warn); }
+.veredicto.no-alcanza{ border-color:color-mix(in srgb, var(--neg) 45%, transparent); }
+.veredicto.no-alcanza h2{ color:var(--neg); }
+
+/* ------------------------------------------------------------- sobres ---- */
+.sobre{ border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
+.sobre-cabeza{
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  padding:12px var(--sep); background:var(--bg-2);
+}
+.sobre-cabeza .titulo{ font-weight:600; }
+.sobre-linea{
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  padding:9px var(--sep) 9px 28px;
+  border-top:1px solid var(--line);
+  font-size:14px;
+}
+.sobre-linea::before{
+  content:"→"; position:absolute; margin-left:-18px; color:var(--fg-3);
+}
+.sobre-pie{
+  display:flex; align-items:baseline; justify-content:space-between;
+  padding:11px var(--sep); border-top:1px solid var(--line);
+  background:var(--bg-2); font-weight:600;
+}
+.alerta{
+  display:flex; gap:10px; align-items:flex-start;
+  padding:12px var(--sep); border-radius:var(--r);
+  border:1px solid color-mix(in srgb, var(--neg) 35%, transparent);
+  font-size:13.5px;
+}
+.alerta.warn{ border-color:color-mix(in srgb, var(--warn) 35%, transparent); }
+.alerta svg{ flex:none; margin-top:1px; }

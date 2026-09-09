@@ -1,0 +1,5 @@
+# Basura de macOS
+.DS_Store
+
+# js/config.js SÍ va al repo: solo tiene la URL y la anon key, que son públicas.
+# Lo que nunca debe entrar aquí es la service_role / secret key de Supabase.

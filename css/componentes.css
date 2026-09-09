@@ -1,0 +1,156 @@
+/* Botones, campos, cards, badges e interruptores.
+   Las filas de lista viven en listas.css; lo que se monta encima de la vista
+   (sheet, toasts) en overlays.css; el planificador en plan.css. */
+
+/* -------------------------------------------------------------- botones --- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:var(--toque); padding:0 18px;
+  border:1px solid var(--line); border-radius:var(--r);
+  background:var(--bg-2); color:var(--fg);
+  font-size:15px; font-weight:550; letter-spacing:-0.01em;
+  cursor:pointer;
+  transition:background var(--transicion), opacity var(--transicion);
+}
+.btn:active{ background:var(--bg-3); }
+.btn[disabled]{ opacity:0.45; cursor:default; }
+.btn-primario{ background:var(--fg); color:var(--bg); border-color:var(--fg); }
+.btn-primario:active{ opacity:0.85; background:var(--fg); }
+.btn-peligro{ color:var(--neg); border-color:var(--neg); background:transparent; }
+.btn-bloque{ width:100%; }
+.btn-sm{ min-height:36px; padding:0 12px; font-size:13.5px; border-radius:10px; }
+
+/* Botón que solo lleva un icono. Área tocable completa aunque el icono sea chico. */
+.icono-btn{
+  display:grid; place-items:center;
+  width:var(--toque); height:var(--toque);
+  margin-right:-10px;                 /* alinea el icono con el borde óptico */
+  border:none; background:none; color:var(--fg-2);
+  border-radius:10px; cursor:pointer;
+  transition:color var(--transicion), background var(--transicion);
+}
+.icono-btn:active{ background:var(--bg-3); color:var(--fg); }
+
+/* --------------------------------------------------------------- campos --- */
+.campo{ display:flex; flex-direction:column; gap:6px; }
+.campo label{ font-size:13px; font-weight:550; color:var(--fg-2); }
+.campo input, .campo select, .campo textarea{
+  width:100%; min-height:var(--toque);
+  padding:11px 13px;
+  border:1px solid var(--line); border-radius:var(--r);
+  background:var(--bg-2);
+  font-size:16px;                     /* 16px o iOS hace zoom al enfocar */
+  transition:border-color var(--transicion);
+}
+.campo input:focus, .campo select:focus, .campo textarea:focus{
+  outline:none; border-color:var(--fg-2);
+}
+.campo input[inputmode="decimal"]{ font-variant-numeric:tabular-nums; }
+.campo-error{ font-size:13px; color:var(--neg); }
+
+/* ---------------------------------------------------------------- cards --- */
+.card{
+  border:1px solid var(--line); border-radius:var(--r);
+  background:var(--bg-2);
+  padding:var(--sep);
+}
+.card-plana{ background:transparent; }
+
+/* Cifra grande del Resumen */
+.cifra{ font-size:30px; font-weight:660; letter-spacing:-0.03em; }
+.cifra-etiqueta{ font-size:12.5px; color:var(--fg-2); }
+
+/* --------------------------------------------------------------- badges --- */
+.badge{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 9px; border-radius:999px;
+  border:1px solid var(--line);
+  font-size:12px; font-weight:550;
+}
+.badge-pos{ color:var(--pos); border-color:color-mix(in srgb, var(--pos) 40%, transparent); }
+.badge-neg{ color:var(--neg); border-color:color-mix(in srgb, var(--neg) 40%, transparent); }
+.badge-warn{ color:var(--warn); border-color:color-mix(in srgb, var(--warn) 40%, transparent); }
+
+/* ---------------------------------------------------------- estado vacío --- */
+.vacio{
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  padding:44px 20px; text-align:center; color:var(--fg-2);
+}
+.vacio .icono-caja{
+  display:grid; place-items:center;
+  width:44px; height:44px; border-radius:12px;
+  background:var(--bg-3); color:var(--fg-3);
+}
+
+/* ------------------------------------------------------- interruptor ----- */
+.interruptor{
+  display:flex; align-items:flex-start; gap:12px;
+  min-height:var(--toque); padding:10px 0;
+  cursor:pointer;
+}
+.interruptor input{
+  flex:none; width:22px; height:22px; margin:1px 0 0;
+  accent-color:var(--fg);
+}
+
+/* ------------------------------------------------------- encabezado de --- */
+/* sección con acción a la derecha (p. ej. "Reordenar")                       */
+.seccion-barra{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; margin-bottom:8px;
+}
+.enlace-accion{
+  border:none; background:none; padding:8px 0; cursor:pointer;
+  font-size:13.5px; font-weight:550; color:var(--fg-2);
+}
+.enlace-accion.activo{ color:var(--fg); }
+
+/* ------------------------------------------------- pastillas de tipo ----- */
+.pastillas{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
+  padding:4px; margin-bottom:16px;
+  border:1px solid var(--line); border-radius:var(--r);
+  background:var(--bg-2);
+}
+.pastilla{
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  min-height:38px; padding:0 6px;
+  border:none; border-radius:10px; background:none;
+  color:var(--fg-2); font-size:13.5px; font-weight:550; cursor:pointer;
+  transition:background var(--transicion), color var(--transicion);
+}
+.pastilla.activa{ background:var(--fg); color:var(--bg); }
+.pastilla[disabled]{ opacity:.45; cursor:default; }
+.pastilla[disabled].activa{ opacity:1; }
+
+/* --------------------------------------------------- campo de monto ------ */
+/* El "$" es parte del campo, no del valor: el input guarda solo el número. */
+.campo-monto{ position:relative; display:flex; align-items:center; }
+.campo-prefijo{
+  position:absolute; left:13px;
+  color:var(--fg-3); font-size:16px; pointer-events:none;
+  font-variant-numeric:tabular-nums;
+}
+.campo-monto input{ padding-left:28px; font-variant-numeric:tabular-nums; }
+
+/* ------------------------------------------------------ barra de uso ----- */
+.barra{
+  height:6px; border-radius:999px; overflow:hidden;
+  background:var(--bg-3); margin:8px 0 5px;
+}
+.barra-relleno{
+  display:block; height:100%; border-radius:999px;
+  background:var(--fg); transition:width var(--transicion);
+}
+.barra-relleno.warn{ background:var(--warn); }
+.barra-relleno.neg{ background:var(--neg); }
+
+/* ---------------------------------------------------- bloques de ciclo --- */
+.rejilla-ciclo{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.bloque-ciclo{
+  padding:10px 12px;
+  border:1px solid var(--line); border-radius:11px;
+  background:var(--bg-3);
+}
+.bloque-ciclo p{ margin:0; }
+

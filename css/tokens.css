@@ -1,0 +1,38 @@
+/* Tokens de diseño: color, tipografía, radios, medidas. Nada de layout aquí. */
+
+:root{
+  --bg:#ffffff; --bg-2:#fafafa; --bg-3:#f4f4f5;
+  --fg:#0a0a0a; --fg-2:#71717a; --fg-3:#a1a1aa;
+  --line:#e4e4e7;
+  --pos:#12a150; --neg:#e5484d; --warn:#d9880a;
+  --r:14px;
+
+  /* Tipografía del sistema: cero descargas, arranque instantáneo. */
+  --fuente: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+
+  /* Medidas del shell */
+  --sep:16px;
+  --alto-tab:56px;
+  --alto-cabecera:52px;
+  --toque:44px;          /* mínimo tocable */
+  --transicion:150ms ease;
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0b0b0c; --bg-2:#141416; --bg-3:#1c1c1f;
+    --fg:#fafafa; --fg-2:#a1a1aa; --fg-3:#71717a;
+    --line:#27272a;
+    --pos:#3dd68c; --neg:#ff6369; --warn:#ffb224;
+  }
+}
+
+/* Los tres acentos, como clases utilitarias. No hay más color en la app. */
+.pos{ color:var(--pos); }
+.neg{ color:var(--neg); }
+.warn{ color:var(--warn); }
+.tenue{ color:var(--fg-2); }
+.tenue-2{ color:var(--fg-3); }
+
+/* Todo monto lleva esto: columnas de números que no bailan. */
+.monto{ font-variant-numeric:tabular-nums; letter-spacing:-0.01em; }

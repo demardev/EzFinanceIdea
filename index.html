@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finanzas</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Finanzas">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0c" media="(prefers-color-scheme: dark)">
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icono-180.png">
+<link rel="icon" href="icons/icono-192.png" type="image/png">
+
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/componentes.css">
+<link rel="stylesheet" href="css/listas.css">
+<link rel="stylesheet" href="css/overlays.css">
+<link rel="stylesheet" href="css/plan.css">
+</head>
+<body>
+
+<!-- Login: no hay registro, el usuario se crea a mano en Supabase. -->
+<section id="login" class="login" hidden></section>
+
+<!-- Shell de la app. Las vistas se montan por JS dentro de #vista. -->
+<div id="app" hidden>
+  <header class="cabecera">
+    <button id="btn-atras" class="icono-btn icono-btn-izq" type="button" aria-label="Volver" hidden></button>
+    <h1 id="titulo" class="crece truncar">Resumen</h1>
+    <div class="cabecera-acciones">
+      <button id="btn-ocultar" class="icono-btn" type="button" aria-label="Ocultar montos"></button>
+    </div>
+  </header>
+
+  <main id="vista" class="vista"></main>
+
+  <button id="fab" class="fab" type="button" aria-label="Nuevo movimiento"></button>
+  <nav id="tabbar" class="tabbar" aria-label="Secciones"></nav>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
