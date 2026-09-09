@@ -73,6 +73,40 @@ Está en el repo a propósito y no es un descuido.
 - Si aun así prefieres que no aparezca en GitHub, pon el repo en **privado**: Cloudflare Pages
   despliega repos privados igual.
 
+### 3 bis. Negocio de pago de recibos (opcional)
+
+Solo si llevas un negocio de pago de recibos. Si no, sáltate esto: la app se
+comporta exactamente igual sin ello.
+
+1. Pega [`sql/02_negocio.sql`](sql/02_negocio.sql) en el **SQL Editor** y ejecútalo.
+   Es idempotente, igual que el primero.
+2. Busca tu uuid:
+
+   ```sql
+   select id, email from auth.users;
+   ```
+
+3. Enciende tu bandera con ese uuid:
+
+   ```sql
+   insert into perfiles (user_id, negocio) values ('TU-UUID', true)
+     on conflict (user_id) do update set negocio = true;
+   ```
+
+**La bandera no se puede encender desde la app**, a propósito: las políticas solo
+permiten *leer* tu propia fila de `perfiles`. Y la restricción no es cosmética —
+las políticas de `pagos_recibo` y del bucket de fotos exigen la bandera, así que
+otro usuario recibe un rechazo de Postgres aunque manipule el JavaScript.
+
+Qué agrega este script:
+
+| | |
+|---|---|
+| `perfiles` | La bandera por usuario. |
+| `movimientos.ambito` | `personal` o `negocio`, para separar los flujos usando las mismas cuentas. |
+| `pagos_recibo` | Una operación = hasta 3 movimientos. Con `fecha_cobro` en null está **pendiente de cobro**. |
+| bucket `recibos` | Fotos privadas, máximo 5 MB, una carpeta por usuario. |
+
 ### 4. Publicar en Cloudflare Pages
 
 1. Sube el repo a GitHub.
