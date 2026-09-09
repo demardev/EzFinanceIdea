@@ -1,7 +1,7 @@
 /* Arranque: arma el cliente, los repos y el contexto; decide login o app.
    Este es el único lugar donde se conectan las piezas entre sí. */
 
-import { crearClienteDatos } from './api/client.js';
+import { crearClienteDatos, crearClienteAlmacen } from './api/client.js';
 import { hayConfig } from './config.js';
 import { tokenVigente, haySesion, enSesionInvalida } from './api/sesion.js';
 import { repoCuentas } from './repos/cuentas.js';
@@ -25,6 +25,7 @@ const app = document.getElementById('app');
 const cliente = crearClienteDatos(tokenVigente);
 const contexto = {
   cliente,                      // solo lo usa el respaldo, que toca todas las tablas
+  almacen: crearClienteAlmacen(tokenVigente),
   cuentas: repoCuentas(cliente),
   categorias: repoCategorias(cliente),
   movimientos: repoMovimientos(cliente),

@@ -9,6 +9,7 @@ import { traducirError, errorApi } from './errores.js';
 
 const REST = `${urlBase()}/rest/v1`;
 const AUTH = `${urlBase()}/auth/v1`;
+const ALMACEN = `${urlBase()}/storage/v1`;
 
 function cabeceras(token, extra) {
   return {
@@ -94,6 +95,65 @@ export function crearClienteDatos(obtenerToken) {
     },
     rpc(funcion, args = {}) {
       return llamar(`/rpc/${funcion}`, 'POST', args);
+    },
+  };
+}
+
+/* ------------------------------------------------------------- archivos --- */
+
+/** Como enviar(), pero para bytes: no intenta interpretar la respuesta. */
+async function enviarArchivo(url, opciones) {
+  let respuesta;
+  try {
+    respuesta = await fetch(url, opciones);
+  } catch {
+    throw errorApi(traducirError(0, null), 0);
+  }
+  if (respuesta.ok) return respuesta;
+
+  /* El error sí viene en JSON; el contenido bueno es el que es binario. */
+  let cuerpo = null;
+  try { cuerpo = await respuesta.json(); } catch { /* da igual */ }
+  console.error(`[almacén] ${opciones.method} ${url} → ${respuesta.status}`, cuerpo);
+  throw errorApi(traducirError(respuesta.status, cuerpo), respuesta.status);
+}
+
+/**
+ * Archivos en Supabase Storage. Recibe cómo conseguir el token, igual que el
+ * cliente de datos, y por eso tampoco se amarra a api/sesion.js.
+ *
+ * Las rutas son "<uuid del usuario>/<archivo>": así lo exige la política del
+ * bucket, que corta por esa primera carpeta.
+ */
+export function crearClienteAlmacen(obtenerToken) {
+  async function cabecerasArchivo(extra) {
+    const token = await obtenerToken();
+    return { apikey: ANON_KEY, Authorization: `Bearer ${token || ANON_KEY}`, ...extra };
+  }
+
+  return {
+    /** @returns la ruta con la que quedó guardado */
+    async subir(bucket, ruta, blob) {
+      await enviarArchivo(`${ALMACEN}/object/${bucket}/${ruta}`, {
+        method: 'POST',
+        headers: await cabecerasArchivo({ 'Content-Type': blob.type, 'x-upsert': 'true' }),
+        body: blob,
+      });
+      return ruta;
+    },
+
+    /** @returns un Blob; el bucket es privado, así que va con el token. */
+    async descargar(bucket, ruta) {
+      const respuesta = await enviarArchivo(
+        `${ALMACEN}/object/authenticated/${bucket}/${ruta}`,
+        { method: 'GET', headers: await cabecerasArchivo() });
+      return respuesta.blob();
+    },
+
+    async borrar(bucket, ruta) {
+      await enviarArchivo(`${ALMACEN}/object/${bucket}/${ruta}`,
+        { method: 'DELETE', headers: await cabecerasArchivo() });
+      return true;
     },
   };
 }

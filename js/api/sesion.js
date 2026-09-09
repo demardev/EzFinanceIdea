@@ -4,6 +4,7 @@
 
 import { peticionAuth } from './client.js';
 import { esFalloDeRed } from './errores.js';
+import { idDeUsuario } from './jwt.js';
 
 const CLAVE = 'finanzas.sesion';
 const MARGEN_SEG = 60;          // refresca un minuto antes de que expire
@@ -44,6 +45,12 @@ export function haySesion() {
 
 export function emailSesion() {
   return sesion?.email ?? '';
+}
+
+/** El uuid del usuario, leído del propio token. Lo necesita el almacén de
+    archivos, que guarda cada foto bajo la carpeta de su dueño. */
+export function idUsuario() {
+  return idDeUsuario(sesion?.access_token);
 }
 
 function expirado() {

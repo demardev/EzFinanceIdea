@@ -10,7 +10,7 @@
    Al cambiar el shell hay que subir VERSION: al activarse borra los caches
    viejos. */
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE_SHELL = `finanzas-shell-${VERSION}`;
 const CACHE_DATOS = `finanzas-datos-${VERSION}`;
 
@@ -29,6 +29,7 @@ const SHELL = [
   'css/tokens.css',
   'js/api/client.js',
   'js/api/errores.js',
+  'js/api/jwt.js',
   'js/api/sesion.js',
   'js/calc/ciclo-tarjeta.js',
   'js/calc/cuotas.js',
@@ -85,6 +86,7 @@ const SHELL = [
   'js/ui/campos.js',
   'js/ui/confirmar.js',
   'js/ui/deslizar.js',
+  'js/ui/foto.js',
   'js/ui/grafica.js',
   'js/ui/lista.js',
   'js/ui/monto-input.js',
@@ -159,7 +161,9 @@ self.addEventListener('fetch', (evento) => {
     return;
   }
 
-  if (url.pathname.startsWith('/rest/v1/')) {
+  /* Datos y fotos: red primero, cache como respaldo. Una foto ya bajada se
+     vuelve a ver sin internet y sin gastar ancho de banda otra vez. */
+  if (url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/storage/v1/object/')) {
     evento.respondWith(redOCache(request));
   }
 });
