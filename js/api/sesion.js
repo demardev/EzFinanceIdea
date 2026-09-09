@@ -3,6 +3,7 @@
    loguearse cada día. */
 
 import { peticionAuth } from './client.js';
+import { esFalloDeRed } from './errores.js';
 
 const CLAVE = 'finanzas.sesion';
 const MARGEN_SEG = 60;          // refresca un minuto antes de que expire
@@ -56,8 +57,14 @@ async function refrescar() {
     });
     return guardar(datos).access_token;
   } catch (e) {
-    borrar();
-    alInvalidarse();
+    /* Sin internet no se puede refrescar, pero la sesión NO ha caducado:
+       cerrarla aquí sacaría al login justo cuando el modo offline debería
+       estar mostrando la última data. Solo se cierra si el servidor rechazó
+       el refresh token. */
+    if (!esFalloDeRed(e)) {
+      borrar();
+      alInvalidarse();
+    }
     throw e;
   } finally {
     refrescando = null;
@@ -69,7 +76,14 @@ export async function tokenVigente() {
   if (!sesion) return null;
   if (!expirado()) return sesion.access_token;
   refrescando ??= refrescar();
-  return refrescando;
+  try {
+    return await refrescando;
+  } catch {
+    /* Si no se pudo refrescar y la sesión sigue en pie (fue la red), se manda
+       el token viejo: la petición fallará y el service worker responderá con
+       lo que tenga cacheado. */
+    return sesion?.access_token ?? null;
+  }
 }
 
 export async function iniciarSesion(email, password) {

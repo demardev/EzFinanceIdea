@@ -51,3 +51,12 @@ export function errorApi(mensaje, estado) {
   e.estado = estado;
   return e;
 }
+
+/**
+ * ¿Falló por falta de red, o porque el servidor dijo que no?
+ * La diferencia importa: si no hay internet la sesión sigue siendo válida y
+ * NO hay que cerrarla; si el servidor rechaza el token, sí.
+ */
+export function esFalloDeRed(error) {
+  return error?.estado === 0;
+}
