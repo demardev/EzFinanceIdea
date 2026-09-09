@@ -31,9 +31,24 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
   el botón: el borrado pasa por la misma `confirmar()` que el resto.
 - El deslizar se apaga en modo reordenar, donde las flechas ocupan ese lado.
 
+## Negocio de pago de recibos
+
+- `perfiles.negocio` decide si la función existe para ese usuario. **La restricción
+  vive en la base**: las políticas de `pagos_recibo` y del bucket exigen `es_negocio()`.
+  Ocultar el botón no protege nada.
+- Una operación son hasta 3 movimientos con `ambito = 'negocio'` y `pago_id`. Con
+  `fecha_cobro` en null está **pendiente**: solo existe el egreso y te deben el
+  monto más la comisión.
+- El **flujo personal del Resumen excluye el negocio**; el **patrimonio los suma
+  todos**, porque ese dinero sí está en la cuenta. No los confundas.
+- Los movimientos generados **nunca se editan uno por uno**: se borran y se
+  regeneran desde la operación.
+
 ## Estructura
 
 - Ningún archivo pasa de 200 líneas, ninguna función de 40. Se parte al momento, no al final.
+  Para medirlo hay que balancear llaves: contar hasta el siguiente `}` en columna 0 da
+  falsos positivos y, peor, esconde las funciones `montarX()` que sí se pasan.
 - `js/calc/` son funciones puras sin red ni DOM, y **todo lo que vive ahí va con pruebas** en
   `test.html` (los casos se escriben antes que la implementación).
 - Solo `js/api/client.js` hace `fetch` y sabe que existe Supabase.

@@ -34,6 +34,12 @@ export function repoMovimientos(cliente) {
     return cliente.eliminar('movimientos', { compra_id: `eq.${compraId}`, fecha: `gt.${hoy}` });
   }
 
+  /* Al editar una operación se borran sus movimientos y se regeneran: son
+     generados, nunca se editan uno por uno. */
+  function eliminarPorPago(pagoId) {
+    return cliente.eliminar('movimientos', { pago_id: `eq.${pagoId}` });
+  }
+
   function ultimos(cuantos = 5) {
     return base.listar({ limit: String(cuantos) });
   }
@@ -57,6 +63,6 @@ export function repoMovimientos(cliente) {
     return origen + destino;
   }
 
-  return { ...base, listarDelMes, ultimos, crearVarios, listarDeCompra,
+  return { ...base, listarDelMes, ultimos, crearVarios, listarDeCompra, eliminarPorPago,
            eliminarPendientesDeCompra, contarPorCategoria, contarPorCuenta };
 }

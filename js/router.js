@@ -1,7 +1,7 @@
 /* Hash routing con un nivel de subruta (#/ajustes/cuentas). El mapa RUTAS es
    la única fuente de verdad: de ahí salen la tab bar, el título y qué se monta. */
 
-import { montarResumen } from './pages/resumen.js';
+import { montarResumen } from './pages/resumen/index.js';
 import { montarMovimientos } from './pages/movimientos/index.js';
 import { montarTarjetas } from './pages/tarjetas/index.js';
 import { montarPlan } from './pages/plan/index.js';

@@ -7,6 +7,7 @@ import { textoMonto } from '../../ui/privacidad.js';
 import { etiquetaDia, nombreDelMes } from '../../calc/fechas.js';
 import { TIPOS, tipoDe } from '../../movimientos/tipos.js';
 import { DIRECCIONES } from '../../movimientos/orden.js';
+import { agruparOperaciones } from '../../negocio/agrupar.js';
 
 const SIGNO = { ingreso: '+', egreso: '−', transferencia: '' };
 
@@ -38,11 +39,38 @@ function fila(mov, nombres, iconos) {
     </div>`;
 }
 
+/* Una operación del negocio se muestra como una sola fila: el egreso, el
+   cobro y la comisión son un mismo hecho. Se agrupa por operación Y día,
+   así que un cobro diferido sale en su propio día, como debe. */
+function filaOperacion(f, nombres) {
+  const cuentas = [...new Set(f.movimientos.map((m) => nombres[m.cuenta_id]).filter(Boolean))];
+  const recibo = f.movimientos.find((m) => m.tipo === 'egreso');
+  return `
+    <div class="lista-fila">
+      <button type="button" class="fila-cuerpo" data-operacion="${f.pagoId}">
+        <span class="icono-caja">${icono('banknote', 18)}</span>
+        <span class="crece" style="min-width:0">
+          <span class="titulo truncar" style="display:block">
+            ${f.incluyeEgreso ? 'Pago de recibo' : 'Cobro de recibo'}
+            ${recibo ? `<span class="tenue-2">· ${textoMonto(recibo.monto)}</span>` : ''}
+          </span>
+          <span class="sub">${escapar(cuentas.join(' → '))}
+            <span class="badge badge-sm">negocio</span></span>
+        </span>
+        <span class="monto ${f.neto >= 0 ? 'pos' : 'neg'}">
+          ${f.neto >= 0 ? '+' : '−'}${textoMonto(Math.abs(f.neto))}
+        </span>
+      </button>
+    </div>`;
+}
+
 function grupoDia(fecha, movs, nombres, iconos) {
+  const filas = agruparOperaciones(movs)
+    .map((f) => (f.grupo ? filaOperacion(f, nombres) : fila(f.movimiento, nombres, iconos)));
   return `
     <div>
       <p class="seccion-titulo">${etiquetaDia(fecha)}</p>
-      <div class="lista">${movs.map((m) => fila(m, nombres, iconos)).join('')}</div>
+      <div class="lista">${filas.join('')}</div>
     </div>`;
 }
 

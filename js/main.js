@@ -3,14 +3,17 @@
 
 import { crearClienteDatos, crearClienteAlmacen } from './api/client.js';
 import { hayConfig } from './config.js';
-import { tokenVigente, haySesion, enSesionInvalida } from './api/sesion.js';
+import { tokenVigente, haySesion, enSesionInvalida, idUsuario } from './api/sesion.js';
 import { repoCuentas } from './repos/cuentas.js';
 import { repoCategorias } from './repos/categorias.js';
 import { repoMovimientos } from './repos/movimientos.js';
 import { repoTarjetas } from './repos/tarjetas.js';
 import { repoCompras } from './repos/compras.js';
 import { repoPlanItems } from './repos/plan-items.js';
-import { abrirRegistro } from './movimientos/registrar.js';
+import { repoPerfiles } from './repos/perfiles.js';
+import { repoPagosRecibo } from './repos/pagos-recibo.js';
+import { abrirNuevoDesdeFab } from './movimientos/registrar.js';
+import { abrirPagoRecibo } from './pages/negocio/registrar.js';
 import { montarLogin } from './pages/login.js';
 import { iniciarRouter } from './router.js';
 import { icono } from './iconos/render.js';
@@ -32,12 +35,29 @@ const contexto = {
   tarjetas: repoTarjetas(cliente),
   compras: repoCompras(cliente),
   planItems: repoPlanItems(cliente),
+  perfiles: repoPerfiles(cliente),
+  pagos: repoPagosRecibo(cliente),
+  /* Se llenan al entrar; hasta entonces la app se comporta como si no
+     hubiera negocio, que es lo correcto para casi todos. */
+  perfil: { negocio: false },
+  userId: null,
   alSalir: mostrarLogin,
 };
 
 /* El RPC es idempotente (no duplica si ya hay datos), pero no hace falta
    pagarle un viaje en cada arranque: basta la primera vez en este equipo. */
 const CLAVE_SIEMBRA = 'finanzas.sembrado';
+
+/* La bandera del negocio decide si aparecen los pagos de recibo. Si falla la
+   lectura no se rompe nada: se queda apagada. */
+async function cargarPerfil() {
+  contexto.userId = idUsuario();
+  try {
+    contexto.perfil = await contexto.perfiles.mio();
+  } catch {
+    contexto.perfil = { negocio: false };
+  }
+}
 
 async function sembrarSiHaceFalta() {
   if (localStorage.getItem(CLAVE_SIEMBRA) === '1') return;
@@ -60,6 +80,7 @@ async function mostrarApp() {
   pantallaLogin.innerHTML = '';
   app.hidden = false;
   await sembrarSiHaceFalta();
+  await cargarPerfil();
   iniciarRouter(contexto);
 }
 
@@ -86,7 +107,12 @@ function conectarCabecera() {
   /* Registrar desde cualquier pantalla; al guardar se repinta la vista actual. */
   fab.addEventListener('click', async () => {
     try {
-      await abrirRegistro(contexto, {}, repintarVista);
+      await abrirNuevoDesdeFab(contexto, repintarVista, async () => {
+        const [cuentas, categorias] = await Promise.all([
+          contexto.cuentas.listarActivas(), contexto.categorias.listarActivas(),
+        ]);
+        await abrirPagoRecibo(contexto, {}, { cuentas, categorias }, repintarVista);
+      });
     } catch (e) { avisoError(e); }
   });
   document.getElementById('btn-atras').innerHTML = icono('atras', 20);

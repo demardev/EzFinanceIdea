@@ -162,3 +162,4 @@
   max-height:220px; display:grid; place-items:center;
 }
 .campo-foto .foto-vista img{ display:block; max-width:100%; max-height:220px; }
+.badge-sm{ padding:1px 6px; font-size:10.5px; border-radius:6px; margin-left:4px; }

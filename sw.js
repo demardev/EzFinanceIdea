@@ -10,7 +10,7 @@
    Al cambiar el shell hay que subir VERSION: al activarse borra los caches
    viejos. */
 
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE_SHELL = `finanzas-shell-${VERSION}`;
 const CACHE_DATOS = `finanzas-datos-${VERSION}`;
 
@@ -50,6 +50,8 @@ const SHELL = [
   'js/movimientos/orden.js',
   'js/movimientos/registrar.js',
   'js/movimientos/tipos.js',
+  'js/negocio/agrupar.js',
+  'js/negocio/pago-recibo.js',
   'js/pages/ajustes/categorias-form.js',
   'js/pages/ajustes/categorias.js',
   'js/pages/ajustes/cuentas-form.js',
@@ -57,6 +59,7 @@ const SHELL = [
   'js/pages/ajustes/datos.js',
   'js/pages/ajustes/fijos-variables.js',
   'js/pages/ajustes/index.js',
+  'js/pages/ajustes/negocio.js',
   'js/pages/ajustes/orden.js',
   'js/pages/ajustes/plan-form.js',
   'js/pages/ajustes/respaldo.js',
@@ -64,10 +67,15 @@ const SHELL = [
   'js/pages/movimientos/filtros.js',
   'js/pages/movimientos/index.js',
   'js/pages/movimientos/vista.js',
+  'js/pages/negocio/acciones.js',
+  'js/pages/negocio/form.js',
+  'js/pages/negocio/pendientes.js',
+  'js/pages/negocio/registrar.js',
   'js/pages/pendiente.js',
   'js/pages/plan/index.js',
   'js/pages/plan/vista.js',
-  'js/pages/resumen.js',
+  'js/pages/resumen/index.js',
+  'js/pages/resumen/vista.js',
   'js/pages/tarjetas/compras.js',
   'js/pages/tarjetas/cuotas-form.js',
   'js/pages/tarjetas/detalle.js',
@@ -80,6 +88,8 @@ const SHELL = [
   'js/repos/compras.js',
   'js/repos/cuentas.js',
   'js/repos/movimientos.js',
+  'js/repos/pagos-recibo.js',
+  'js/repos/perfiles.js',
   'js/repos/plan-items.js',
   'js/repos/tarjetas.js',
   'js/router.js',

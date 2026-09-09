@@ -33,6 +33,24 @@ $$;
 
 grant execute on function es_negocio() to authenticated;
 
+-- Preferencias del negocio: de qué cuenta sale el pago, a cuál entra el cobro
+-- y la comisión habitual. Se guardan aquí y no en el navegador para que sigan
+-- al usuario entre dispositivos.
+alter table perfiles add column if not exists cuenta_pago_id   uuid references cuentas(id) on delete set null;
+alter table perfiles add column if not exists cuenta_cobro_id  uuid references cuentas(id) on delete set null;
+alter table perfiles add column if not exists comision_default numeric(14,2) not null default 0;
+
+drop policy if exists "perfiles_ajustar_propio" on perfiles;
+create policy "perfiles_ajustar_propio" on perfiles
+  for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Permisos POR COLUMNA: el usuario puede cambiar sus preferencias, pero
+-- `negocio` no está en la lista. La bandera sigue sin poder encenderse desde
+-- la app, aunque ahora la tabla acepte updates.
+revoke update on perfiles from authenticated;
+grant  update (cuenta_pago_id, cuenta_cobro_id, comision_default) on perfiles to authenticated;
+
 -- ------------------------------------------------------------ movimientos --
 -- `ambito` separa lo personal de lo del negocio usando las MISMAS cuentas.
 -- El patrimonio los suma todos (el dinero está ahí de verdad); lo que se

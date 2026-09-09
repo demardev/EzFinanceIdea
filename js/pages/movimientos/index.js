@@ -7,6 +7,7 @@ import { filtrosVacios, cuantosActivos, aplicar, abrirSheetFiltros } from './fil
 import { abrirRegistro, eliminarMovimiento } from '../../movimientos/registrar.js';
 import { conectarDeslizar, cerrarDeslizada } from '../../ui/deslizar.js';
 import { ordenarPorFecha, direccionOpuesta } from '../../movimientos/orden.js';
+import { abrirPagoRecibo } from '../negocio/registrar.js';
 import { totalesDelMes } from '../../calc/saldos.js';
 import { avisoError } from '../../ui/toast.js';
 
@@ -65,9 +66,19 @@ export async function montarMovimientos(contenedor, contexto) {
     pintar();
   }
 
+  function abrirFiltros() {
+    const paraSheet = { ...datos, negocio: Boolean(contexto.perfil?.negocio) };
+    abrirSheetFiltros(filtros, paraSheet, async (nuevos) => {
+      const cambioMes = nuevos.mes !== filtros.mes;
+      filtros = nuevos;
+      if (cambioMes) await recargar();
+      else { pagina = 1; pintar(); }
+    });
+  }
+
   contenedor.addEventListener('click', async (evento) => {
     const objetivo = evento.target.closest(
-      '[data-editar], [data-borrar], #btn-filtros, #btn-mes, #btn-mas, #btn-orden');
+      '[data-editar], [data-borrar], [data-operacion], #btn-filtros, #btn-mes, #btn-mas, #btn-orden');
     if (!objetivo) return;
     try {
       if (objetivo.id === 'btn-mas') { pagina += 1; pintar(); return; }
@@ -84,11 +95,12 @@ export async function montarMovimientos(contenedor, contexto) {
         return;
       }
       if (objetivo.id === 'btn-filtros' || objetivo.id === 'btn-mes') {
-        abrirSheetFiltros(filtros, datos, async (nuevos) => {
-          const cambioMes = nuevos.mes !== filtros.mes;
-          filtros = nuevos;
-          if (cambioMes) await recargar(); else { pagina = 1; pintar(); }
-        });
+        abrirFiltros();
+        return;
+      }
+      if (objetivo.dataset.operacion) {
+        const pago = await contexto.pagos.obtener(objetivo.dataset.operacion);
+        if (pago) await abrirPagoRecibo(contexto, pago, datos, recargar);
         return;
       }
       const mov = delMes.find((m) => m.id === objetivo.dataset.editar);

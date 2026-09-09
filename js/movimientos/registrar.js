@@ -6,6 +6,8 @@ import { abrirFormMovimiento } from './formulario.js';
 import { confirmar } from '../ui/confirmar.js';
 import { aviso } from '../ui/toast.js';
 import { formatearFecha } from '../calc/fechas.js';
+import { abrirSheet } from '../ui/sheet.js';
+import { icono } from '../iconos/render.js';
 
 async function cargarCatalogos({ cuentas, tarjetas, categorias }) {
   const [c, t, k] = await Promise.all([
@@ -48,4 +50,33 @@ export async function eliminarMovimiento({ movimientos }, mov, alCambiar) {
   aviso('Movimiento eliminado.');
   await alCambiar();
   return true;
+}
+
+/**
+ * Qué abre el botón flotante. Sin negocio va directo al movimiento; con
+ * negocio pregunta, porque son dos cosas distintas que se registran a diario.
+ */
+export function abrirNuevoDesdeFab(contexto, alCambiar, abrirPago) {
+  if (!contexto.perfil?.negocio) return abrirRegistro(contexto, {}, alCambiar);
+
+  const { hoja, cerrar } = abrirSheet({
+    titulo: '¿Qué vas a registrar?',
+    cuerpo: `
+      <div class="pila-sm">
+        <button class="btn btn-primario btn-bloque" data-elegir="movimiento">
+          ${icono('movimientos', 18)} Movimiento
+        </button>
+        <button class="btn btn-bloque" data-elegir="recibo">
+          ${icono('banknote', 18)} Pago de recibo
+        </button>
+      </div>`,
+  });
+
+  hoja.querySelectorAll('[data-elegir]').forEach((boton) => {
+    boton.addEventListener('click', () => {
+      cerrar();
+      if (boton.dataset.elegir === 'recibo') abrirPago();
+      else abrirRegistro(contexto, {}, alCambiar);
+    });
+  });
 }

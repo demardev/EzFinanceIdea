@@ -9,12 +9,14 @@ import { TIPOS, CLAVES_TIPO } from '../../movimientos/tipos.js';
 import { escapar } from '../../ui/texto.js';
 
 export function filtrosVacios() {
-  return { mes: mesDe(hoyISO()), tipo: '', cuenta: '', categoria: '', texto: '' };
+  return { mes: mesDe(hoyISO()), tipo: '', cuenta: '', categoria: '', texto: '', ambito: '' };
 }
+
+export const AMBITOS = [['', 'Todo'], ['personal', 'Personal'], ['negocio', 'Negocio']];
 
 /** Cuántos filtros activos hay, sin contar el mes (que siempre está puesto). */
 export function cuantosActivos(f) {
-  return ['tipo', 'cuenta', 'categoria', 'texto'].filter((k) => f[k]).length;
+  return ['tipo', 'cuenta', 'categoria', 'texto', 'ambito'].filter((k) => f[k]).length;
 }
 
 function tocaCuenta(mov, id) {
@@ -31,6 +33,7 @@ function coincideTexto(mov, texto) {
 
 export function aplicar(movimientos, f) {
   return movimientos.filter((m) =>
+    (!f.ambito || (m.ambito ?? 'personal') === f.ambito) &&
     (!f.tipo || m.tipo === f.tipo) &&
     (!f.cuenta || tocaCuenta(m, f.cuenta)) &&
     (!f.categoria || m.categoria_id === f.categoria) &&
@@ -69,18 +72,17 @@ function encadenarTipoYCategoria(hoja, categorias) {
   });
 }
 
-export function abrirSheetFiltros(filtros, datos, alAplicar) {
+function campos(filtros, datos) {
   const cuentasYTarjetas = [
     ...datos.cuentas.map((c) => [c.id, c.nombre]),
     ...datos.tarjetas.map((t) => [t.id, `${t.nombre} (tarjeta)`]),
   ];
-
-  const { hoja, cerrar } = abrirSheet({
-    titulo: 'Filtros',
-    cuerpo: `
+  return `
       <form id="form-filtros">
         ${campoSelect({ nombre: 'mes', etiqueta: 'Mes', valor: filtros.mes,
                         opciones: mesesOfrecidos(filtros.mes) })}
+        ${datos.negocio ? campoSelect({ nombre: 'ambito', etiqueta: 'Ámbito',
+                        valor: filtros.ambito, opciones: AMBITOS }) : ''}
         ${campoSelect({ nombre: 'tipo', etiqueta: 'Tipo', valor: filtros.tipo,
                         opciones: [['', 'Todos'], ...CLAVES_TIPO.map((k) => [k, TIPOS[k].etiqueta])] })}
         ${campoSelect({ nombre: 'cuenta', etiqueta: 'Cuenta o tarjeta', valor: filtros.cuenta,
@@ -93,7 +95,13 @@ export function abrirSheetFiltros(filtros, datos, alAplicar) {
           <button class="btn btn-primario btn-bloque" type="submit">Aplicar</button>
           <button class="btn btn-bloque" type="button" id="btn-limpiar">Limpiar filtros</button>
         </div>
-      </form>`,
+      </form>`;
+}
+
+export function abrirSheetFiltros(filtros, datos, alAplicar) {
+  const { hoja, cerrar } = abrirSheet({
+    titulo: 'Filtros',
+    cuerpo: campos(filtros, datos),
   });
 
   encadenarTipoYCategoria(hoja, datos.categorias);
