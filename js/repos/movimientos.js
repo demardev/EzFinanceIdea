@@ -9,7 +9,9 @@ import { crearRepo } from './base.js';
 import { rangoDelMes } from '../calc/fechas.js';
 
 export function repoMovimientos(cliente) {
-  const base = crearRepo(cliente, 'movimientos', { orden: 'fecha.desc' });
+  /* Desempate por created_at: `fecha` no lleva hora, así que sin esto dos
+   movimientos del mismo día llegarían en orden arbitrario. */
+  const base = crearRepo(cliente, 'movimientos', { orden: 'fecha.desc,created_at.desc' });
 
   /** @param mes 'YYYY-MM' */
   function listarDelMes(mes, extra = {}) {

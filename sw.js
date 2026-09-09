@@ -10,7 +10,7 @@
    Al cambiar el shell hay que subir VERSION: al activarse borra los caches
    viejos. */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE_SHELL = `finanzas-shell-${VERSION}`;
 const CACHE_DATOS = `finanzas-datos-${VERSION}`;
 
@@ -46,6 +46,7 @@ const SHELL = [
   'js/main.js',
   'js/movimientos/campos.js',
   'js/movimientos/formulario.js',
+  'js/movimientos/orden.js',
   'js/movimientos/registrar.js',
   'js/movimientos/tipos.js',
   'js/pages/ajustes/categorias-form.js',

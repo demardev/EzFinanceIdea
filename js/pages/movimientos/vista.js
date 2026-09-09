@@ -6,6 +6,7 @@ import { escapar } from '../../ui/texto.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { etiquetaDia, nombreDelMes } from '../../calc/fechas.js';
 import { TIPOS, tipoDe } from '../../movimientos/tipos.js';
+import { DIRECCIONES } from '../../movimientos/orden.js';
 
 const SIGNO = { ingreso: '+', egreso: '−', transferencia: '' };
 
@@ -67,11 +68,17 @@ function resumenMes(totales) {
     </div>`;
 }
 
-function barra({ mes, activos }) {
+function barra({ mes, activos, orden }) {
+  const d = DIRECCIONES[orden];
   return `
     <div class="seccion-barra">
-      <button class="enlace-accion activo" id="btn-mes" type="button">
+      <button class="enlace-accion activo crece truncar" id="btn-mes" type="button"
+              style="text-align:left">
         ${nombreDelMes(mes)} ${icono('abajo', 14)}
+      </button>
+      <button class="icono-btn" id="btn-orden" type="button"
+              aria-label="${d.etiqueta}" title="${d.etiqueta}">
+        ${icono(d.icono, 18)}
       </button>
       <button class="enlace-accion ${activos ? 'activo' : ''}" id="btn-filtros" type="button">
         ${icono('filtro', 15)} Filtros${activos ? ` (${activos})` : ''}
@@ -80,10 +87,10 @@ function barra({ mes, activos }) {
 }
 
 export function pintarMovimientos(contenedor, estado) {
-  const { visibles, totales, nombres, iconos, mes, activos, hayMas, total } = estado;
+  const { visibles, totales, nombres, iconos, mes, activos, orden, hayMas, total } = estado;
   contenedor.innerHTML = `
     <div class="pila">
-      ${barra({ mes, activos })}
+      ${barra({ mes, activos, orden })}
       ${resumenMes(totales)}
       ${visibles.length
         ? porDia(visibles).map(([f, ms]) => grupoDia(f, ms, nombres, iconos)).join('')

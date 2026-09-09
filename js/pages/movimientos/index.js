@@ -6,10 +6,12 @@ import { pintarMovimientos } from './vista.js';
 import { filtrosVacios, cuantosActivos, aplicar, abrirSheetFiltros } from './filtros.js';
 import { abrirRegistro, eliminarMovimiento } from '../../movimientos/registrar.js';
 import { conectarDeslizar, cerrarDeslizada } from '../../ui/deslizar.js';
+import { ordenarPorFecha, direccionOpuesta } from '../../movimientos/orden.js';
 import { totalesDelMes } from '../../calc/saldos.js';
 import { avisoError } from '../../ui/toast.js';
 
 const POR_PAGINA = 50;
+const CLAVE_ORDEN = 'finanzas.orden-movimientos';
 
 /** { id: nombre } de cuentas, tarjetas y categorías, para pintar las filas. */
 function indiceDeNombres({ cuentas, tarjetas, categorias }) {
@@ -28,6 +30,7 @@ function indiceDeIconos({ categorias }) {
 export async function montarMovimientos(contenedor, contexto) {
   const { movimientos, cuentas, tarjetas, categorias } = contexto;
   let filtros = filtrosVacios();
+  let orden = localStorage.getItem(CLAVE_ORDEN) === 'asc' ? 'asc' : 'desc';
   let datos = { cuentas: [], tarjetas: [], categorias: [] };
   let delMes = [];
   let pagina = 1;
@@ -40,7 +43,7 @@ export async function montarMovimientos(contenedor, contexto) {
   }
 
   function pintar() {
-    const filtrados = aplicar(delMes, filtros);
+    const filtrados = ordenarPorFecha(aplicar(delMes, filtros), orden);
     const visibles = filtrados.slice(0, pagina * POR_PAGINA);
     pintarMovimientos(contenedor, {
       visibles,
@@ -51,6 +54,7 @@ export async function montarMovimientos(contenedor, contexto) {
       iconos: indiceDeIconos(datos),
       mes: filtros.mes,
       activos: cuantosActivos(filtros),
+      orden,
     });
     conectarDeslizar(contenedor);
   }
@@ -62,10 +66,17 @@ export async function montarMovimientos(contenedor, contexto) {
   }
 
   contenedor.addEventListener('click', async (evento) => {
-    const objetivo = evento.target.closest('[data-editar], [data-borrar], #btn-filtros, #btn-mes, #btn-mas');
+    const objetivo = evento.target.closest(
+      '[data-editar], [data-borrar], #btn-filtros, #btn-mes, #btn-mas, #btn-orden');
     if (!objetivo) return;
     try {
       if (objetivo.id === 'btn-mas') { pagina += 1; pintar(); return; }
+      if (objetivo.id === 'btn-orden') {
+        orden = direccionOpuesta(orden);
+        localStorage.setItem(CLAVE_ORDEN, orden);
+        pintar();
+        return;
+      }
       if (objetivo.dataset.borrar) {
         cerrarDeslizada();
         const mov = delMes.find((m) => m.id === objetivo.dataset.borrar);

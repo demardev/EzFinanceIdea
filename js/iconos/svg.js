@@ -24,6 +24,8 @@ export const TRAZOS = {
   abajo:    '<path d="m6 9 6 6 6-6"/>',
   arriba:   '<path d="m18 15-6-6-6 6"/>',
   atras:    '<path d="m15 18-6-6 6-6"/>',
+  'orden-desc': '<path d="M6 4v15"/><path d="m3 16 3 3 3-3"/><path d="M12 6h9"/><path d="M12 12h6"/><path d="M12 18h3"/>',
+  'orden-asc':  '<path d="M6 20V5"/><path d="m3 8 3-3 3 3"/><path d="M12 6h3"/><path d="M12 12h6"/><path d="M12 18h9"/>',
   descarga: '<path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/>',
   entra:    '<path d="M17 7 7 17"/><path d="M17 17H7V7"/>',
   sale:     '<path d="M7 17 17 7"/><path d="M7 7h10v10"/>',
