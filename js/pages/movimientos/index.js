@@ -9,6 +9,7 @@ import { conectarDeslizar, cerrarDeslizada } from '../../ui/deslizar.js';
 import { ordenarPorFecha, direccionOpuesta } from '../../movimientos/orden.js';
 import { abrirPagoRecibo } from '../negocio/registrar.js';
 import { totalesDelMes } from '../../calc/saldos.js';
+import { hoyISO } from '../../calc/fechas.js';
 import { ambitoGuardado, guardarAmbito } from '../../ui/ambito.js';
 import { avisoError } from '../../ui/toast.js';
 
@@ -63,8 +64,13 @@ export async function montarMovimientos(contenedor, contexto) {
     conectarDeslizar(contenedor);
   }
 
+  /* Solo lo que YA pasó. Una cuota del 29 con fecha futura no es un
+     movimiento del mes todavía: encabezaría la lista sin haber ocurrido y
+     además inflaría el "salió" con dinero que sigue en la cuenta. Lo que falta
+     por venir se ve en el Plan y dentro de su compra. */
   async function recargar() {
-    delMes = await movimientos.listarDelMes(filtros.mes);
+    const todos = await movimientos.listarDelMes(filtros.mes);
+    delMes = todos.filter((m) => m.fecha <= hoyISO());
     pagina = 1;
     pintar();
   }
