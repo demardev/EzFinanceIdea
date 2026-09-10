@@ -2,7 +2,7 @@
    No calcula dinero (calc/) ni pinta (vista.js / detalle.js). */
 
 import { cardTarjeta } from './vista.js';
-import { pintarDetalle, alternarOrden, alternarAnteriores,
+import { pintarDetalle, alternarOrden, alternarBloque,
          alternarCuotasDe } from './detalle.js';
 import { abrirFormTarjeta } from './form.js';
 import { abrirSheetPago } from './pagar.js';
@@ -129,7 +129,7 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
     try {
       /* Lo que solo cambia cómo se ve la pantalla: se repinta y ya. */
       if (o.id === 'btn-orden-tarjeta') { alternarOrden(); return pintar(); }
-      if (o.dataset.bloque) { alternarAnteriores(); return pintar(); }
+      if (o.dataset.bloque) { alternarBloque(o.dataset.bloque); return pintar(); }
       if (o.dataset.cuotasDe) { alternarCuotasDe(o.dataset.cuotasDe); return pintar(); }
 
       if (o.id === 'btn-nueva') return editar({});

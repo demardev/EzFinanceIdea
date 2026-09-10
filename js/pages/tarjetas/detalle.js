@@ -13,10 +13,19 @@ import { ordenarPorFecha, direccionOpuesta, DIRECCIONES } from '../../movimiento
 import { bloqueCompras } from './detalle-compras.js';
 
 const CLAVE_ORDEN = 'finanzas.orden-tarjeta';
-const CLAVE_VIEJOS = 'finanzas.ver-anteriores';
+const CLAVE_BLOQUES = 'finanzas.bloques-tarjeta';
+
+/* Lo viejo arranca plegado —es historia— y lo de ahora abierto. */
+const POR_OMISION = { anteriores: false, alCorte: true, abierto: true };
+
+function leerBloques() {
+  try {
+    return { ...POR_OMISION, ...JSON.parse(localStorage.getItem(CLAVE_BLOQUES) || '{}') };
+  } catch { return { ...POR_OMISION }; }
+}
 
 let orden = localStorage.getItem(CLAVE_ORDEN) === 'asc' ? 'asc' : 'desc';
-let verAnteriores = localStorage.getItem(CLAVE_VIEJOS) === '1';
+let abiertos = leerBloques();
 let compraAbierta = null;
 
 export function alternarOrden() {
@@ -24,9 +33,9 @@ export function alternarOrden() {
   localStorage.setItem(CLAVE_ORDEN, orden);
 }
 
-export function alternarAnteriores() {
-  verAnteriores = !verAnteriores;
-  localStorage.setItem(CLAVE_VIEJOS, verAnteriores ? '1' : '0');
+export function alternarBloque(clave) {
+  abiertos = { ...abiertos, [clave]: !abiertos[clave] };
+  localStorage.setItem(CLAVE_BLOQUES, JSON.stringify(abiertos));
 }
 
 /** Tocar el contador de una compra abre sus cuotas; tocarlo de nuevo las cierra. */
@@ -62,26 +71,18 @@ function lista(movs, nombres, iconos, compras) {
     : '<p class="tenue-2" style="padding:2px">Nada en este bloque.</p>';
 }
 
-function bloque(titulo, pie, movs, nombres, iconos, compras) {
+/* Los tres bloques se pliegan igual: el número de al lado dice cuántos
+   movimientos hay guardados ahí dentro, para no tener que abrirlo. */
+function bloque(clave, titulo, pie, movs, nombres, iconos, compras) {
+  const abierto = abiertos[clave];
   return `
     <div>
-      <p class="seccion-titulo">${escapar(titulo)}</p>
-      ${pie ? `<p class="tenue-2" style="font-size:12px;margin:-4px 0 8px">${escapar(pie)}</p>` : ''}
-      ${lista(movs, nombres, iconos, compras)}
-    </div>`;
-}
-
-/* Lo anterior al corte es historia: se pliega para que no tape lo de este mes,
-   y el número de al lado dice cuánto hay guardado ahí dentro. */
-function bloquePlegable(titulo, pie, movs, nombres, iconos, compras) {
-  return `
-    <div>
-      <button type="button" class="seccion-titulo titulo-plegable" data-bloque="anteriores">
-        ${escapar(titulo)} ${icono(verAnteriores ? 'arriba' : 'abajo', 13)}
+      <button type="button" class="seccion-titulo titulo-plegable" data-bloque="${clave}">
+        ${escapar(titulo)} ${icono(abierto ? 'arriba' : 'abajo', 13)}
         <span class="crece"></span>
         <span class="tenue-2" style="text-transform:none">${movs.length}</span>
       </button>
-      ${verAnteriores ? `
+      ${abierto ? `
         <p class="tenue-2" style="font-size:12px;margin:-4px 0 8px">${escapar(pie)}</p>
         ${lista(movs, nombres, iconos, compras)}` : ''}
     </div>`;
@@ -127,21 +128,21 @@ export function pintarDetalle(contenedor, {
      compra, al tocar el contador. */
   const delCiclo = movimientos.filter((m) => !(m.compra_id && m.fecha > hoyISO()));
   const tramos = repartirPorCiclo(delCiclo, ciclo);
-  const pintarBloque = (t, pie, movs) =>
-    bloque(t, pie, ordenar(movs), nombres, iconos, todasLasCompras);
+  const pintarBloque = (clave, titulo, pie, movs) =>
+    bloque(clave, titulo, pie, ordenar(movs), nombres, iconos, todasLasCompras);
 
   contenedor.innerHTML = `
     <div class="pila">
       ${cabecera(tarjeta, deuda)}
       ${bloqueCompras(compras, movimientos, { abierta: compraAbierta, ordenar })}
       ${barraOrden()}
-      ${bloquePlegable('Anterior al corte', `hasta ${formatearFecha(ciclo.fechaCorteAnterior)}`,
-                       ordenar(tramos.anteriores), nombres, iconos, todasLasCompras)}
-      ${pintarBloque('Corte actual',
+      ${pintarBloque('anteriores', 'Anterior al corte',
+                     `hasta ${formatearFecha(ciclo.fechaCorteAnterior)}`, tramos.anteriores)}
+      ${pintarBloque('alCorte', 'Corte actual',
                      `${formatearFecha(ciclo.fechaCorteAnterior)} — ${formatearFecha(ciclo.fechaUltimoCorte)}`,
                      tramos.alCorte)}
-      ${pintarBloque('Ciclo abierto', `desde ${formatearFecha(ciclo.fechaUltimoCorte)}`,
-                     tramos.abierto)}
+      ${pintarBloque('abierto', 'Ciclo abierto',
+                     `desde ${formatearFecha(ciclo.fechaUltimoCorte)}`, tramos.abierto)}
       <button class="btn btn-bloque" type="button" data-cuotas="${tarjeta.id}">
         ${icono('card', 16)} Nueva compra a cuotas
       </button>
