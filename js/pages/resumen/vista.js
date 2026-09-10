@@ -35,18 +35,35 @@ function filaCuenta(cuenta, saldos) {
     </div>`;
 }
 
+/* Igual que en Movimientos: la fila abre el movimiento y se desliza para
+   descubrir Eliminar. Los del negocio no: esos se abren como operación
+   completa, porque sus movimientos nunca se editan uno por uno. */
 function filaMovimiento(mov) {
   const tipo = tipoDe(mov);
+  const cuerpo = `
+    <span class="icono-caja">${icono(tipo.icono, 18)}</span>
+    <span class="crece truncar">
+      <span class="titulo">${escapar(mov.descripcion)}</span><br>
+      <span class="sub">${formatearFecha(mov.fecha)}</span>
+    </span>
+    <span class="monto ${tipo.acento}">${SIGNO[mov.tipo]}${textoMonto(mov.monto)}</span>`;
+
+  if (mov.pago_id) {
+    return `
+      <div class="lista-fila">
+        <button type="button" class="fila-cuerpo" data-operacion="${mov.pago_id}">
+          ${cuerpo}
+        </button>
+      </div>`;
+  }
   return `
-    <div class="lista-fila">
-      <span class="fila-cuerpo" style="cursor:default">
-        <span class="icono-caja">${icono(tipo.icono, 18)}</span>
-        <span class="crece truncar">
-          <span class="titulo">${escapar(mov.descripcion)}</span><br>
-          <span class="sub">${formatearFecha(mov.fecha)}</span>
-        </span>
-        <span class="monto ${tipo.acento}">${SIGNO[mov.tipo]}${textoMonto(mov.monto)}</span>
-      </span>
+    <div class="fila-deslizable">
+      <button class="borrar-deslizado" type="button" data-borrar="${mov.id}">
+        ${icono('basura', 18)} Eliminar
+      </button>
+      <div class="lista-fila" data-desliza>
+        <button type="button" class="fila-cuerpo" data-editar="${mov.id}">${cuerpo}</button>
+      </div>
     </div>`;
 }
 

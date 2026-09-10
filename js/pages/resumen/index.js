@@ -9,6 +9,8 @@ import { mesDe, hoyISO } from '../../calc/fechas.js';
 import { ambitoGuardado, guardarAmbito, esDelAmbito } from '../../ui/ambito.js';
 import { conectarPastillas } from '../../ui/pastillas.js';
 import { animarRodillos, hayRodillo } from '../../ui/rodillo.js';
+import { conectarMovimientos } from './acciones.js';
+import { conectarDeslizar } from '../../ui/deslizar.js';
 import { avisoError } from '../../ui/toast.js';
 
 /* El flujo personal excluye el negocio: si no, un mes de recibos inflaría el
@@ -51,6 +53,11 @@ async function datosDeNegocio(contexto, mes) {
   };
 }
 
+/** Volver a montar la pantalla: recarga los datos y las cifras ruedan solas. */
+function recargar() {
+  dispatchEvent(new HashChangeEvent('hashchange'));
+}
+
 function conectarPorCobrar(contenedor, contexto, pendientes) {
   contenedor.querySelector('#btn-por-cobrar')?.addEventListener('click', async () => {
     try {
@@ -58,8 +65,7 @@ function conectarPorCobrar(contenedor, contexto, pendientes) {
         contexto.cuentas.listarActivas(), contexto.categorias.listarActivas(),
       ]);
       const { abrirPendientes } = await import('../negocio/pendientes.js');
-      abrirPendientes(contexto, pendientes, { cuentas, categorias },
-                      () => dispatchEvent(new HashChangeEvent('hashchange')));
+      abrirPendientes(contexto, pendientes, { cuentas, categorias }, recargar);
     } catch (e) { avisoError(e); }
   });
 }
@@ -84,6 +90,7 @@ export async function montarResumen(contenedor, contexto) {
     const pintar = () => {
       pintarResumen(contenedor, { ...estado, ambito, ultimos: ultimosDe(todos, ambito) });
       conectarPorCobrar(contenedor, contexto, pendientes);
+      conectarDeslizar(contenedor);          // hay que rehacerlo en cada repintado
       animarRodillos(contenedor);
     };
     pintar();
@@ -94,6 +101,7 @@ export async function montarResumen(contenedor, contexto) {
       guardarAmbito(valor);
       pintar();
     });
+    conectarMovimientos(contenedor, contexto, () => todos, recargar);
   } catch (e) {
     contenedor.innerHTML = '<p class="campo-error">No se pudo cargar.</p>';
     avisoError(e);

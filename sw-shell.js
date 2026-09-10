@@ -66,6 +66,7 @@ self.SHELL = [
   'js/pages/pendiente.js',
   'js/pages/plan/index.js',
   'js/pages/plan/vista.js',
+  'js/pages/resumen/acciones.js',
   'js/pages/resumen/index.js',
   'js/pages/resumen/vista.js',
   'js/pages/tarjetas/compras.js',
