@@ -23,7 +23,8 @@ export const RENDERERS = {
   /* Solo las categorías del tipo elegido: es la regla que pediste. */
   categoria: (campo, valor, datos, tipoClave) => campoSelect({
     nombre: campo.nombre, etiqueta: campo.etiqueta, valor: valor ?? '',
-    opciones: opcionesDe(datos.categorias.filter((c) => c.tipo === tipoClave), 'Sin categoría'),
+    opciones: opcionesDe(datos.categorias.filter((c) => c.tipo === tipoClave),
+                         'Elige una categoría'),
   }),
 
   cuenta: (campo, valor, datos) => campoSelect({
@@ -42,9 +43,16 @@ export const RENDERERS = {
   }),
 };
 
-/** Pinta los campos que declara el tipo, en el orden que los declara. */
+function pintarUno(campo, valores, datos, tipoClave) {
+  return RENDERERS[campo.clase](campo, valores[campo.nombre], datos, tipoClave);
+}
+
+/** Pinta los campos que declara el tipo, en el orden que los declara.
+    Un array anidado son dos campos que van en la misma línea. */
 export function pintarCampos(campos, valores, datos, tipoClave) {
-  return campos
-    .map((campo) => RENDERERS[campo.clase](campo, valores[campo.nombre], datos, tipoClave))
-    .join('');
+  return campos.map((campo) => {
+    if (!Array.isArray(campo)) return pintarUno(campo, valores, datos, tipoClave);
+    const dos = campo.map((c) => pintarUno(c, valores, datos, tipoClave)).join('');
+    return `<div class="campo-fila">${dos}</div>`;
+  }).join('');
 }

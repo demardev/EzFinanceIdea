@@ -20,6 +20,7 @@ function validarBase(datos) {
   if (!(Number(datos.monto) > 0)) return 'El monto tiene que ser mayor que cero.';
   if (!datos.fecha) return 'Falta la fecha.';
   if (!String(datos.descripcion || '').trim()) return 'Ponle una descripción.';
+  if (!datos.categoria_id) return 'Elige una categoría.';
   return null;
 }
 
@@ -45,7 +46,7 @@ export const TIPOS = {
     etiqueta: 'Ingreso',
     icono: 'entra',
     acento: 'pos',
-    campos: [MONTO, FECHA, DESCRIPCION, CATEGORIA,
+    campos: [[MONTO, FECHA], DESCRIPCION, CATEGORIA,
       { clase: 'cuenta', nombre: 'cuenta_id', etiqueta: 'Entra a' }, NOTA],
     validar(datos) {
       return validarBase(datos) || (datos.cuenta_id ? null : 'Elige a qué cuenta entra.');
@@ -62,7 +63,7 @@ export const TIPOS = {
     etiqueta: 'Egreso',
     icono: 'sale',
     acento: 'neg',
-    campos: [MONTO, FECHA, DESCRIPCION, CATEGORIA,
+    campos: [[MONTO, FECHA], DESCRIPCION, CATEGORIA,
       { clase: 'origenMixto', nombre: 'origen', etiqueta: 'Sale de' }, NOTA],
     validar(datos) {
       return validarBase(datos) || (separar(datos.origen).id ? null : 'Elige de dónde sale.');
@@ -84,7 +85,7 @@ export const TIPOS = {
     etiqueta: 'Transferencia',
     icono: 'arrows',
     acento: 'tenue',
-    campos: [MONTO, FECHA, DESCRIPCION, CATEGORIA,
+    campos: [[MONTO, FECHA], DESCRIPCION, CATEGORIA,
       { clase: 'cuenta', nombre: 'cuenta_id', etiqueta: 'Sale de' },
       { clase: 'destinoMixto', nombre: 'destino', etiqueta: 'Entra a' }, NOTA],
     validar(datos) {

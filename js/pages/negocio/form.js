@@ -17,24 +17,30 @@ function campos(pago, { cuentas, perfil }) {
     ${campoTexto({ nombre: 'descripcion', etiqueta: 'Descripción',
                    valor: pago.descripcion ?? '',
                    ayuda: 'De quién es el recibo. Es por donde lo vas a buscar después.' })}
-    ${campoMonto({ nombre: 'monto_recibo', etiqueta: 'Monto del recibo',
-                   valor: pago.monto_recibo ?? '' })}
-    ${campoMonto({ nombre: 'comision', etiqueta: 'Comisión',
-                   valor: pago.comision ?? perfil.comision_default ?? 0 })}
-    ${campoTexto({ nombre: 'fecha_pago', etiqueta: 'Día que pagaste el recibo',
-                   valor: pago.fecha_pago ?? hoyISO(), tipo: 'date' })}
-    ${campoSelect({ nombre: 'cuenta_pago_id', etiqueta: 'Pagado desde',
-                    valor: pago.cuenta_pago_id ?? perfil.cuenta_pago_id ?? '',
-                    opciones: opcionesCuenta(cuentas) })}
+    <div class="campo-fila">
+      ${campoMonto({ nombre: 'monto_recibo', etiqueta: 'Monto del recibo',
+                     valor: pago.monto_recibo ?? '' })}
+      ${campoMonto({ nombre: 'comision', etiqueta: 'Comisión',
+                     valor: pago.comision ?? perfil.comision_default ?? 0 })}
+    </div>
+    <div class="campo-fila">
+      ${campoTexto({ nombre: 'fecha_pago', etiqueta: 'Día del pago',
+                     valor: pago.fecha_pago ?? hoyISO(), tipo: 'date' })}
+      ${campoSelect({ nombre: 'cuenta_pago_id', etiqueta: 'Pagado desde',
+                      valor: pago.cuenta_pago_id ?? perfil.cuenta_pago_id ?? '',
+                      opciones: opcionesCuenta(cuentas) })}
+    </div>
 
     ${campoInterruptor({ nombre: 'cobrado', etiqueta: 'Ya me pagaron', activo: cobrado,
                          ayuda: 'Si no, queda pendiente de cobro y se registra solo la salida.' })}
     <div data-solo-cobrado ${cobrado ? '' : 'hidden'}>
-      ${campoTexto({ nombre: 'fecha_cobro', etiqueta: 'Día que te pagaron',
-                     valor: pago.fecha_cobro ?? hoyISO(), tipo: 'date' })}
-      ${campoSelect({ nombre: 'cuenta_cobro_id', etiqueta: 'Cobrado en',
-                      valor: pago.cuenta_cobro_id ?? perfil.cuenta_cobro_id ?? '',
-                      opciones: opcionesCuenta(cuentas) })}
+      <div class="campo-fila">
+        ${campoTexto({ nombre: 'fecha_cobro', etiqueta: 'Día del cobro',
+                       valor: pago.fecha_cobro ?? hoyISO(), tipo: 'date' })}
+        ${campoSelect({ nombre: 'cuenta_cobro_id', etiqueta: 'Cobrado en',
+                        valor: pago.cuenta_cobro_id ?? perfil.cuenta_cobro_id ?? '',
+                        opciones: opcionesCuenta(cuentas) })}
+      </div>
     </div>
 
     ${campoTexto({ nombre: 'nota', etiqueta: 'Nota', valor: pago.nota ?? '', requerido: false })}

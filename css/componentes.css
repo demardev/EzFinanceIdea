@@ -47,6 +47,12 @@
 }
 .campo input[inputmode="decimal"]{ font-variant-numeric:tabular-nums; }
 .campo-error{ font-size:13px; color:var(--neg); }
+/* Dos campos cortos en una línea. `align-items:end` los alinea por el input,
+   así que una etiqueta que ocupe dos renglones no descuadra al vecino. */
+.campo-fila{
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:10px; align-items:end;
+}
 
 /* ---------------------------------------------------------------- cards --- */
 .card{
