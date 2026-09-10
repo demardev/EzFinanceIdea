@@ -19,7 +19,14 @@ export function evaluar({ base, pesimista }) {
      gastos variables no cabe: se cubren los pagos agendados, pero el mes no
      cierra. Eso también es "no alcanza". */
   const colchonNoCabe = base.libreTotal < 0;
-  const nivel = faltantes.length || colchonNoCabe ? 'no-alcanza'
+
+  /* Sin sobres, sin faltantes y sin nada libre no hay plan que evaluar: es un
+     usuario que todavía no ha cargado sus ingresos ni sus fijos. Decirle
+     "Justo" ahí es responder una pregunta que no hizo. */
+  const vacio = !base.sobres.length && !faltantes.length && base.libreTotal === 0;
+
+  const nivel = vacio ? 'vacio'
+    : faltantes.length || colchonNoCabe ? 'no-alcanza'
     : base.libreTotal === 0 || apretadoEnPesimista ? 'justo'
     : 'alcanza';
 

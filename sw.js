@@ -10,7 +10,7 @@
    Al cambiar el shell hay que subir VERSION: al activarse borra los caches
    viejos. */
 
-const VERSION = 'v11';
+const VERSION = 'v12';
 const CACHE_SHELL = `finanzas-shell-${VERSION}`;
 const CACHE_DATOS = `finanzas-datos-${VERSION}`;
 

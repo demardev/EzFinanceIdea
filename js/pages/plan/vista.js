@@ -106,17 +106,48 @@ function bloqueGrafica(base) {
     </div>`;
 }
 
-export function pintarPlan(contenedor, { v, base, nombres, horizonte, horizontes }) {
+/* "Horizonte" no dice nada por sí solo: al lado va hasta qué día mira el
+   plan, que es lo que de verdad cambia el resultado. */
+function barraHorizonte({ horizonte, horizontes, hasta }) {
   const opciones = horizontes.map(([clave, etiqueta]) =>
     `<option value="${clave}" ${clave === horizonte ? 'selected' : ''}>${etiqueta}</option>`).join('');
-
-  contenedor.innerHTML = `
-    <div class="pila">
-      <div class="seccion-barra">
+  return `
+    <div>
+      <div class="seccion-barra" style="margin-bottom:2px">
         <span class="seccion-titulo" style="margin:0">Horizonte</span>
         <select id="sel-horizonte" class="enlace-accion activo"
                 style="border:none;background:none">${opciones}</select>
       </div>
+      <p class="tenue-2" style="font-size:12.5px">
+        Hasta dónde mira el plan: cuenta solo los ingresos y pagos que caen
+        de hoy al ${formatearFecha(hasta)}.
+      </p>
+    </div>`;
+}
+
+function sinDatos() {
+  return `
+    <div class="vacio">
+      <span class="icono-caja">${icono('plan', 22)}</span>
+      <p>Todavía no hay nada que planear.</p>
+      <p class="tenue-2" style="font-size:12.5px">
+        El plan trabaja con tus ingresos y tus gastos fijos: agrégalos en
+        Ajustes → Fijos y variables. Con eso te dice si te alcanza hasta la
+        fecha del horizonte.
+      </p>
+    </div>`;
+}
+
+export function pintarPlan(contenedor, { v, base, nombres, horizonte, horizontes, hasta }) {
+  if (v.nivel === 'vacio') {
+    contenedor.innerHTML = `
+      <div class="pila">${barraHorizonte({ horizonte, horizontes, hasta })}${sinDatos()}</div>`;
+    return;
+  }
+
+  contenedor.innerHTML = `
+    <div class="pila">
+      ${barraHorizonte({ horizonte, horizontes, hasta })}
       ${veredicto(v)}
       ${alertas(v, nombres)}
       ${rango(v)}

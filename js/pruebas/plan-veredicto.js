@@ -3,6 +3,9 @@
 import { describir, igual } from './marco.js';
 import { evaluar } from '../calc/plan/veredicto.js';
 
+const SOBRE = { nombre: 'Sueldo', fecha: '2026-09-15', monto: 1000,
+                asignaciones: [], colchon: 0, libre: 0 };
+
 const resultado = (extra = {}) => ({
   faltantes: [], transferencias: [], libreTotal: 1000,
   diaMasAjustado: { fecha: '2026-09-20', total: 500 },
@@ -40,8 +43,29 @@ describir('veredicto', (caso) => {
   });
 
   caso('justo cuando queda exactamente en ceros', () => {
-    igual(evaluar({ base: resultado({ libreTotal: 0 }),
-                    pesimista: resultado({ libreTotal: 0 }) }).nivel, 'justo');
+    igual(evaluar({ base: resultado({ libreTotal: 0, sobres: [SOBRE] }),
+                    pesimista: resultado({ libreTotal: 0, sobres: [SOBRE] }) }).nivel, 'justo');
+  });
+
+  caso('sin sobres, sin faltantes y sin libre no hay nada que planear', () => {
+    const v = evaluar({ base: resultado({ libreTotal: 0 }),
+                        pesimista: resultado({ libreTotal: 0 }) });
+    igual(v.nivel, 'vacio');
+  });
+
+  caso('tener saldo sin obligaciones no es estar vacío', () => {
+    const v = evaluar({ base: resultado({ libreTotal: 500, sobres: [SOBRE] }),
+                        pesimista: resultado({ libreTotal: 500, sobres: [SOBRE] }) });
+    igual(v.nivel, 'alcanza');
+  });
+
+  caso('deber algo sin tener nada no es estar vacío: es no alcanzar', () => {
+    const v = evaluar({
+      base: resultado({ libreTotal: 0,
+                        faltantes: [{ nombre: 'Renta', fecha: '2026-09-25', monto: 900 }] }),
+      pesimista: resultado({ libreTotal: 0 }),
+    });
+    igual(v.nivel, 'no-alcanza');
   });
 
   caso('no alcanza si el colchón de variables no cabe, aunque no haya faltantes con fecha', () => {

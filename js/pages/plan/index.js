@@ -64,6 +64,7 @@ export async function montarPlan(contenedor, contexto) {
       base,
       nombres: indiceDeNombres(datos),
       horizonte,
+      hasta,
       horizontes: Object.entries(HORIZONTES).map(([k, h]) => [k, h.etiqueta]),
     });
   }
