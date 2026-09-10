@@ -65,7 +65,11 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
 ## PWA
 
 - Al agregar o quitar un archivo del shell (HTML, CSS, JS, iconos) hay que **actualizar la lista
-  `SHELL` y subir `VERSION` en `sw.js`**, si no la app sirve el cache viejo.
+  `SHELL` de `sw-shell.js` y subir `VERSION` en `sw.js`**, si no la app sirve el cache viejo.
+  Los dos: el navegador detecta la actualización por el contenido de `sw.js`.
+- El shell **no pide `index.html`**: el hosting (Cloudflare Pages) lo redirige a `/` con un 308, y
+  una respuesta con redirect guardada en el cache hace que Safari se niegue a abrir la app
+  ("the response served by the service worker has redirections"). Se pide `./`, que responde 200.
 - Los iconos se regeneran con `python3 icons/generar-iconos.py`. Sin dependencias.
 
 ## Desarrollo local
