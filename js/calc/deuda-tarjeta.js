@@ -50,6 +50,13 @@ export function calcularDeuda(movimientos, ciclo, limite = 0) {
 
   const deudaTotal = sumar(vieja, corte, nuevo);
 
+  /* El banco congela el monto COMPLETO de una compra a meses desde el día que
+     la haces y lo suelta conforme le pagas, así que el disponible tiene que
+     descontar también las cuotas que todavía no cobra. La DEUDA no las
+     incluye —esas aún no se cobran— y por eso son dos números distintos. */
+  const comprometido = comprometidoEnCuotas(movimientos, hoy);
+  const usado = sumar(deudaTotal, comprometido);
+
   return {
     deudaVieja: vieja,
     saldoAlCorte: corte,
@@ -58,9 +65,10 @@ export function calcularDeuda(movimientos, ciclo, limite = 0) {
     saldoAFavor: disponible,
     /* Lo que hay que pagar antes de la fecha límite. */
     aPagarAhora: sumar(vieja, corte),
+    comprometido,
     ...(limite > 0 ? {
-      usoDelLimite: redondear((deudaTotal / limite) * 100),
-      disponible: redondear(limite - deudaTotal),
+      usoDelLimite: redondear((usado / limite) * 100),
+      disponible: redondear(limite - usado),
     } : {}),
   };
 }

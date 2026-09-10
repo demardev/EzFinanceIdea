@@ -92,7 +92,7 @@ describir('deuda de tarjeta', (caso) => {
   caso('sin movimientos, todo en cero', () => {
     const d = calcularDeuda([], CICLO);
     igual(d, { deudaVieja: 0, saldoAlCorte: 0, nuevoCiclo: 0,
-               deudaTotal: 0, saldoAFavor: 0, aPagarAhora: 0 });
+               deudaTotal: 0, saldoAFavor: 0, aPagarAhora: 0, comprometido: 0 });
   });
 
   caso('los centavos no se pierden en la cascada', () => {
@@ -138,6 +138,37 @@ describir('deuda de tarjeta', (caso) => {
     const d = calcularDeuda([cargo(12500, '2026-09-01')], CICLO, 50000);
     igual(d.usoDelLimite, 25);
     igual(d.disponible, 37500);
+  });
+
+  /* El banco congela el monto COMPLETO de una compra a meses en cuanto la
+     haces, y lo va soltando conforme le pagas. Si el disponible solo restara
+     la cuota ya cobrada, diría que tienes miles de más. */
+  caso('una compra a meses congela el total, no solo la cuota cobrada', () => {
+    const cuota = (k, fecha) => ({
+      tipo: 'egreso', monto: 1000, fecha, tarjeta_id: 't1',
+      compra_id: 'msi', cuota_num: k, cuota_total: 12,
+    });
+    const movs = [cuota(1, '2026-09-18'),
+      ...Array.from({ length: 11 }, (_, i) => cuota(i + 2, `2026-${10 + i}-18`))];
+
+    const d = calcularDeuda(movs, CICLO, 50000);
+    igual(d.deudaTotal, 1000);        // cobrado hasta hoy
+    igual(d.disponible, 38000);       // 50000 − 12000 de la compra entera
+    igual(d.usoDelLimite, 24);
+  });
+
+  caso('el disponible se libera al PAGAR la tarjeta, no al vencer la cuota', () => {
+    const cuota = (k, fecha) => ({
+      tipo: 'egreso', monto: 1000, fecha, tarjeta_id: 't1',
+      compra_id: 'msi', cuota_num: k, cuota_total: 3,
+    });
+    const dos = [cuota(1, '2026-08-18'), cuota(2, '2026-09-18'), cuota(3, '2026-10-18')];
+
+    /* Dos cuotas ya cobradas y ninguna pagada: sigue congelado el total. */
+    igual(calcularDeuda(dos, CICLO, 50000).disponible, 47000);
+
+    /* Al pagar 1000 al banco, se libera exactamente eso. */
+    igual(calcularDeuda([...dos, pago(1000, '2026-09-19')], CICLO, 50000).disponible, 48000);
   });
 });
 

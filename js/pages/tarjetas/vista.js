@@ -95,7 +95,8 @@ export function cardTarjeta(t, d, c) {
 
       ${d.comprometido > 0 ? `
         <p class="tenue" style="font-size:12.5px">
-          ${icono('reloj', 13)} Comprometido en cuotas: ${textoMonto(d.comprometido)}
+          ${icono('reloj', 13)} Comprometido en cuotas: ${textoMonto(d.comprometido)} ·
+          el banco ya lo descontó de tu disponible
         </p>` : ''}
 
       ${botones(t)}
