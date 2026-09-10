@@ -2,7 +2,8 @@
    No calcula dinero (calc/) ni pinta (vista.js / detalle.js). */
 
 import { cardTarjeta } from './vista.js';
-import { pintarDetalle } from './detalle.js';
+import { pintarDetalle, alternarOrden, alternarAnteriores,
+         alternarCuotasDe } from './detalle.js';
 import { abrirFormTarjeta } from './form.js';
 import { abrirSheetPago } from './pagar.js';
 import { abrirFormCompra } from './cuotas-form.js';
@@ -122,9 +123,15 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
   }
 
   contenedor.addEventListener('click', async (evento) => {
-    const o = evento.target.closest('[data-pagar], [data-cuotas], [data-detalle], [data-compra], #btn-nueva, #btn-editar-tarjeta');
+    const o = evento.target.closest('[data-pagar], [data-cuotas], [data-detalle], [data-compra],'
+      + ' [data-cuotas-de], [data-bloque], #btn-nueva, #btn-orden-tarjeta, #btn-editar-tarjeta');
     if (!o) return;
     try {
+      /* Lo que solo cambia cómo se ve la pantalla: se repinta y ya. */
+      if (o.id === 'btn-orden-tarjeta') { alternarOrden(); return pintar(); }
+      if (o.dataset.bloque) { alternarAnteriores(); return pintar(); }
+      if (o.dataset.cuotasDe) { alternarCuotasDe(o.dataset.cuotasDe); return pintar(); }
+
       if (o.id === 'btn-nueva') return editar({});
       if (o.dataset.detalle) { location.hash = `#/tarjetas/${o.dataset.detalle}`; return; }
       if (o.dataset.compra) {

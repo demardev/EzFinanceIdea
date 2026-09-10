@@ -1,11 +1,38 @@
 /* Detalle de una tarjeta: sus movimientos en tres bloques según el ciclo.
-   La lista de compras a cuotas se agrega en el paso de cuotas. */
+
+   El estado de la vista —orden, si el bloque viejo está desplegado, y qué
+   compra muestra sus cuotas— vive aquí y no en la pantalla: la pantalla se
+   repinta entera con cada cambio de datos y se perdería. */
 
 import { icono } from '../../iconos/render.js';
 import { escapar } from '../../ui/texto.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { formatearFecha, hoyISO } from '../../calc/fechas.js';
-import { progresoDeCompra, esCuotaYaPagada } from '../../calc/cuotas.js';
+import { esCuotaYaPagada } from '../../calc/cuotas.js';
+import { ordenarPorFecha, direccionOpuesta, DIRECCIONES } from '../../movimientos/orden.js';
+import { bloqueCompras } from './detalle-compras.js';
+
+const CLAVE_ORDEN = 'finanzas.orden-tarjeta';
+const CLAVE_VIEJOS = 'finanzas.ver-anteriores';
+
+let orden = localStorage.getItem(CLAVE_ORDEN) === 'asc' ? 'asc' : 'desc';
+let verAnteriores = localStorage.getItem(CLAVE_VIEJOS) === '1';
+let compraAbierta = null;
+
+export function alternarOrden() {
+  orden = direccionOpuesta(orden);
+  localStorage.setItem(CLAVE_ORDEN, orden);
+}
+
+export function alternarAnteriores() {
+  verAnteriores = !verAnteriores;
+  localStorage.setItem(CLAVE_VIEJOS, verAnteriores ? '1' : '0');
+}
+
+/** Tocar el contador de una compra abre sus cuotas; tocarlo de nuevo las cierra. */
+export function alternarCuotasDe(compraId) {
+  compraAbierta = compraAbierta === compraId ? null : compraId;
+}
 
 function fila(mov, nombres, iconos, compras = []) {
   const esPago = mov.tipo === 'transferencia';
@@ -29,14 +56,34 @@ function fila(mov, nombres, iconos, compras = []) {
     </div>`;
 }
 
+function lista(movs, nombres, iconos, compras) {
+  return movs.length
+    ? `<div class="lista">${movs.map((m) => fila(m, nombres, iconos, compras)).join('')}</div>`
+    : '<p class="tenue-2" style="padding:2px">Nada en este bloque.</p>';
+}
+
 function bloque(titulo, pie, movs, nombres, iconos, compras) {
   return `
     <div>
       <p class="seccion-titulo">${escapar(titulo)}</p>
       ${pie ? `<p class="tenue-2" style="font-size:12px;margin:-4px 0 8px">${escapar(pie)}</p>` : ''}
-      ${movs.length
-        ? `<div class="lista">${movs.map((m) => fila(m, nombres, iconos, compras)).join('')}</div>`
-        : `<p class="tenue-2" style="padding:2px">Nada en este bloque.</p>`}
+      ${lista(movs, nombres, iconos, compras)}
+    </div>`;
+}
+
+/* Lo anterior al corte es historia: se pliega para que no tape lo de este mes,
+   y el número de al lado dice cuánto hay guardado ahí dentro. */
+function bloquePlegable(titulo, pie, movs, nombres, iconos, compras) {
+  return `
+    <div>
+      <button type="button" class="seccion-titulo titulo-plegable" data-bloque="anteriores">
+        ${escapar(titulo)} ${icono(verAnteriores ? 'arriba' : 'abajo', 13)}
+        <span class="crece"></span>
+        <span class="tenue-2" style="text-transform:none">${movs.length}</span>
+      </button>
+      ${verAnteriores ? `
+        <p class="tenue-2" style="font-size:12px;margin:-4px 0 8px">${escapar(pie)}</p>
+        ${lista(movs, nombres, iconos, compras)}` : ''}
     </div>`;
 }
 
@@ -50,59 +97,51 @@ export function repartirPorCiclo(movimientos, ciclo) {
   };
 }
 
-/** Una fila por compra a cuotas, con su progreso 3/12 y una barra. */
-function filaCompra(compra, cuotas) {
-  const p = progresoDeCompra(compra, cuotas, hoyISO());
-  const avance = p.total ? (p.cobradas / p.total) * 100 : 0;
+function barraOrden() {
+  const d = DIRECCIONES[orden];
   return `
-    <div class="lista-fila">
-      <button type="button" class="fila-cuerpo" data-compra="${compra.id}">
-        <span class="crece" style="min-width:0">
-          <span class="fila-entre">
-            <span class="titulo truncar">${escapar(compra.descripcion)}</span>
-            <span class="monto tenue">${p.texto}</span>
-          </span>
-          <span class="barra"><span class="barra-relleno" style="width:${avance}%"></span></span>
-          <span class="sub">
-            ${textoMonto(p.montoCuota)} al mes · faltan ${textoMonto(p.restante)}${
-              compra.cuotas_pagadas ? ` · ${compra.cuotas_pagadas} ya pagadas antes` : ''}
-          </span>
-        </span>
-      </button>
+    <div class="seccion-barra">
+      <span class="seccion-titulo" style="margin:0">Movimientos</span>
+      <button class="icono-btn" id="btn-orden-tarjeta" type="button"
+              aria-label="${d.etiqueta}" title="${d.etiqueta}">${icono(d.icono, 18)}</button>
     </div>`;
 }
 
-function bloqueCompras(compras, cuotas) {
-  if (!compras.length) return '';
+function cabecera(tarjeta, deuda) {
   return `
-    <div>
-      <p class="seccion-titulo">Compras a cuotas</p>
-      <div class="lista">${compras.map((c) => filaCompra(c, cuotas)).join('')}</div>
+    <div class="card">
+      <p class="cifra-etiqueta">Deuda total</p>
+      <p class="cifra monto">${textoMonto(deuda.deudaTotal)}</p>
+      <p class="tenue" style="font-size:12.5px">
+        ${escapar(tarjeta.banco || '')}${tarjeta.ultimos_4 ? ` · •••• ${escapar(tarjeta.ultimos_4)}` : ''}
+        · corte día ${tarjeta.dia_corte} · pago día ${tarjeta.dia_limite_pago}
+      </p>
     </div>`;
 }
 
 export function pintarDetalle(contenedor, {
   tarjeta, ciclo, deuda, movimientos, compras, todasLasCompras = compras, nombres, iconos,
 }) {
-  const tramos = repartirPorCiclo(movimientos, ciclo);
+  const ordenar = (movs) => ordenarPorFecha(movs, orden);
+  /* Las cuotas por cobrar salen de los bloques del ciclo: se ven dentro de su
+     compra, al tocar el contador. */
+  const delCiclo = movimientos.filter((m) => !(m.compra_id && m.fecha > hoyISO()));
+  const tramos = repartirPorCiclo(delCiclo, ciclo);
+  const pintarBloque = (t, pie, movs) =>
+    bloque(t, pie, ordenar(movs), nombres, iconos, todasLasCompras);
+
   contenedor.innerHTML = `
     <div class="pila">
-      <div class="card">
-        <p class="cifra-etiqueta">Deuda total</p>
-        <p class="cifra monto">${textoMonto(deuda.deudaTotal)}</p>
-        <p class="tenue" style="font-size:12.5px">
-          ${escapar(tarjeta.banco || '')}${tarjeta.ultimos_4 ? ` · •••• ${escapar(tarjeta.ultimos_4)}` : ''}
-          · corte día ${tarjeta.dia_corte} · pago día ${tarjeta.dia_limite_pago}
-        </p>
-      </div>
-      ${bloqueCompras(compras, movimientos)}
-      ${bloque('Anterior al corte', `hasta ${formatearFecha(ciclo.fechaCorteAnterior)}`,
-               tramos.anteriores, nombres, iconos, todasLasCompras)}
-      ${bloque('Corte actual',
-               `${formatearFecha(ciclo.fechaCorteAnterior)} — ${formatearFecha(ciclo.fechaUltimoCorte)}`,
-               tramos.alCorte, nombres, iconos, todasLasCompras)}
-      ${bloque('Ciclo abierto', `desde ${formatearFecha(ciclo.fechaUltimoCorte)}`,
-               tramos.abierto, nombres, iconos, todasLasCompras)}
+      ${cabecera(tarjeta, deuda)}
+      ${bloqueCompras(compras, movimientos, { abierta: compraAbierta, ordenar })}
+      ${barraOrden()}
+      ${bloquePlegable('Anterior al corte', `hasta ${formatearFecha(ciclo.fechaCorteAnterior)}`,
+                       ordenar(tramos.anteriores), nombres, iconos, todasLasCompras)}
+      ${pintarBloque('Corte actual',
+                     `${formatearFecha(ciclo.fechaCorteAnterior)} — ${formatearFecha(ciclo.fechaUltimoCorte)}`,
+                     tramos.alCorte)}
+      ${pintarBloque('Ciclo abierto', `desde ${formatearFecha(ciclo.fechaUltimoCorte)}`,
+                     tramos.abierto)}
       <button class="btn btn-bloque" type="button" data-cuotas="${tarjeta.id}">
         ${icono('card', 16)} Nueva compra a cuotas
       </button>
