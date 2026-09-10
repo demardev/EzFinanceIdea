@@ -9,7 +9,7 @@ import { agruparOperaciones } from '../negocio/agrupar.js';
 const CATS = { pago: 'cat-pago', cobro: 'cat-cobro', comision: 'cat-comision' };
 
 const PENDIENTE = {
-  id: 'p1', monto_recibo: 50, comision: 1,
+  id: 'p1', monto_recibo: 50, comision: 1, descripcion: 'Doña Rosa',
   fecha_pago: '2026-09-01', cuenta_pago_id: 'banco',
   fecha_cobro: null, cuenta_cobro_id: null,
 };
@@ -55,6 +55,21 @@ describir('pago de recibo — movimientos generados', (caso) => {
   caso('cada movimiento lleva su categoría', () => {
     const movs = movimientosDePago(COBRADO, CATS);
     igual(movs.map((m) => m.categoria_id), ['cat-pago', 'cat-cobro', 'cat-comision']);
+  });
+
+  caso('la descripción encabeza los tres movimientos: por ahí se busca', () => {
+    const movs = movimientosDePago(COBRADO, CATS);
+    igual(movs.map((m) => m.descripcion), [
+      'Doña Rosa — pago de recibo',
+      'Doña Rosa — cobro de recibo',
+      'Doña Rosa — comisión',
+    ]);
+  });
+
+  caso('sin descripción queda el texto genérico', () => {
+    const movs = movimientosDePago({ ...COBRADO, descripcion: '  ' }, CATS);
+    igual(movs.map((m) => m.descripcion),
+          ['Pago de recibo', 'Cobro de recibo', 'Comisión']);
   });
 
   caso('las columnas de ruteo que no se usan quedan en nulo', () => {

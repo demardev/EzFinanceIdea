@@ -45,13 +45,17 @@ function fila(mov, nombres, iconos) {
 function filaOperacion(f, nombres) {
   const cuentas = [...new Set(f.movimientos.map((m) => nombres[m.cuenta_id]).filter(Boolean))];
   const recibo = f.movimientos.find((m) => m.tipo === 'egreso');
+  /* El título es la descripción que escribiste —el cliente— y ya dice si esto
+     fue el pago o el cobro; las operaciones viejas no la tienen. */
+  const titulo = (recibo || f.movimientos[0]).descripcion
+              || (f.incluyeEgreso ? 'Pago de recibo' : 'Cobro de recibo');
   return `
     <div class="lista-fila">
       <button type="button" class="fila-cuerpo" data-operacion="${f.pagoId}">
         <span class="icono-caja">${icono('banknote', 18)}</span>
         <span class="crece" style="min-width:0">
           <span class="titulo truncar" style="display:block">
-            ${f.incluyeEgreso ? 'Pago de recibo' : 'Cobro de recibo'}
+            ${escapar(titulo)}
             ${recibo ? `<span class="tenue-2">· ${textoMonto(recibo.monto)}</span>` : ''}
           </span>
           <span class="sub">${escapar(cuentas.join(' → '))}

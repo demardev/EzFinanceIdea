@@ -84,6 +84,10 @@ create table if not exists pagos_recibo (
   )
 );
 
+-- La descripción es de quién es el recibo: encabeza los movimientos generados
+-- y es por donde se busca la operación. Las filas viejas se quedan en null.
+alter table pagos_recibo add column if not exists descripcion text;
+
 create index if not exists idx_pagos_pendientes on pagos_recibo (user_id, fecha_cobro);
 
 -- Los movimientos generados quedan atados a su operación.

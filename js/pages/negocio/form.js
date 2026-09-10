@@ -14,6 +14,9 @@ function opcionesCuenta(cuentas) {
 function campos(pago, { cuentas, perfil }) {
   const cobrado = Boolean(pago.fecha_cobro);
   return `
+    ${campoTexto({ nombre: 'descripcion', etiqueta: 'Descripción',
+                   valor: pago.descripcion ?? '',
+                   ayuda: 'De quién es el recibo. Es por donde lo vas a buscar después.' })}
     ${campoMonto({ nombre: 'monto_recibo', etiqueta: 'Monto del recibo',
                    valor: pago.monto_recibo ?? '' })}
     ${campoMonto({ nombre: 'comision', etiqueta: 'Comisión',
@@ -50,6 +53,7 @@ function conectarCobrado(hoja, form) {
 function aFila(d) {
   const cobrado = Boolean(d.cobrado);
   return {
+    descripcion: d.descripcion.trim(),
     monto_recibo: redondear(d.monto_recibo),
     comision: redondear(d.comision || 0),
     fecha_pago: d.fecha_pago,
@@ -61,6 +65,7 @@ function aFila(d) {
 }
 
 function validar(d) {
+  if (!d.descripcion.trim()) throw new Error('Ponle una descripción, el nombre del cliente.');
   if (!(d.monto_recibo > 0)) throw new Error('Pon el monto del recibo.');
   if (!d.cuenta_pago_id) throw new Error('Elige de qué cuenta salió el pago.');
   if (d.cobrado && !d.cuenta_cobro_id) throw new Error('Elige en qué cuenta te pagaron.');

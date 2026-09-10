@@ -24,6 +24,14 @@ function movimiento(pago, extra) {
   };
 }
 
+/* La descripción la escribes tú —casi siempre el nombre del cliente— y es por
+   donde vas a buscar después, así que encabeza los tres movimientos. Si no la
+   pusiste, queda solo el texto genérico. */
+function textoDe(pago, generico) {
+  const suyo = String(pago.descripcion || '').trim();
+  return suyo ? `${suyo} — ${generico.toLowerCase()}` : generico;
+}
+
 export function estaPendiente(pago) {
   return !pago.fecha_cobro;
 }
@@ -36,7 +44,7 @@ export function movimientosDePago(pago, categorias = {}) {
     tipo: 'egreso',
     monto: redondear(pago.monto_recibo),
     fecha: pago.fecha_pago,
-    descripcion: 'Pago de recibo',
+    descripcion: textoDe(pago, 'Pago de recibo'),
     categoria_id: categorias.pago ?? null,
     cuenta_id: pago.cuenta_pago_id ?? null,
   })];
@@ -47,7 +55,7 @@ export function movimientosDePago(pago, categorias = {}) {
     tipo: 'ingreso',
     monto: redondear(pago.monto_recibo),
     fecha: pago.fecha_cobro,
-    descripcion: 'Cobro de recibo',
+    descripcion: textoDe(pago, 'Cobro de recibo'),
     categoria_id: categorias.cobro ?? null,
     cuenta_id: pago.cuenta_cobro_id ?? null,
   }));
@@ -57,7 +65,7 @@ export function movimientosDePago(pago, categorias = {}) {
       tipo: 'ingreso',
       monto: redondear(pago.comision),
       fecha: pago.fecha_cobro,
-      descripcion: 'Comisión',
+      descripcion: textoDe(pago, 'Comisión'),
       categoria_id: categorias.comision ?? null,
       cuenta_id: pago.cuenta_cobro_id ?? null,
     }));

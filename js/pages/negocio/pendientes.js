@@ -24,7 +24,7 @@ function fila(pago) {
             <span class="tenue-2">+ ${textoMonto(pago.comision)}</span>
           </span>
           <span class="sub ${dias >= 7 ? 'warn' : ''}">
-            pagado ${formatearFecha(pago.fecha_pago)} · hace ${dias} ${dias === 1 ? 'día' : 'días'}
+            ${pago.descripcion ? `${escapar(pago.descripcion)} · ` : ''}pagado ${formatearFecha(pago.fecha_pago)} · hace ${dias} ${dias === 1 ? 'día' : 'días'}
             ${pago.nota ? `· ${escapar(pago.nota)}` : ''}
           </span>
         </span>
