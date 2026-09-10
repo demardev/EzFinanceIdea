@@ -20,10 +20,14 @@ function soloPersonales(movimientos) {
   return movimientos.filter((m) => (m.ambito ?? 'personal') === 'personal');
 }
 
-/* El ámbito elegido manda SOLO sobre esta lista: el entró/salió de arriba
+/* "Últimos" es lo que YA pasó. La lista viene ordenada por fecha descendente,
+   así que sin descartar el futuro las cuotas de una compra a meses —fechadas
+   hasta dentro de tres años— se sientan encima de todo y tapan lo de ayer.
+
+   El ámbito elegido manda SOLO sobre esta lista: el entró/salió de arriba
    sigue siendo personal y el patrimonio sigue sumándolo todo. */
-function ultimosDe(todos, ambito) {
-  return todos.filter((m) => esDelAmbito(m, ambito)).slice(0, 5);
+function ultimosDe(todos, ambito, hoy) {
+  return todos.filter((m) => m.fecha <= hoy && esDelAmbito(m, ambito)).slice(0, 5);
 }
 
 function estadoDeResumen({ hoy, lista, todos, delMes, tjs, cmps, items, negocio }) {
@@ -88,7 +92,7 @@ export async function montarResumen(contenedor, contexto) {
     let ambito = ambitoGuardado();
 
     const pintar = () => {
-      pintarResumen(contenedor, { ...estado, ambito, ultimos: ultimosDe(todos, ambito) });
+      pintarResumen(contenedor, { ...estado, ambito, ultimos: ultimosDe(todos, ambito, hoy) });
       conectarPorCobrar(contenedor, contexto, pendientes);
       conectarDeslizar(contenedor);          // hay que rehacerlo en cada repintado
       animarRodillos(contenedor);
