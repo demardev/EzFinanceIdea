@@ -9,6 +9,7 @@ import { conectarDeslizar, cerrarDeslizada } from '../../ui/deslizar.js';
 import { ordenarPorFecha, direccionOpuesta } from '../../movimientos/orden.js';
 import { abrirPagoRecibo } from '../negocio/registrar.js';
 import { totalesDelMes } from '../../calc/saldos.js';
+import { ambitoGuardado, guardarAmbito } from '../../ui/ambito.js';
 import { avisoError } from '../../ui/toast.js';
 
 const POR_PAGINA = 50;
@@ -30,7 +31,7 @@ function indiceDeIconos({ categorias }) {
 
 export async function montarMovimientos(contenedor, contexto) {
   const { movimientos, cuentas, tarjetas, categorias } = contexto;
-  let filtros = filtrosVacios();
+  let filtros = { ...filtrosVacios(), ambito: ambitoGuardado() };
   let orden = localStorage.getItem(CLAVE_ORDEN) === 'asc' ? 'asc' : 'desc';
   let datos = { cuentas: [], tarjetas: [], categorias: [] };
   let delMes = [];
@@ -55,6 +56,8 @@ export async function montarMovimientos(contenedor, contexto) {
       iconos: indiceDeIconos(datos),
       mes: filtros.mes,
       activos: cuantosActivos(filtros),
+      ambito: filtros.ambito,
+      negocio: Boolean(contexto.perfil?.negocio),
       orden,
     });
     conectarDeslizar(contenedor);
@@ -67,8 +70,7 @@ export async function montarMovimientos(contenedor, contexto) {
   }
 
   function abrirFiltros() {
-    const paraSheet = { ...datos, negocio: Boolean(contexto.perfil?.negocio) };
-    abrirSheetFiltros(filtros, paraSheet, async (nuevos) => {
+    abrirSheetFiltros(filtros, datos, async (nuevos) => {
       const cambioMes = nuevos.mes !== filtros.mes;
       filtros = nuevos;
       if (cambioMes) await recargar();
@@ -78,9 +80,18 @@ export async function montarMovimientos(contenedor, contexto) {
 
   contenedor.addEventListener('click', async (evento) => {
     const objetivo = evento.target.closest(
-      '[data-editar], [data-borrar], [data-operacion], #btn-filtros, #btn-mes, #btn-mas, #btn-orden');
+      '[data-editar], [data-borrar], [data-operacion], [data-pastilla],'
+      + ' #btn-filtros, #btn-mes, #btn-mas, #btn-orden');
     if (!objetivo) return;
     try {
+      /* La pastilla "Todo" vale "", así que se pregunta por el atributo. */
+      if (objetivo.hasAttribute('data-pastilla')) {
+        filtros.ambito = objetivo.dataset.pastilla;
+        guardarAmbito(filtros.ambito);
+        pagina = 1;
+        pintar();
+        return;
+      }
       if (objetivo.id === 'btn-mas') { pagina += 1; pintar(); return; }
       if (objetivo.id === 'btn-orden') {
         orden = direccionOpuesta(orden);

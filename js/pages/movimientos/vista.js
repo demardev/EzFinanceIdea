@@ -8,6 +8,7 @@ import { etiquetaDia, nombreDelMes } from '../../calc/fechas.js';
 import { TIPOS, tipoDe } from '../../movimientos/tipos.js';
 import { DIRECCIONES } from '../../movimientos/orden.js';
 import { agruparOperaciones } from '../../negocio/agrupar.js';
+import { pastillasAmbito } from '../../ui/ambito.js';
 
 const SIGNO = { ingreso: '+', egreso: '−', transferencia: '' };
 
@@ -123,6 +124,7 @@ export function pintarMovimientos(contenedor, estado) {
   contenedor.innerHTML = `
     <div class="pila">
       ${barra({ mes, activos, orden })}
+      ${estado.negocio ? pastillasAmbito(estado.ambito) : ''}
       ${resumenMes(totales)}
       ${visibles.length
         ? porDia(visibles).map(([f, ms]) => grupoDia(f, ms, nombres, iconos)).join('')

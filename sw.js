@@ -10,7 +10,7 @@
    Al cambiar el shell hay que subir VERSION: al activarse borra los caches
    viejos. */
 
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE_SHELL = `finanzas-shell-${VERSION}`;
 const CACHE_DATOS = `finanzas-datos-${VERSION}`;
 
@@ -93,6 +93,7 @@ const SHELL = [
   'js/repos/plan-items.js',
   'js/repos/tarjetas.js',
   'js/router.js',
+  'js/ui/ambito.js',
   'js/ui/campos.js',
   'js/ui/confirmar.js',
   'js/ui/deslizar.js',
@@ -100,6 +101,7 @@ const SHELL = [
   'js/ui/grafica.js',
   'js/ui/lista.js',
   'js/ui/monto-input.js',
+  'js/ui/pastillas.js',
   'js/ui/privacidad.js',
   'js/ui/sheet-formulario.js',
   'js/ui/sheet.js',

@@ -5,6 +5,7 @@ import { escapar } from '../../ui/texto.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { formatearFecha } from '../../calc/fechas.js';
 import { tipoDe } from '../../movimientos/tipos.js';
+import { pastillasAmbito } from '../../ui/ambito.js';
 
 const ICONO_POR_TIPO = {
   efectivo: 'banknote', bancaria: 'banco', ahorro: 'piggy', otro: 'wallet',
@@ -64,10 +65,12 @@ function filaVencimiento(v) {
     </div>`;
 }
 
-function seccion(titulo, filas, vacio) {
+/** @param encabezado va entre el título y la lista; hoy solo las pastillas. */
+function seccion(titulo, filas, vacio, encabezado = '') {
   return `
     <div>
       <p class="seccion-titulo">${titulo}</p>
+      ${encabezado}
       ${filas.length ? `<div class="lista">${filas.join('')}</div>`
                      : `<p class="tenue-2">${vacio}</p>`}
     </div>`;
@@ -120,6 +123,7 @@ export function pintarResumen(contenedor, e) {
       ${seccion('Cuentas', e.cuentas.map((c) => filaCuenta(c, e.saldos)),
                 'Todavía no hay cuentas.')}
       ${seccion('Últimos movimientos', e.ultimos.map(filaMovimiento),
-                'Aún no registras nada. Usa el botón +.')}
+                e.ambito ? 'Nada de este ámbito todavía.' : 'Aún no registras nada. Usa el botón +.',
+                e.negocio ? pastillasAmbito(e.ambito) : '')}
     </div>`;
 }

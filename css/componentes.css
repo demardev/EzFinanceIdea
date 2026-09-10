@@ -123,6 +123,11 @@
 .pastilla[disabled]{ opacity:.45; cursor:default; }
 .pastilla[disabled].activa{ opacity:1; }
 
+/* Variante delgada: cuando las pastillas no son el control principal de un
+   formulario, sino el selector de qué se está viendo en la pantalla. */
+.pastillas-sm{ padding:3px; margin-bottom:8px; }
+.pastillas-sm .pastilla{ min-height:30px; font-size:12.5px; }
+
 /* --------------------------------------------------- campo de monto ------ */
 /* El "$" es parte del campo, no del valor: el input guarda solo el número. */
 .campo-monto{ position:relative; display:flex; align-items:center; }

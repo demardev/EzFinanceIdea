@@ -6,17 +6,17 @@ import { abrirSheet } from '../../ui/sheet.js';
 import { campoTexto, campoSelect, datosDe } from '../../ui/campos.js';
 import { mesDe, hoyISO, sumarMeses, nombreDelMes } from '../../calc/fechas.js';
 import { TIPOS, CLAVES_TIPO } from '../../movimientos/tipos.js';
+import { esDelAmbito } from '../../ui/ambito.js';
 import { escapar } from '../../ui/texto.js';
 
 export function filtrosVacios() {
   return { mes: mesDe(hoyISO()), tipo: '', cuenta: '', categoria: '', texto: '', ambito: '' };
 }
 
-export const AMBITOS = [['', 'Todo'], ['personal', 'Personal'], ['negocio', 'Negocio']];
-
-/** Cuántos filtros activos hay, sin contar el mes (que siempre está puesto). */
+/* El ámbito no se cuenta: no está en este sheet sino en las pastillas de la
+   pantalla, donde se ve solo cuál está elegido. */
 export function cuantosActivos(f) {
-  return ['tipo', 'cuenta', 'categoria', 'texto', 'ambito'].filter((k) => f[k]).length;
+  return ['tipo', 'cuenta', 'categoria', 'texto'].filter((k) => f[k]).length;
 }
 
 function tocaCuenta(mov, id) {
@@ -33,7 +33,7 @@ function coincideTexto(mov, texto) {
 
 export function aplicar(movimientos, f) {
   return movimientos.filter((m) =>
-    (!f.ambito || (m.ambito ?? 'personal') === f.ambito) &&
+    esDelAmbito(m, f.ambito) &&
     (!f.tipo || m.tipo === f.tipo) &&
     (!f.cuenta || tocaCuenta(m, f.cuenta)) &&
     (!f.categoria || m.categoria_id === f.categoria) &&
@@ -81,8 +81,6 @@ function campos(filtros, datos) {
       <form id="form-filtros">
         ${campoSelect({ nombre: 'mes', etiqueta: 'Mes', valor: filtros.mes,
                         opciones: mesesOfrecidos(filtros.mes) })}
-        ${datos.negocio ? campoSelect({ nombre: 'ambito', etiqueta: 'Ámbito',
-                        valor: filtros.ambito, opciones: AMBITOS }) : ''}
         ${campoSelect({ nombre: 'tipo', etiqueta: 'Tipo', valor: filtros.tipo,
                         opciones: [['', 'Todos'], ...CLAVES_TIPO.map((k) => [k, TIPOS[k].etiqueta])] })}
         ${campoSelect({ nombre: 'cuenta', etiqueta: 'Cuenta o tarjeta', valor: filtros.cuenta,
@@ -109,11 +107,11 @@ export function abrirSheetFiltros(filtros, datos, alAplicar) {
   const form = hoja.querySelector('#form-filtros');
   form.addEventListener('submit', (evento) => {
     evento.preventDefault();
-    alAplicar({ ...filtrosVacios(), ...datosDe(form) });
+    alAplicar({ ...filtrosVacios(), ambito: filtros.ambito, ...datosDe(form) });
     cerrar();
   });
   hoja.querySelector('#btn-limpiar').addEventListener('click', () => {
-    alAplicar({ ...filtrosVacios(), mes: filtros.mes });
+    alAplicar({ ...filtrosVacios(), mes: filtros.mes, ambito: filtros.ambito });
     cerrar();
   });
 }

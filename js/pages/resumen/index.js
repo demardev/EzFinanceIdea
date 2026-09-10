@@ -6,6 +6,8 @@ import { deudaTotalDeTarjetas } from '../../calc/deuda-tarjeta.js';
 import { proximosVencimientos } from '../../calc/vencimientos.js';
 import { totalesDeNegocio, totalPorCobrar, estaPendiente } from '../../negocio/pago-recibo.js';
 import { mesDe, hoyISO } from '../../calc/fechas.js';
+import { ambitoGuardado, guardarAmbito, esDelAmbito } from '../../ui/ambito.js';
+import { conectarPastillas } from '../../ui/pastillas.js';
 import { avisoError } from '../../ui/toast.js';
 
 /* El flujo personal excluye el negocio: si no, un mes de recibos inflaría el
@@ -13,6 +15,26 @@ import { avisoError } from '../../ui/toast.js';
    todos, porque ese dinero está de verdad en la cuenta. */
 function soloPersonales(movimientos) {
   return movimientos.filter((m) => (m.ambito ?? 'personal') === 'personal');
+}
+
+/* El ámbito elegido manda SOLO sobre esta lista: el entró/salió de arriba
+   sigue siendo personal y el patrimonio sigue sumándolo todo. */
+function ultimosDe(todos, ambito) {
+  return todos.filter((m) => esDelAmbito(m, ambito)).slice(0, 5);
+}
+
+function estadoDeResumen({ hoy, lista, todos, delMes, tjs, cmps, items, negocio }) {
+  return {
+    cuentas: lista,
+    saldos: saldosPorCuenta(lista, todos),
+    patrimonio: patrimonioLiquido(lista, todos),
+    totales: totalesDelMes(soloPersonales(delMes)),
+    deuda: deudaTotalDeTarjetas(tjs, todos, cmps),
+    vencimientos: proximosVencimientos(
+      { tarjetas: tjs, movimientos: todos, compras: cmps, planItems: items },
+      { hoy, dias: 14 }),
+    negocio,
+  };
 }
 
 async function datosDeNegocio(contexto, mes) {
@@ -55,20 +77,21 @@ export async function montarResumen(contenedor, contexto) {
       planItems.listarActivos(),
     ]);
     const { negocio, pendientes } = await datosDeNegocio(contexto, mesDe(hoy));
+    const estado = estadoDeResumen({ hoy, lista, todos, delMes, tjs, cmps, items, negocio });
+    let ambito = ambitoGuardado();
 
-    pintarResumen(contenedor, {
-      cuentas: lista,
-      saldos: saldosPorCuenta(lista, todos),
-      patrimonio: patrimonioLiquido(lista, todos),
-      totales: totalesDelMes(soloPersonales(delMes)),
-      ultimos: todos.slice(0, 5),
-      deuda: deudaTotalDeTarjetas(tjs, todos, cmps),
-      vencimientos: proximosVencimientos(
-        { tarjetas: tjs, movimientos: todos, compras: cmps, planItems: items },
-        { hoy, dias: 14 }),
-      negocio,
+    const pintar = () => {
+      pintarResumen(contenedor, { ...estado, ambito, ultimos: ultimosDe(todos, ambito) });
+      conectarPorCobrar(contenedor, contexto, pendientes);
+    };
+    pintar();
+    /* El contenedor es nuevo en cada navegación (ver router.js), así que este
+       listener se engancha una sola vez y sobrevive a los repintados. */
+    conectarPastillas(contenedor, (valor) => {
+      ambito = valor;
+      guardarAmbito(valor);
+      pintar();
     });
-    conectarPorCobrar(contenedor, contexto, pendientes);
   } catch (e) {
     contenedor.innerHTML = '<p class="campo-error">No se pudo cargar.</p>';
     avisoError(e);
