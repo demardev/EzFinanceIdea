@@ -8,6 +8,7 @@ import { totalesDeNegocio, totalPorCobrar, estaPendiente } from '../../negocio/p
 import { mesDe, hoyISO } from '../../calc/fechas.js';
 import { ambitoGuardado, guardarAmbito, esDelAmbito } from '../../ui/ambito.js';
 import { conectarPastillas } from '../../ui/pastillas.js';
+import { animarRodillos, hayRodillo } from '../../ui/rodillo.js';
 import { avisoError } from '../../ui/toast.js';
 
 /* El flujo personal excluye el negocio: si no, un mes de recibos inflaría el
@@ -65,7 +66,7 @@ function conectarPorCobrar(contenedor, contexto, pendientes) {
 
 export async function montarResumen(contenedor, contexto) {
   const { cuentas, movimientos, tarjetas, compras, planItems } = contexto;
-  contenedor.innerHTML = '<p class="tenue">Cargando…</p>';
+  contenedor.innerHTML = hayRodillo('patrimonio') ? '' : '<p class="tenue">Cargando…</p>';
   try {
     const hoy = hoyISO();
     const [lista, todos, delMes, tjs, cmps, items] = await Promise.all([
@@ -83,6 +84,7 @@ export async function montarResumen(contenedor, contexto) {
     const pintar = () => {
       pintarResumen(contenedor, { ...estado, ambito, ultimos: ultimosDe(todos, ambito) });
       conectarPorCobrar(contenedor, contexto, pendientes);
+      animarRodillos(contenedor);
     };
     pintar();
     /* El contenedor es nuevo en cada navegación (ver router.js), así que este

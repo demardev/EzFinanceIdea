@@ -95,6 +95,7 @@ self.SHELL = [
   'js/ui/monto-input.js',
   'js/ui/pastillas.js',
   'js/ui/privacidad.js',
+  'js/ui/rodillo.js',
   'js/ui/sheet-formulario.js',
   'js/ui/sheet.js',
   'js/ui/tabbar.js',

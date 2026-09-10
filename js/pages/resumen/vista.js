@@ -6,6 +6,7 @@ import { textoMonto } from '../../ui/privacidad.js';
 import { formatearFecha } from '../../calc/fechas.js';
 import { tipoDe } from '../../movimientos/tipos.js';
 import { pastillasAmbito } from '../../ui/ambito.js';
+import { rodillo } from '../../ui/rodillo.js';
 
 const ICONO_POR_TIPO = {
   efectivo: 'banknote', bancaria: 'banco', ahorro: 'piggy', otro: 'wallet',
@@ -103,18 +104,18 @@ export function pintarResumen(contenedor, e) {
     <div class="pila">
       <div class="card">
         <p class="cifra-etiqueta">Patrimonio líquido</p>
-        <p class="cifra monto">${textoMonto(e.patrimonio)}</p>
+        <p class="cifra monto">${rodillo('patrimonio', e.patrimonio)}</p>
         ${e.deuda > 0 ? `<p class="tenue" style="font-size:12.5px">
           Deuda de tarjetas: <span class="monto neg">${textoMonto(e.deuda)}</span></p>` : ''}
       </div>
 
       <div class="card fila-entre">
         <span><span class="cifra-etiqueta">Entró</span><br>
-          <span class="monto pos">${textoMonto(e.totales.entro)}</span></span>
+          <span class="monto pos">${rodillo('entro', e.totales.entro)}</span></span>
         <span><span class="cifra-etiqueta">Salió</span><br>
-          <span class="monto neg">${textoMonto(e.totales.salio)}</span></span>
+          <span class="monto neg">${rodillo('salio', e.totales.salio)}</span></span>
         <span><span class="cifra-etiqueta">Neto</span><br>
-          <span class="monto">${textoMonto(e.totales.neto)}</span></span>
+          <span class="monto">${rodillo('neto', e.totales.neto)}</span></span>
       </div>
 
       ${e.negocio ? panelNegocio(e.negocio) : ''}

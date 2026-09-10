@@ -25,5 +25,8 @@ export function alCambiarPrivacidad(fn) {
 
 /** Lo que usan las vistas para pintar dinero. formatear() sigue siendo puro. */
 export function textoMonto(n, opciones) {
-  return oculto ? '••••••' : formatear(n, opciones);
+  if (!oculto) return formatear(n, opciones);
+  /* Tres puntos y no seis: la fila se sigue leyendo como un monto en vez de
+     convertirse en una hilera de puntos. */
+  return `${opciones?.moneda ?? '$'}•••`;
 }

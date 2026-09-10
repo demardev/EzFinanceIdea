@@ -166,6 +166,21 @@
 .bloque-ciclo p{ margin:0; }
 
 
+/* -------------------------------------------------------------- rodillo --- */
+/* Cada dígito vive en una caja de una línea con el resto recortado; la tira
+   se desliza dentro. `line-height:1` es lo que hace que 1em sea exactamente
+   un dígito, así que la traslación cae siempre en su sitio. */
+.rodillos{ display:inline-flex; align-items:baseline; line-height:1; }
+.rodillo{ display:inline-block; height:1em; overflow:hidden; }
+.rodillo .tira{
+  display:block;
+  transition:transform 520ms cubic-bezier(0.22, 0.9, 0.3, 1);
+}
+.rodillo .tira span{ display:block; height:1em; }
+@media (prefers-reduced-motion: reduce){
+  .rodillo .tira{ transition:none; }
+}
+
 /* ---------------------------------------------------------- campo foto --- */
 .campo-foto .foto-vista{
   border:1px solid var(--line); border-radius:var(--r);
