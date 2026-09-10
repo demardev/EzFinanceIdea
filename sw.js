@@ -10,7 +10,7 @@
    Al cambiar el shell hay que subir VERSION: al activarse borra los caches
    viejos. */
 
-const VERSION = 'v8';
+const VERSION = 'v9';
 const CACHE_SHELL = `finanzas-shell-${VERSION}`;
 const CACHE_DATOS = `finanzas-datos-${VERSION}`;
 
@@ -129,13 +129,25 @@ self.addEventListener('activate', (evento) => {
   })());
 });
 
+/* Safari se niega a abrir la app si el service worker contesta una NAVEGACIÓN
+   con una respuesta que arrastra un redirect ("the response served by the
+   service worker has redirections"). Pasa cuando lo guardado en el cache vino
+   de un 301. Reconstruirla la limpia: mismo cuerpo, sin la marca. */
+async function sinRedirecciones(respuesta) {
+  if (!respuesta?.redirected) return respuesta;
+  return new Response(await respuesta.blob(), {
+    status: respuesta.status, statusText: respuesta.statusText, headers: respuesta.headers,
+  });
+}
+
 /** Del cache al instante; la red actualiza el cache para la próxima vez. */
 async function delCacheYRevalidar(peticion) {
   const cache = await caches.open(CACHE_SHELL);
   const guardada = await cache.match(peticion);
   const enRed = fetch(peticion)
-    .then((respuesta) => {
-      if (respuesta.ok) cache.put(peticion, respuesta.clone());
+    .then(async (respuesta) => {
+      /* Se limpia ANTES de guardar: así el cache nunca queda envenenado. */
+      if (respuesta.ok) await cache.put(peticion, await sinRedirecciones(respuesta.clone()));
       return respuesta;
     })
     .catch(() => guardada);
@@ -166,7 +178,8 @@ self.addEventListener('fetch', (evento) => {
   if (mismoOrigen) {
     /* La navegación siempre cae en index.html: el router vive en el hash. */
     if (request.mode === 'navigate') {
-      evento.respondWith(delCacheYRevalidar(new Request('index.html')));
+      evento.respondWith(delCacheYRevalidar(new Request('index.html'))
+        .then(sinRedirecciones));
       return;
     }
     evento.respondWith(delCacheYRevalidar(request));
