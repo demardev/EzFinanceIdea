@@ -135,7 +135,11 @@ begin
   from (values
       ('Pago de recibo', 'egreso',  'banknote', 90),
       ('Cobro de recibo','ingreso', 'banknote', 90),
-      ('Comisión',       'ingreso', 'tag',      91)
+      ('Comisión',       'ingreso', 'tag',      91),
+      -- Las dos del arqueo de caja: una categoría pertenece a un solo tipo,
+      -- así que el sobrante y el faltante necesitan cada uno la suya.
+      ('Ajuste de caja', 'ingreso', 'wallet',   92),
+      ('Ajuste de caja', 'egreso',  'wallet',   92)
   ) as n(nombre, tipo, icono, orden)
   where not exists (
     select 1 from categorias c

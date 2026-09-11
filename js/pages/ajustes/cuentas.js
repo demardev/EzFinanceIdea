@@ -8,6 +8,10 @@ import { aviso, avisoError } from '../../ui/toast.js';
 import { plural } from '../../ui/texto.js';
 import { icono } from '../../iconos/render.js';
 import { abrirFormCuenta } from './cuentas-form.js';
+import { abrirArqueo } from './arqueo.js';
+import { saldoDeCuenta } from '../../calc/saldos.js';
+import { formatear } from '../../calc/dinero.js';
+import { hoyISO } from '../../calc/fechas.js';
 import { mover } from './orden.js';
 import { conectarDeslizar, cerrarDeslizada } from '../../ui/deslizar.js';
 
@@ -65,6 +69,31 @@ async function borrar(cuenta, { cuentas, movimientos }) {
   return true;
 }
 
+/* El esperado se calcula solo con lo que YA pasó: un movimiento fechado
+   mañana haría "cuadrar" con dinero que todavía no existe. */
+async function abrirArqueoDe(cuenta, contexto, alTerminar) {
+  const { movimientos, categorias } = contexto;
+  const movs = await movimientos.listar();
+  const esperado = saldoDeCuenta(cuenta, movs.filter((m) => m.fecha <= hoyISO()));
+
+  abrirArqueo(cuenta, {
+    esperado,
+    alAjustar: async (r) => {
+      const cats = await categorias.listarActivas();
+      const cat = cats.find((c) => c.tipo === r.ajuste.tipo && /ajuste de caja/i.test(c.nombre));
+      await movimientos.crear({
+        tipo: r.ajuste.tipo, monto: r.ajuste.monto, fecha: hoyISO(),
+        descripcion: 'Ajuste de caja', categoria_id: cat?.id ?? null,
+        cuenta_id: cuenta.id, cuenta_destino_id: null,
+        tarjeta_id: null, tarjeta_destino_id: null,
+        nota: `Contado ${formatear(r.contado)} contra ${formatear(r.esperado)} esperados.`,
+      });
+      aviso(`Ajuste registrado: ${formatear(r.ajuste.monto)}.`);
+      await alTerminar();
+    },
+  });
+}
+
 export async function montarCuentas(contenedor, contexto) {
   const { cuentas } = contexto;
   let lista = [];
@@ -94,7 +123,9 @@ export async function montarCuentas(contenedor, contexto) {
   });
 
   function abrirEdicion(cuenta) {
+    const puedeContar = Boolean(contexto.perfil?.negocio) && cuenta.tipo === 'efectivo' && cuenta.id;
     abrirFormCuenta(cuenta, {
+      alContar: puedeContar ? () => abrirArqueoDe(cuenta, contexto, recargar) : null,
       alGuardar: async (datos) => {
         await (cuenta.id ? cuentas.actualizar(cuenta.id, datos) : cuentas.crear(datos));
         await recargar();

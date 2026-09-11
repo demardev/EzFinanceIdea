@@ -208,6 +208,23 @@
   .rodillo .tira{ transition:none; }
 }
 
+/* -------------------------------------------------------- arqueo de caja -- */
+/* Denominación, por, unidades, subtotal. */
+.arqueo-fila{
+  display:grid; grid-template-columns:64px 10px 1fr 92px;
+  gap:10px; align-items:center; margin-bottom:8px;
+}
+.arqueo-fila input{
+  width:100%; min-height:var(--toque);
+  padding:8px 12px; text-align:center;
+  border:1px solid var(--line); border-radius:var(--r);
+  background:var(--bg-2); color:inherit;
+  font-size:16px;                     /* 16px o iOS hace zoom al enfocar */
+  font-variant-numeric:tabular-nums;
+}
+.arqueo-fila input:focus{ outline:none; border-color:var(--fg-2); }
+.arqueo-fila .monto{ font-variant-numeric:tabular-nums; }
+
 /* ---------------------------------------------------------- campo foto --- */
 .campo-foto .foto-vista{
   border:1px solid var(--line); border-radius:var(--r);

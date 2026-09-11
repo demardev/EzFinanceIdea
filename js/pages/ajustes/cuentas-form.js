@@ -4,6 +4,7 @@
 import { abrirSheetFormulario } from '../../ui/sheet-formulario.js';
 import { campoTexto, campoMonto, campoSelect, campoInterruptor } from '../../ui/campos.js';
 import { redondear } from '../../calc/dinero.js';
+import { icono } from '../../iconos/render.js';
 
 const TIPOS = [
   ['efectivo', 'Efectivo'],
@@ -26,11 +27,26 @@ function campos(cuenta) {
     }) : ''}`;
 }
 
-export function abrirFormCuenta(cuenta, { alGuardar, alEliminar }) {
-  abrirSheetFormulario({
+/* Solo para cuentas de efectivo y con la bandera de negocio: quien decide es
+   quien llama, aquí solo se pinta si mandó el callback. */
+function botonContar() {
+  return `
+    <button class="btn btn-bloque" type="button" id="btn-contar" style="margin-top:14px">
+      ${icono('banknote', 16)} Contar efectivo
+    </button>`;
+}
+
+export function abrirFormCuenta(cuenta, { alGuardar, alEliminar, alContar = null }) {
+  const hoja = abrirSheetFormulario({
     titulo: cuenta.id ? 'Editar cuenta' : 'Nueva cuenta',
     id: 'form-cuenta',
-    cuerpo: campos(cuenta),
+    cuerpo: campos(cuenta) + (alContar ? botonContar() : ''),
+    alPintar: (h, form) => {
+      form.querySelector('#btn-contar')?.addEventListener('click', () => {
+        hoja.cerrar();          // el arqueo abre su propia hoja
+        alContar();
+      });
+    },
     textoGuardar: cuenta.id ? 'Guardar' : 'Crear cuenta',
     textoBorrar: cuenta.id ? 'Eliminar cuenta' : '',
     alEliminar: cuenta.id ? alEliminar : null,
@@ -44,4 +60,5 @@ export function abrirFormCuenta(cuenta, { alGuardar, alEliminar }) {
       });
     },
   });
+  return hoja;
 }
