@@ -26,6 +26,10 @@
   padding:12px var(--sep); background:var(--bg-2);
 }
 .sobre-cabeza .titulo{ font-weight:600; }
+.sobre-plegable{
+  width:100%; border:none; color:inherit; font:inherit;
+  text-align:left; cursor:pointer; align-items:center;
+}
 .sobre-linea{
   display:flex; align-items:baseline; justify-content:space-between; gap:10px;
   padding:9px var(--sep) 9px 28px;

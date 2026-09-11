@@ -2,7 +2,9 @@
    y le pasa el resultado a la vista. Aquí no se hace aritmética. */
 
 import { pintarPlan } from './vista.js';
-import { construirLineaTiempo, colchonDelPeriodo } from '../../calc/plan/linea-tiempo.js';
+import { alternarSobre } from './sobres.js';
+import { construirLineaTiempo, colchonDelPeriodo,
+         hayGastosVariables } from '../../calc/plan/linea-tiempo.js';
 import { asignar } from '../../calc/plan/asignar.js';
 import { evaluar } from '../../calc/plan/veredicto.js';
 import { saldosPorCuenta } from '../../calc/saldos.js';
@@ -65,9 +67,17 @@ export async function montarPlan(contenedor, contexto) {
       nombres: indiceDeNombres(datos),
       horizonte,
       hasta,
+      sinVariables: !hayGastosVariables(datos.planItems),
       horizontes: Object.entries(HORIZONTES).map(([k, h]) => [k, h.etiqueta]),
     });
   }
+
+  contenedor.addEventListener('click', (evento) => {
+    const boton = evento.target.closest('[data-sobre]');
+    if (!boton) return;
+    alternarSobre(boton.dataset.sobre, boton.dataset.abierto === '1');
+    pintar();
+  });
 
   contenedor.addEventListener('change', (evento) => {
     if (evento.target.id !== 'sel-horizonte') return;

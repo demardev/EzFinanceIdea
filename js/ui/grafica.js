@@ -2,6 +2,7 @@
    Sin librerías. Marca la zona bajo cero en rojo y el día más ajustado. */
 
 import { formatearFecha } from '../calc/fechas.js';
+import { textoMonto } from './privacidad.js';
 
 const ANCHO = 320;
 const ALTO = 110;
@@ -51,12 +52,15 @@ export function graficaSaldo(serie, diaMasAjustado) {
     </svg>`;
 }
 
-/** Pie de la gráfica: primer y último día del horizonte. */
+/** Pie de la gráfica: primer y último día del horizonte, con su saldo. Sin
+    montos la gráfica solo enseña una forma que no se puede leer. */
 export function piesDeGrafica(serie) {
   if (!serie?.length) return '';
+  const extremo = (p, lado) => `
+    <span style="text-align:${lado}">${formatearFecha(p.fecha)}<br>
+      <span class="monto" style="color:var(--fg-2)">${textoMonto(p.total)}</span></span>`;
   return `
     <div class="fila-entre tenue-2" style="font-size:11.5px">
-      <span>${formatearFecha(serie[0].fecha)}</span>
-      <span>${formatearFecha(serie.at(-1).fecha)}</span>
+      ${extremo(serie[0], 'left')}${extremo(serie.at(-1), 'right')}
     </div>`;
 }

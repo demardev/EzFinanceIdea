@@ -1,8 +1,9 @@
 /* Pruebas de calc/plan/linea-tiempo.js — escritas antes que la implementación. */
 
 import { describir, igual, cierto } from './marco.js';
-import { ocurrenciasMensuales, eventosDePlan, colchonDelPeriodo,
+import { ocurrenciasMensuales, eventosDePlan, colchonDelPeriodo, hayGastosVariables,
          eventosDeTarjeta, construirLineaTiempo } from '../calc/plan/linea-tiempo.js';
+import { asignar } from '../calc/plan/asignar.js';
 
 const ITEMS = [
   { id: 'p1', nombre: 'Sueldo', clase: 'ingreso', variabilidad: 'fijo',
@@ -101,6 +102,21 @@ describir('línea de tiempo — colchón de variables', (caso) => {
   caso('sin gastos variables, no hay colchón', () => {
     igual(colchonDelPeriodo([], 'min', '2026-09-01', '2026-09-30'), 0);
   });
+
+  /* Sin ellos el veredicto asume que no gastas en comida: hay que avisarlo. */
+  caso('detecta si hay gastos variables con qué armar el colchón', () => {
+    igual(hayGastosVariables(ITEMS), true);                     // "Comida"
+    igual(hayGastosVariables([]), false);
+  });
+
+  caso('un ingreso variable no cuenta como gasto variable', () => {
+    igual(hayGastosVariables(ITEMS.filter((i) => i.nombre !== 'Comida')), false);
+  });
+
+  caso('un gasto variable pausado tampoco cuenta', () => {
+    const pausado = ITEMS.map((i) => (i.nombre === 'Comida' ? { ...i, activo: false } : i));
+    igual(hayGastosVariables(pausado), false);
+  });
 });
 
 describir('línea de tiempo — pagos de tarjeta', (caso) => {
@@ -159,16 +175,40 @@ describir('línea de tiempo — todo junto', (caso) => {
     cierto(fechas.every((f, i) => i === 0 || fechas[i - 1] <= f), 'no está ordenada');
   });
 
-  caso('a igual fecha, los ingresos van antes que las obligaciones', () => {
-    const items = [
-      { id: 'a', nombre: 'Pago', clase: 'gasto', variabilidad: 'fijo',
-        monto: 100, dia_mes: 10, cuenta_id: 'banco', activo: true },
-      { id: 'b', nombre: 'Cobro', clase: 'ingreso', variabilidad: 'fijo',
-        monto: 100, dia_mes: 10, cuenta_id: 'banco', activo: true },
-    ];
+  /* Conservador: no se cuenta con que el depósito llegue antes que el cobro
+     del banco el mismo día. Un pago que vence el día de cobro se paga con lo
+     que ya tienes. */
+  const MISMO_DIA = [
+    { id: 'a', nombre: 'Pago', clase: 'gasto', variabilidad: 'fijo',
+      monto: 150, dia_mes: 28, cuenta_id: 'banco', activo: true },
+    { id: 'b', nombre: 'Salario', clase: 'ingreso', variabilidad: 'fijo',
+      monto: 520, dia_mes: 28, cuenta_id: 'banco', activo: true },
+  ];
+
+  caso('a igual fecha, el pago va ANTES que el ingreso', () => {
     const linea = construirLineaTiempo(
-      { planItems: items, tarjetas: [], movimientos: [], compras: [] },
+      { planItems: MISMO_DIA, tarjetas: [], movimientos: [], compras: [] },
       { hoy: '2026-09-01', hasta: '2026-09-30', escenario: 'min' });
-    igual(linea.map((e) => e.nombre), ['Cobro', 'Pago']);
+    igual(linea.map((e) => e.nombre), ['Pago', 'Salario']);
+  });
+
+  caso('un pago del día de cobro sale del dinero que ya tienes, no del salario', () => {
+    const eventos = construirLineaTiempo(
+      { planItems: MISMO_DIA, tarjetas: [], movimientos: [], compras: [] },
+      { hoy: '2026-09-01', hasta: '2026-09-30', escenario: 'min' });
+    const r = asignar({ eventos, saldos: { banco: 732 }, colchon: 0,
+                        desde: '2026-09-01', hasta: '2026-09-30' });
+    igual(r.sobres[0].nombre, 'Saldo de hoy');
+    igual(r.sobres[0].asignaciones.map((a) => a.nombre), ['Pago']);
+    igual(r.sobres[1].asignaciones, []);
+  });
+
+  caso('si hoy no alcanza para el pago del día de cobro, se avisa', () => {
+    const eventos = construirLineaTiempo(
+      { planItems: MISMO_DIA, tarjetas: [], movimientos: [], compras: [] },
+      { hoy: '2026-09-01', hasta: '2026-09-30', escenario: 'min' });
+    const r = asignar({ eventos, saldos: { banco: 100 }, colchon: 0,
+                        desde: '2026-09-01', hasta: '2026-09-30' });
+    igual(r.faltantes.map((f) => `${f.nombre} ${f.monto}`), ['Pago 50']);
   });
 });

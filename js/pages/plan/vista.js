@@ -6,6 +6,7 @@ import { escapar } from '../../ui/texto.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { formatearFecha } from '../../calc/fechas.js';
 import { graficaSaldo, piesDeGrafica } from '../../ui/grafica.js';
+import { bloqueSobres } from './sobres.js';
 
 const TITULO = { alcanza: 'Alcanza', justo: 'Justo', 'no-alcanza': 'No alcanza' };
 
@@ -52,38 +53,6 @@ function alertas(v, nombres) {
   return [...filas, ...movidas].join('');
 }
 
-function lineaSobre(a) {
-  return `
-    <div class="sobre-linea">
-      <span class="crece truncar">${escapar(a.nombre)}
-        <span class="tenue-2">· vence ${formatearFecha(a.fecha)}</span></span>
-      <span class="monto neg">${textoMonto(a.monto)}</span>
-    </div>`;
-}
-
-function sobre(s) {
-  return `
-    <div class="sobre">
-      <div class="sobre-cabeza">
-        <span class="crece truncar">
-          <span class="titulo">${escapar(s.nombre)}</span>
-          <span class="tenue-2">· ${formatearFecha(s.fecha)}</span>
-        </span>
-        <span class="monto pos">${textoMonto(s.monto)}</span>
-      </div>
-      ${s.asignaciones.map(lineaSobre).join('')}
-      ${s.colchon > 0 ? `
-        <div class="sobre-linea">
-          <span class="crece truncar">Colchón de gastos variables</span>
-          <span class="monto tenue">${textoMonto(s.colchon)}</span>
-        </div>` : ''}
-      <div class="sobre-pie">
-        <span>Libre</span>
-        <span class="monto ${s.libre < 0 ? 'neg' : 'pos'}">${textoMonto(s.libre)}</span>
-      </div>
-    </div>`;
-}
-
 function rango(v) {
   if (v.libreBase === v.librePesimista) return '';
   return `
@@ -91,6 +60,16 @@ function rango(v) {
       Si los gastos variables se van al máximo, te quedan
       ${textoMonto(v.librePesimista)} en vez de ${textoMonto(v.libreBase)}.
     </p>`;
+}
+
+/* Si el punto más bajo es hoy, "el día más ajustado es hoy" no dice nada: lo
+   que importa es que el saldo nunca baja de ahí. */
+function fraseAjustado(d, serie) {
+  if (!d) return '';
+  if (d.fecha === serie[0]?.fecha && d.total >= 0) {
+    return `Tu saldo no baja de lo que tienes hoy en todo el horizonte.`;
+  }
+  return `El día más ajustado es el ${formatearFecha(d.fecha)}, con ${textoMonto(d.total)}.`;
 }
 
 function bloqueGrafica(base) {
@@ -101,8 +80,7 @@ function bloqueGrafica(base) {
       ${graficaSaldo(base.serie, d)}
       ${piesDeGrafica(base.serie)}
       ${d ? `<p class="tenue-2" style="font-size:12.5px;margin-top:6px">
-        El día más ajustado es el ${formatearFecha(d.fecha)}, con ${textoMonto(d.total)}.
-      </p>` : ''}
+        ${fraseAjustado(d, base.serie)}</p>` : ''}
     </div>`;
 }
 
@@ -138,7 +116,17 @@ function sinDatos() {
     </div>`;
 }
 
-export function pintarPlan(contenedor, { v, base, nombres, horizonte, horizontes, hasta }) {
+/* Sin gastos variables el veredicto asume que no comes ni te mueves: hay que
+   decirlo junto al veredicto, no enterrado en Ajustes. */
+function avisoSinVariables() {
+  return alerta('No tienes gastos variables: este plan asume que no gastas nada en '
+    + 'comida, gasolina ni salidas. Agrégalos en Ajustes → Fijos y variables para '
+    + 'que el veredicto sea real.', 'warn');
+}
+
+export function pintarPlan(contenedor, {
+  v, base, nombres, horizonte, horizontes, hasta, sinVariables = false,
+}) {
   if (v.nivel === 'vacio') {
     contenedor.innerHTML = `
       <div class="pila">${barraHorizonte({ horizonte, horizontes, hasta })}${sinDatos()}</div>`;
@@ -149,13 +137,10 @@ export function pintarPlan(contenedor, { v, base, nombres, horizonte, horizontes
     <div class="pila">
       ${barraHorizonte({ horizonte, horizontes, hasta })}
       ${veredicto(v)}
+      ${sinVariables ? avisoSinVariables() : ''}
       ${alertas(v, nombres)}
       ${rango(v)}
-      ${base.sobres.length ? `
-        <div>
-          <p class="seccion-titulo">Sobres por ingreso</p>
-          <div class="pila-sm">${base.sobres.map(sobre).join('')}</div>
-        </div>` : `<p class="tenue">No hay ingresos ni obligaciones en este horizonte.</p>`}
+      ${bloqueSobres(base.sobres)}
       ${bloqueGrafica(base)}
     </div>`;
 }

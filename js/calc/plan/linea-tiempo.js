@@ -69,9 +69,16 @@ export function eventosDePlan(planItems, desde, hasta, escenario) {
  * Colchón de gastos variables para el horizonte. Se prorratea por días sobre
  * un mes de 30: si el horizonte son 15 días, se reserva la mitad del mes.
  */
+const esGastoVariable = (i) => i.activo && i.clase === 'gasto' && i.variabilidad === 'variable';
+
+/** ¿Hay con qué armar el colchón? Sin gastos variables el veredicto asume
+    que no gastas en comida ni en transporte, y hay que decirlo. */
+export function hayGastosVariables(planItems) {
+  return planItems.some(esGastoVariable);
+}
+
 export function colchonDelPeriodo(planItems, escenario, desde, hasta) {
-  const variables = planItems.filter(
-    (i) => i.activo && i.clase === 'gasto' && i.variabilidad === 'variable');
+  const variables = planItems.filter(esGastoVariable);
   const mensual = sumar(...variables.map((i) => montoDe(i, escenario)));
   const dias = diasEntre(desde, hasta) + 1;
   return redondear((mensual * dias) / 30);
@@ -133,7 +140,10 @@ function cortesFuturos(tarjeta, movimientos, gastosFijos, ciclo, hasta, comoPago
 }
 
 /* A igual fecha, primero entra el dinero y después se paga. */
-const PESO = { ingreso: 0, obligacion: 1 };
+/* En empate de fecha el pago va PRIMERO. Conservador: no se cuenta con que
+   el depósito llegue antes que el cargo del banco el mismo día, así que un
+   pago que vence el día de cobro se paga con lo que ya tienes. */
+const PESO = { obligacion: 0, ingreso: 1 };
 
 export function construirLineaTiempo({ planItems, tarjetas, movimientos, compras },
                                      { hoy, hasta, escenario = 'min' }) {

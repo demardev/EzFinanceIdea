@@ -65,6 +65,7 @@ self.SHELL = [
   'js/pages/negocio/registrar.js',
   'js/pages/pendiente.js',
   'js/pages/plan/index.js',
+  'js/pages/plan/sobres.js',
   'js/pages/plan/vista.js',
   'js/pages/resumen/acciones.js',
   'js/pages/resumen/index.js',
