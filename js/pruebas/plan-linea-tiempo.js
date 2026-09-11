@@ -2,7 +2,8 @@
 
 import { describir, igual, cierto } from './marco.js';
 import { ocurrenciasMensuales, eventosDePlan, colchonDelPeriodo, hayGastosVariables,
-         ingresosSinFecha, construirLineaTiempo } from '../calc/plan/linea-tiempo.js';
+         ingresosSinFecha, variablesEnEfectivo,
+         construirLineaTiempo } from '../calc/plan/linea-tiempo.js';
 import { asignar } from '../calc/plan/asignar.js';
 
 const ITEMS = [
@@ -125,6 +126,12 @@ describir('línea de tiempo — colchón de variables', (caso) => {
     const conTarjeta = [...ITEMS, { id: 'p7', nombre: 'Maquillaje', clase: 'gasto',
       variabilidad: 'variable', monto_min: 20, monto_max: 60, tarjeta_id: 'bbva', activo: true }];
     igual(colchonDelPeriodo(conTarjeta, 'min', '2026-09-01', '2026-09-30'), 3000);   // solo Comida
+  });
+
+  caso('se puede decir qué variables forman el colchón', () => {
+    const conTarjeta = [...ITEMS, { nombre: 'Maquillaje', clase: 'gasto', variabilidad: 'variable',
+                                    tarjeta_id: 'bbva', activo: true }];
+    igual(variablesEnEfectivo(conTarjeta), ['Comida']);   // el de tarjeta va a su pago
   });
 
   caso('uno con tarjeta sí cuenta para no mostrar el aviso', () => {

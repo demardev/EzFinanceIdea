@@ -135,6 +135,7 @@ function notaSinFecha(nombres) {
 
 export function pintarPlan(contenedor, {
   v, base, nombres, horizonte, horizontes, hasta, sinVariables = false, sinFecha = [],
+  nombresColchon = [],
 }) {
   if (v.nivel === 'vacio') {
     contenedor.innerHTML = `
@@ -150,7 +151,7 @@ export function pintarPlan(contenedor, {
       ${alertas(v, nombres)}
       ${notaSinFecha(sinFecha)}
       ${rango(v)}
-      ${bloqueSobres(base.sobres)}
+      ${bloqueSobres(base.sobres, { nombresColchon })}
       ${bloqueGrafica(base)}
     </div>`;
 }

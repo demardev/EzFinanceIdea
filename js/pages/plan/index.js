@@ -4,7 +4,7 @@
 import { pintarPlan } from './vista.js';
 import { alternarSobre } from './sobres.js';
 import { construirLineaTiempo, colchonDelPeriodo, hayGastosVariables,
-         ingresosSinFecha } from '../../calc/plan/linea-tiempo.js';
+         ingresosSinFecha, variablesEnEfectivo } from '../../calc/plan/linea-tiempo.js';
 import { asignar } from '../../calc/plan/asignar.js';
 import { evaluar } from '../../calc/plan/veredicto.js';
 import { saldosPorCuenta } from '../../calc/saldos.js';
@@ -65,6 +65,7 @@ function pintarConDatos(contenedor, { datos, saldos, horizonte }) {
     hasta,
     sinVariables: !hayGastosVariables(datos.planItems),
     sinFecha: ingresosSinFecha(datos.planItems),
+    nombresColchon: variablesEnEfectivo(datos.planItems),
     horizontes: Object.entries(HORIZONTES).map(([k, h]) => [k, h.etiqueta]),
   });
 }

@@ -87,6 +87,11 @@ export function hayGastosVariables(planItems) {
    tarjeta en su fecha límite. Ver cortesFuturos(). */
 const esVariableEnEfectivo = (i) => esGastoVariable(i) && !i.tarjeta_id;
 
+/** Lo que forma el colchón, para que la línea diga qué es y no solo cuánto. */
+export function variablesEnEfectivo(planItems) {
+  return planItems.filter(esVariableEnEfectivo).map((i) => i.nombre);
+}
+
 export function colchonDelPeriodo(planItems, escenario, desde, hasta) {
   const variables = planItems.filter(esVariableEnEfectivo);
   const mensual = sumar(...variables.map((i) => montoDe(i, escenario)));

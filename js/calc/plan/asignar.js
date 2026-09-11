@@ -7,7 +7,7 @@
    transferencia explícita; si aun así no alcanza, se reporta el faltante con
    su monto exacto y su fecha. */
 
-import { sumar, redondear, repartir } from '../dinero.js';
+import { sumar, redondear } from '../dinero.js';
 import { diasEntre, sumarDias } from '../fechas.js';
 
 function totalDe(saldos) {
@@ -45,20 +45,21 @@ function serieDiaria(desde, hasta, porFecha) {
   return puntos;
 }
 
-function repartirColchon(sobres, colchon) {
-  const conIngreso = sobres.filter((s) => s.monto > 0);
-  if (!conIngreso.length || colchon <= 0) return;
-  const total = sumar(...conIngreso.map((s) => s.monto));
-  /* Proporcional al tamaño del sobre; el último absorbe el residuo. */
-  const partesColchon = repartir(colchon, conIngreso.length);
-  conIngreso.forEach((s, i) => {
-    s.colchon = total > 0
-      ? redondear((colchon * s.monto) / total)
-      : partesColchon[i];
+/* El colchón se reparte por los DÍAS que cubre cada sobre, no por lo que
+   trae: los variables se gastan día a día, y cada sobre los paga hasta que
+   llega el siguiente ingreso. Lo de hoy solo aguanta hasta el primer cobro;
+   un salario, un mes. El último absorbe el residuo para no perder centavos. */
+function repartirColchon(sobres, colchon, hasta) {
+  const dias = sobres.map((s, i) => {
+    const siguiente = sobres[i + 1];
+    s.colchonHasta = siguiente ? sumarDias(siguiente.fecha, -1) : hasta;
+    return siguiente ? diasEntre(s.fecha, siguiente.fecha) : diasEntre(s.fecha, hasta) + 1;
   });
-  const repartido = sumar(...conIngreso.map((s) => s.colchon));
-  const ultimo = conIngreso.at(-1);
-  ultimo.colchon = redondear(ultimo.colchon + (colchon - repartido));
+  const totalDias = dias.reduce((n, d) => n + d, 0);
+  if (colchon <= 0 || totalDias <= 0) return;
+  sobres.forEach((s, i) => { s.colchon = redondear((colchon * dias[i]) / totalDias); });
+  const ultimo = sobres.at(-1);
+  ultimo.colchon = redondear(ultimo.colchon + (colchon - sumar(...sobres.map((s) => s.colchon))));
 }
 
 function sobreNuevo(nombre, fecha, monto) {
@@ -127,7 +128,7 @@ export function asignar({ eventos, saldos, colchon = 0, desde, hasta }) {
   recorrer(eventos, estado, caja);
 
   const { sobres, faltantes, transferencias, deltas } = caja;
-  repartirColchon(sobres, colchon);
+  repartirColchon(sobres, colchon, hasta);
   sobres.forEach((s) => {
     s.libre = redondear(s.monto - sumar(...s.asignaciones.map((a) => a.monto)) - s.colchon);
   });
@@ -137,7 +138,9 @@ export function asignar({ eventos, saldos, colchon = 0, desde, hasta }) {
   const diaMasAjustado = serie.reduce((peor, p) => (p.total < peor.total ? p : peor), serie[0]);
 
   return {
-    sobres: sobres.filter((s) => s.monto > 0 || s.asignaciones.length),
+    /* Un sobre sin dinero se enseña igual si le tocan días de colchón: si
+       no, parte del colchón desaparecería de la vista. */
+    sobres: sobres.filter((s) => s.monto > 0 || s.asignaciones.length || s.colchon > 0),
     faltantes,
     transferencias,
     serie,

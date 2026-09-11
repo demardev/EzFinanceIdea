@@ -41,16 +41,38 @@ describir('asignar — sobres', (caso) => {
     igual(r.sobres[1].nombre, 'Sueldo');
   });
 
-  caso('el colchón se reparte entre los ingresos, sin perder centavos', () => {
+  /* Los variables se gastan día a día: cada sobre aparta los de los días que
+     cubre, hasta que llega el siguiente ingreso. No importa cuánto traiga. */
+  caso('el colchón se reparte por los días que cubre cada sobre, sin perder centavos', () => {
     const r = asignar({
       eventos: [ingreso('A', '2026-09-05', 1000), ingreso('B', '2026-09-20', 2000)],
       saldos: { banco: 0 },
       colchon: 1000,
       desde: '2026-09-01', hasta: '2026-09-30',
     });
-    const total = r.sobres.reduce((n, s) => n + s.colchon, 0);
-    igual(Math.round(total * 100) / 100, 1000);
-    cierto(r.sobres[1].colchon > r.sobres[0].colchon, 'el sobre mayor carga más colchón');
+    // Hoy 4 días, A 15 días, B 11 días: 30 en total.
+    igual(r.sobres.map((s) => s.colchon), [133.33, 500, 366.67]);
+  });
+
+  caso('un sobre sin dinero igual carga los días que cubre', () => {
+    const r = asignar({
+      eventos: [ingreso('A', '2026-09-05', 1000)],
+      saldos: { banco: 0 }, colchon: 300,
+      desde: '2026-09-01', hasta: '2026-09-30',
+    });
+    igual(r.sobres[0].nombre, 'Saldo de hoy');
+    igual(r.sobres[0].colchon, 40);          // 4 de 30 días
+  });
+
+  caso('con tus números: lo de hoy aguanta hasta el cobro, cada salario un mes', () => {
+    const r = asignar({
+      eventos: ['2026-09-28', '2026-10-28', '2026-11-28'].map((f) => ingreso('Salario', f, 520.55)),
+      saldos: { banco: 732.07 }, colchon: 276,
+      desde: '2026-09-10', hasta: '2026-12-10',
+    });
+    igual(r.sobres.map((s) => s.colchon), [54, 90, 93, 39]);
+    igual(r.sobres.map((s) => s.colchonHasta),
+          ['2026-09-27', '2026-10-27', '2026-11-27', '2026-12-10']);
   });
 });
 

@@ -16,3 +16,9 @@ export function plural(n, singular, plural_, cero = `ningún ${singular}`) {
   if (n === 1) return `1 ${singular}`;
   return `${n} ${plural_}`;
 }
+
+/** ["A"] → "A" · ["A", "B"] → "A y B" · ["A", "B", "C"] → "A, B y C" */
+export function enLista(palabras) {
+  if (palabras.length < 2) return palabras.join('');
+  return `${palabras.slice(0, -1).join(', ')} y ${palabras.at(-1)}`;
+}

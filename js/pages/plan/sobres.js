@@ -5,7 +5,7 @@
    cabecera y lo que les queda libre, y se abren al tocarlos. */
 
 import { icono } from '../../iconos/render.js';
-import { escapar, plural } from '../../ui/texto.js';
+import { escapar, plural, enLista } from '../../ui/texto.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { formatearFecha } from '../../calc/fechas.js';
 
@@ -41,18 +41,26 @@ function lineaTraspaso(t) {
     </div>`;
 }
 
-function contenido(s) {
+/* "Colchón de gastos variables" no decía qué era: la línea nombra lo que se
+   aparta y hasta qué día, que es cuando el siguiente ingreso lo releva. */
+function lineaColchon(s, nombresColchon) {
+  const que = nombresColchon.length ? enLista(nombresColchon) : 'Gastos variables';
+  return `
+    <div class="sobre-linea">
+      <span class="crece truncar">${escapar(que)}
+        <span class="tenue-2">· hasta ${formatearFecha(s.colchonHasta)}</span></span>
+      <span class="monto tenue">${textoMonto(s.colchon)}</span>
+    </div>`;
+}
+
+function contenido(s, nombresColchon) {
   return `
     ${s.asignaciones.map(lineaSobre).join('')}
     ${(s.traspasos ?? []).map(lineaTraspaso).join('')}
-    ${s.colchon > 0 ? `
-      <div class="sobre-linea">
-        <span class="crece truncar">Colchón de gastos variables</span>
-        <span class="monto tenue">${textoMonto(s.colchon)}</span>
-      </div>` : ''}`;
+    ${s.colchon > 0 ? lineaColchon(s, nombresColchon) : ''}`;
 }
 
-function sobre(s, abierto) {
+function sobre(s, abierto, nombresColchon) {
   const pagos = s.asignaciones.length;
   return `
     <div class="sobre">
@@ -66,7 +74,7 @@ function sobre(s, abierto) {
         <span class="monto pos">${textoMonto(s.monto)}</span>
         <span class="tenue-2">${icono(abierto ? 'arriba' : 'abajo', 13)}</span>
       </button>
-      ${abierto ? contenido(s) : ''}
+      ${abierto ? contenido(s, nombresColchon) : ''}
       <div class="sobre-pie">
         <span>Libre</span>
         <span class="monto ${s.libre < 0 ? 'neg' : 'pos'}">${textoMonto(s.libre)}</span>
@@ -74,11 +82,13 @@ function sobre(s, abierto) {
     </div>`;
 }
 
-export function bloqueSobres(sobres) {
+/** @param nombresColchon los gastos variables en efectivo que forman el colchón */
+export function bloqueSobres(sobres, { nombresColchon = [] } = {}) {
   if (!sobres.length) {
     return '<p class="tenue">No hay ingresos ni obligaciones en este horizonte.</p>';
   }
-  const filas = sobres.map((s, i) => sobre(s, elegidos.get(claveDe(s)) ?? i === 0));
+  const filas = sobres.map((s, i) =>
+    sobre(s, elegidos.get(claveDe(s)) ?? i === 0, nombresColchon));
   return `
     <div>
       <p class="seccion-titulo">Sobres por ingreso</p>
