@@ -48,11 +48,11 @@ export function eventosDePlan(planItems, desde, hasta, escenario) {
   const activos = planItems.filter((i) => i.activo);
   const eventos = [];
 
-  activos.filter((i) => i.clase === 'ingreso').forEach((item) => {
-    const fechas = item.dia_mes
-      ? ocurrenciasMensuales(item.dia_mes, desde, hasta)
-      : [desde];   /* un ingreso variable sin día se asume disponible ya */
-    fechas.forEach((f) => eventos.push(evento(item, f, 'ingreso', escenario)));
+  /* Un ingreso sin día fijo no se agenda: es incierto, y cuando llega y lo
+     registras ya está en el saldo de hoy. Ver ingresosSinFecha(). */
+  activos.filter((i) => i.clase === 'ingreso' && i.dia_mes).forEach((item) => {
+    ocurrenciasMensuales(item.dia_mes, desde, hasta)
+      .forEach((f) => eventos.push(evento(item, f, 'ingreso', escenario)));
   });
 
   activos
@@ -63,6 +63,12 @@ export function eventosDePlan(planItems, desde, hasta, escenario) {
     });
 
   return eventos;
+}
+
+/** Los ingresos que el plan deja fuera por no tener fecha, para decirlo. */
+export function ingresosSinFecha(planItems) {
+  return planItems.filter((i) => i.activo && i.clase === 'ingreso' && !i.dia_mes)
+    .map((i) => i.nombre);
 }
 
 /**
@@ -77,8 +83,12 @@ export function hayGastosVariables(planItems) {
   return planItems.some(esGastoVariable);
 }
 
+/* Un variable con tarjeta no es efectivo que se reserva: se paga con la
+   tarjeta en su fecha límite. Ver cortesFuturos(). */
+const esVariableEnEfectivo = (i) => esGastoVariable(i) && !i.tarjeta_id;
+
 export function colchonDelPeriodo(planItems, escenario, desde, hasta) {
-  const variables = planItems.filter(esGastoVariable);
+  const variables = planItems.filter(esVariableEnEfectivo);
   const mensual = sumar(...variables.map((i) => montoDe(i, escenario)));
   const dias = diasEntre(desde, hasta) + 1;
   return redondear((mensual * dias) / 30);
@@ -89,7 +99,8 @@ export function colchonDelPeriodo(planItems, escenario, desde, hasta) {
  * corte, más los cortes siguientes proyectando el ciclo abierto, las cuotas
  * futuras y los gastos fijos que se le cargan.
  */
-export function eventosDeTarjeta(tarjeta, movimientos, gastosFijosDeTarjeta, hoy, hasta) {
+export function eventosDeTarjeta(tarjeta, movimientos, gastosFijosDeTarjeta, hoy, hasta,
+                                 { variables = [], escenarioGastos = 'min' } = {}) {
   const ciclo = calcularCiclo(tarjeta.dia_corte, tarjeta.dia_limite_pago, hoy);
   const deuda = calcularDeuda(movimientos, ciclo, tarjeta.limite_credito);
   const eventos = [];
@@ -109,12 +120,22 @@ export function eventosDeTarjeta(tarjeta, movimientos, gastosFijosDeTarjeta, hoy
     eventos.push(comoPago(deuda.aPagarAhora, ciclo.fechaLimiteDelCorte, 'saldo al corte'));
   }
 
-  eventos.push(...cortesFuturos(tarjeta, movimientos, gastosFijosDeTarjeta, ciclo, hasta, comoPago));
+  const previstos = { movimientos, gastosFijos: gastosFijosDeTarjeta, variables, escenarioGastos };
+  eventos.push(...cortesFuturos(tarjeta, previstos, ciclo, hasta, comoPago));
   return eventos;
 }
 
+/* Lo que se gastará con variables en un tramo del ciclo, prorrateado sobre 30
+   días como el colchón. Del ciclo abierto solo cuentan los días que faltan:
+   lo ya gastado de verdad está en los cargos. */
+function variablesDelTramo(variables, escenario, desde, hasta) {
+  const dias = diasEntre(desde, hasta);
+  return variables.map((v) => redondear((montoDe(v, escenario) * dias) / 30));
+}
+
 /** Lo que cobrará cada corte siguiente que venza dentro del horizonte. */
-function cortesFuturos(tarjeta, movimientos, gastosFijos, ciclo, hasta, comoPago) {
+function cortesFuturos(tarjeta, previstos, ciclo, hasta, comoPago) {
+  const { movimientos, gastosFijos, variables, escenarioGastos } = previstos;
   const eventos = [];
   let corte = ciclo.fechaUltimoCorte;
   let siguiente = ciclo.fechaProximoCorte;
@@ -129,7 +150,9 @@ function cortesFuturos(tarjeta, movimientos, gastosFijos, ciclo, hasta, comoPago
         .filter((f) => f > corte)
         .map(() => Number(item.monto) || 0));
 
-    const monto = sumar(...cargos.map((m) => m.monto), ...recurrentes);
+    const estimados = variablesDelTramo(variables, escenarioGastos,
+                                        corte > ciclo.hoy ? corte : ciclo.hoy, siguiente);
+    const monto = sumar(...cargos.map((m) => m.monto), ...recurrentes, ...estimados);
     if (monto > 0) eventos.push(comoPago(monto, vence, `corte del ${siguiente}`));
 
     corte = siguiente;
@@ -139,14 +162,13 @@ function cortesFuturos(tarjeta, movimientos, gastosFijos, ciclo, hasta, comoPago
   return eventos;
 }
 
-/* A igual fecha, primero entra el dinero y después se paga. */
 /* En empate de fecha el pago va PRIMERO. Conservador: no se cuenta con que
    el depósito llegue antes que el cargo del banco el mismo día, así que un
    pago que vence el día de cobro se paga con lo que ya tienes. */
 const PESO = { obligacion: 0, ingreso: 1 };
 
 export function construirLineaTiempo({ planItems, tarjetas, movimientos, compras },
-                                     { hoy, hasta, escenario = 'min' }) {
+                                     { hoy, hasta, escenario = 'min', escenarioGastos = 'min' }) {
   const eventos = eventosDePlan(planItems, hoy, hasta, escenario);
 
   tarjetas.filter((t) => !t.archivada).forEach((tarjeta) => {
@@ -155,8 +177,10 @@ export function construirLineaTiempo({ planItems, tarjetas, movimientos, compras
     const gastos = planItems.filter(
       (i) => i.activo && i.clase === 'gasto' && i.variabilidad === 'fijo'
           && i.tarjeta_id === tarjeta.id);
+    const variables = planItems.filter((i) => esGastoVariable(i) && i.tarjeta_id === tarjeta.id);
     eventos.push(...eventosDeTarjeta(
-      tarjeta, sinCuotasYaPagadas(suyos, compras), gastos, hoy, hasta));
+      tarjeta, sinCuotasYaPagadas(suyos, compras), gastos, hoy, hasta,
+      { variables, escenarioGastos }));
   });
 
   return eventos.sort((a, b) =>

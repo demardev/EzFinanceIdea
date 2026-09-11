@@ -143,3 +143,34 @@ describir('asignar — serie diaria', (caso) => {
     igual(c.libreTotal, 600);
   });
 });
+
+/* Un sobre corto lo cubre lo que sobró de los anteriores, y se ve: así un
+   sobre solo queda en rojo cuando de verdad no alcanza el dinero. */
+describir('asignar — un sobre cubre al siguiente', (caso) => {
+  const conSaldo = (saldo) => asignar({
+    eventos: [ingreso('Comisión', '2026-09-10', 100), obligacion('BAC', '2026-09-28', 150)],
+    saldos: { banco: saldo }, colchon: 0, desde: '2026-09-01', hasta: '2026-09-30',
+  });
+
+  caso('lo que sobró de un sobre cubre al que se queda corto', () => {
+    const r = conSaldo(800);
+    igual(r.sobres.map((s) => `${s.nombre} ${s.libre}`), ['Saldo de hoy 750', 'Comisión 0']);
+    igual(r.sobres[1].traspasos, [{ nombre: 'Saldo de hoy', fecha: '2026-09-01', monto: 50 }]);
+    igual(r.sobres[0].traspasos, [{ nombre: 'Comisión', fecha: '2026-09-10', monto: -50 }]);
+    igual(r.faltantes, []);
+  });
+
+  caso('si antes no sobra lo suficiente, queda en rojo solo lo que de verdad falta', () => {
+    const r = conSaldo(20);
+    igual(r.sobres[1].libre, -30);
+    igual(r.faltantes.map((f) => f.monto), [30]);
+  });
+
+  caso('un sobre que alcanza no toca a los demás', () => {
+    const r = asignar({
+      eventos: [ingreso('Sueldo', '2026-09-10', 1000), obligacion('Renta', '2026-09-20', 700)],
+      saldos: { banco: 500 }, colchon: 0, desde: '2026-09-01', hasta: '2026-09-30',
+    });
+    igual(r.sobres.map((s) => s.traspasos), [[], []]);
+  });
+});

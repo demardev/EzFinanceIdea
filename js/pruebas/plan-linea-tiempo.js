@@ -2,7 +2,7 @@
 
 import { describir, igual, cierto } from './marco.js';
 import { ocurrenciasMensuales, eventosDePlan, colchonDelPeriodo, hayGastosVariables,
-         eventosDeTarjeta, construirLineaTiempo } from '../calc/plan/linea-tiempo.js';
+         ingresosSinFecha, construirLineaTiempo } from '../calc/plan/linea-tiempo.js';
 import { asignar } from '../calc/plan/asignar.js';
 
 const ITEMS = [
@@ -50,14 +50,22 @@ describir('línea de tiempo — eventos del plan', (caso) => {
     igual(sueldo.cuentaId, 'banco');
   });
 
-  caso('los ingresos variables usan el mínimo en el escenario conservador', () => {
-    const eventos = eventosDePlan(ITEMS, '2026-09-01', '2026-09-30', 'min');
-    igual(eventos.find((e) => e.nombre === 'Freelance').monto, 5000);
+  caso('un ingreso variable con día usa el mínimo en el escenario conservador', () => {
+    const conDia = ITEMS.map((i) => (i.nombre === 'Freelance' ? { ...i, dia_mes: 20 } : i));
+    const freelance = eventosDePlan(conDia, '2026-09-01', '2026-09-30', 'min')
+      .find((e) => e.nombre === 'Freelance');
+    igual(`${freelance.fecha} ${freelance.monto}`, '2026-09-20 5000');
   });
 
-  caso('un ingreso variable sin día cae al inicio del rango', () => {
+  /* Un ingreso incierto y sin fecha no paga nada hasta que llega: cuando lo
+     registras como movimiento ya está en el saldo de hoy. */
+  caso('un ingreso variable sin día no se agenda', () => {
     const eventos = eventosDePlan(ITEMS, '2026-09-08', '2026-09-30', 'min');
-    igual(eventos.find((e) => e.nombre === 'Freelance').fecha, '2026-09-08');
+    igual(eventos.some((e) => e.nombre === 'Freelance'), false);
+  });
+
+  caso('se puede saber cuáles quedaron fuera', () => {
+    igual(ingresosSinFecha(ITEMS), ['Freelance']);
   });
 
   caso('los gastos fijos con cuenta son obligaciones en su día', () => {
@@ -113,56 +121,20 @@ describir('línea de tiempo — colchón de variables', (caso) => {
     igual(hayGastosVariables(ITEMS.filter((i) => i.nombre !== 'Comida')), false);
   });
 
+  caso('un variable con tarjeta no va al colchón: va al pago de su tarjeta', () => {
+    const conTarjeta = [...ITEMS, { id: 'p7', nombre: 'Maquillaje', clase: 'gasto',
+      variabilidad: 'variable', monto_min: 20, monto_max: 60, tarjeta_id: 'bbva', activo: true }];
+    igual(colchonDelPeriodo(conTarjeta, 'min', '2026-09-01', '2026-09-30'), 3000);   // solo Comida
+  });
+
+  caso('uno con tarjeta sí cuenta para no mostrar el aviso', () => {
+    igual(hayGastosVariables([{ clase: 'gasto', variabilidad: 'variable',
+                                tarjeta_id: 'bbva', activo: true }]), true);
+  });
+
   caso('un gasto variable pausado tampoco cuenta', () => {
     const pausado = ITEMS.map((i) => (i.nombre === 'Comida' ? { ...i, activo: false } : i));
     igual(hayGastosVariables(pausado), false);
-  });
-});
-
-describir('línea de tiempo — pagos de tarjeta', (caso) => {
-  const tarjeta = { id: 'bbva', nombre: 'BBVA', dia_corte: 15, dia_limite_pago: 5,
-                    limite_credito: 50000, cuenta_pago_id: 'banco' };
-  const cargo = (monto, fecha) => ({ tipo: 'egreso', monto, fecha, tarjeta_id: 'bbva' });
-
-  caso('el saldo al corte vence en su fecha límite', () => {
-    // Hoy 20/sep: último corte 15/sep, vence 05/oct.
-    const eventos = eventosDeTarjeta(tarjeta, [cargo(3000, '2026-09-10')], [],
-                                     '2026-09-20', '2026-10-31');
-    const primero = eventos[0];
-    igual(primero.clase, 'obligacion');
-    igual(primero.monto, 3000);
-    igual(primero.fecha, '2026-10-05');
-    igual(primero.cuentaId, 'banco');
-  });
-
-  caso('proyecta el corte siguiente con lo del ciclo abierto', () => {
-    const eventos = eventosDeTarjeta(tarjeta, [cargo(3000, '2026-09-10'), cargo(800, '2026-09-18')],
-                                     [], '2026-09-20', '2026-11-30');
-    igual(eventos.length, 2);
-    igual(eventos[1].monto, 800);
-    igual(eventos[1].fecha, '2026-11-05');   // corte 15/oct -> vence 05/nov
-  });
-
-  caso('las cuotas futuras caen en el corte que les toca', () => {
-    const cuota = { tipo: 'egreso', monto: 500, fecha: '2026-10-20', tarjeta_id: 'bbva',
-                    compra_id: 'c1', cuota_num: 2, cuota_total: 6 };
-    const eventos = eventosDeTarjeta(tarjeta, [cuota], [], '2026-09-20', '2026-12-31');
-    // Cae después del corte del 15/oct -> entra al corte del 15/nov, vence 05/dic.
-    const conCuota = eventos.find((e) => e.monto === 500);
-    igual(conCuota.fecha, '2026-12-05');
-  });
-
-  caso('un gasto fijo cargado a la tarjeta se proyecta al corte', () => {
-    const netflix = [{ ...ITEMS[3] }];
-    const eventos = eventosDeTarjeta(tarjeta, [], netflix, '2026-09-20', '2026-11-30');
-    // Netflix el 5/oct entra al corte del 15/oct, que vence el 05/nov.
-    igual(eventos.length, 1);
-    igual(eventos[0].monto, 200);
-    igual(eventos[0].fecha, '2026-11-05');
-  });
-
-  caso('sin deuda ni proyección, no hay eventos', () => {
-    igual(eventosDeTarjeta(tarjeta, [], [], '2026-09-20', '2026-10-31'), []);
   });
 });
 

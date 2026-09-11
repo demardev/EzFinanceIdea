@@ -62,7 +62,27 @@ function repartirColchon(sobres, colchon) {
 }
 
 function sobreNuevo(nombre, fecha, monto) {
-  return { nombre, fecha, monto, asignaciones: [], colchon: 0, libre: 0 };
+  return { nombre, fecha, monto, asignaciones: [], colchon: 0, libre: 0, traspasos: [] };
+}
+
+/* Si un sobre se queda corto y los anteriores tienen sobrante, lo cubren: es
+   el mismo dinero, solo estaba etiquetado en otro sobre. Se anota en los dos
+   para que la cuenta de cada uno se pueda seguir. Un sobre queda en rojo solo
+   cuando antes no sobra lo suficiente. El más cercano da primero. */
+function cubrirConSobrantes(sobres) {
+  sobres.forEach((sobre, i) => {
+    for (let j = i - 1; j >= 0 && sobre.libre < 0; j -= 1) {
+      const donante = sobres[j];
+      if (donante.libre <= 0) continue;
+      const pasa = redondear(Math.min(donante.libre, -sobre.libre));
+      donante.libre = redondear(donante.libre - pasa);
+      sobre.libre = redondear(sobre.libre + pasa);
+      /* Con fecha: varios sobres se llaman igual ("Salario") y sin ella no se
+         sabría a cuál fue. */
+      donante.traspasos.push({ nombre: sobre.nombre, fecha: sobre.fecha, monto: -pasa });
+      sobre.traspasos.push({ nombre: donante.nombre, fecha: donante.fecha, monto: pasa });
+    }
+  });
 }
 
 /** Recorre la línea de tiempo llevando el saldo de cada cuenta. */
@@ -111,6 +131,7 @@ export function asignar({ eventos, saldos, colchon = 0, desde, hasta }) {
   sobres.forEach((s) => {
     s.libre = redondear(s.monto - sumar(...s.asignaciones.map((a) => a.monto)) - s.colchon);
   });
+  cubrirConSobrantes(sobres);
 
   const serie = serieDiaria(desde, hasta, { saldoInicial, deltas });
   const diaMasAjustado = serie.reduce((peor, p) => (p.total < peor.total ? p : peor), serie[0]);

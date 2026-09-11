@@ -28,9 +28,23 @@ function lineaSobre(a) {
     </div>`;
 }
 
+/* Lo que un sobre le pasó a otro, o recibió de uno anterior: sin esta línea
+   el Libre de los dos no cuadraría con lo que se ve. */
+function lineaTraspaso(t) {
+  const recibe = t.monto > 0;
+  return `
+    <div class="sobre-linea">
+      <span class="crece truncar">${recibe ? 'Cubierto con lo que sobró de' : 'Cubre a'}
+        ${escapar(t.nombre)} <span class="tenue-2">· ${formatearFecha(t.fecha)}</span></span>
+      <span class="monto ${recibe ? 'pos' : 'tenue'}">
+        ${recibe ? '+' : '−'}${textoMonto(Math.abs(t.monto))}</span>
+    </div>`;
+}
+
 function contenido(s) {
   return `
     ${s.asignaciones.map(lineaSobre).join('')}
+    ${(s.traspasos ?? []).map(lineaTraspaso).join('')}
     ${s.colchon > 0 ? `
       <div class="sobre-linea">
         <span class="crece truncar">Colchón de gastos variables</span>

@@ -124,8 +124,17 @@ function avisoSinVariables() {
     + 'que el veredicto sea real.', 'warn');
 }
 
+/* Decir qué ingresos no se cuentan: si no, un ingreso que desaparece del plan
+   parece un error. */
+function notaSinFecha(nombres) {
+  if (!nombres.length) return '';
+  return `<p class="tenue-2" style="font-size:12.5px">No cuento
+    ${nombres.map(escapar).join(', ')}: los ingresos variables sin día fijo entran al
+    plan cuando los registras como movimiento.</p>`;
+}
+
 export function pintarPlan(contenedor, {
-  v, base, nombres, horizonte, horizontes, hasta, sinVariables = false,
+  v, base, nombres, horizonte, horizontes, hasta, sinVariables = false, sinFecha = [],
 }) {
   if (v.nivel === 'vacio') {
     contenedor.innerHTML = `
@@ -139,6 +148,7 @@ export function pintarPlan(contenedor, {
       ${veredicto(v)}
       ${sinVariables ? avisoSinVariables() : ''}
       ${alertas(v, nombres)}
+      ${notaSinFecha(sinFecha)}
       ${rango(v)}
       ${bloqueSobres(base.sobres)}
       ${bloqueGrafica(base)}

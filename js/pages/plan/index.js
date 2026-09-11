@@ -3,8 +3,8 @@
 
 import { pintarPlan } from './vista.js';
 import { alternarSobre } from './sobres.js';
-import { construirLineaTiempo, colchonDelPeriodo,
-         hayGastosVariables } from '../../calc/plan/linea-tiempo.js';
+import { construirLineaTiempo, colchonDelPeriodo, hayGastosVariables,
+         ingresosSinFecha } from '../../calc/plan/linea-tiempo.js';
 import { asignar } from '../../calc/plan/asignar.js';
 import { evaluar } from '../../calc/plan/veredicto.js';
 import { saldosPorCuenta } from '../../calc/saldos.js';
@@ -27,7 +27,7 @@ const CLAVE_HORIZONTE = 'finanzas.horizonte';
  * es el colchón de GASTOS variables.
  */
 function correr(datos, saldos, hoy, hasta, escenarioGastos) {
-  const eventos = construirLineaTiempo(datos, { hoy, hasta, escenario: 'min' });
+  const eventos = construirLineaTiempo(datos, { hoy, hasta, escenario: 'min', escenarioGastos });
   const colchon = colchonDelPeriodo(datos.planItems, escenarioGastos, hoy, hasta);
   return asignar({ eventos, saldos, colchon, desde: hoy, hasta });
 }
@@ -38,58 +38,64 @@ function indiceDeNombres({ cuentas, tarjetas }) {
   return mapa;
 }
 
-export async function montarPlan(contenedor, contexto) {
-  const { planItems, cuentas, tarjetas, movimientos, compras } = contexto;
-  let horizonte = localStorage.getItem(CLAVE_HORIZONTE) || 'mes';
-  let datos = null;
-  let saldos = {};
+async function cargarDatos({ planItems, cuentas, tarjetas, movimientos, compras }) {
+  const [items, cts, tjs, movs, cmps] = await Promise.all([
+    planItems.listarActivos(), cuentas.listarActivas(),
+    tarjetas.listarActivas(), movimientos.listar(), compras.listar(),
+  ]);
+  return {
+    datos: { planItems: items, tarjetas: tjs, movimientos: movs, compras: cmps, cuentas: cts },
+    saldos: saldosPorCuenta(cts, movs),
+  };
+}
 
-  async function cargar() {
-    const [items, cts, tjs, movs, cmps] = await Promise.all([
-      planItems.listarActivos(), cuentas.listarActivas(),
-      tarjetas.listarActivas(), movimientos.listar(), compras.listar(),
-    ]);
-    datos = { planItems: items, tarjetas: tjs, movimientos: movs, compras: cmps, cuentas: cts };
-    saldos = saldosPorCuenta(cts, movs);
-  }
+function pintarConDatos(contenedor, { datos, saldos, horizonte }) {
+  const hoy = hoyISO();
+  const hasta = HORIZONTES[horizonte].hasta(hoy);
+  /* Dos corridas: la base con los variables al mínimo y la pesimista al
+     máximo. La diferencia es la frase del rango. */
+  const base = correr(datos, saldos, hoy, hasta, 'min');
+  const pesimista = correr(datos, saldos, hoy, hasta, 'max');
 
-  function pintar() {
-    const hoy = hoyISO();
-    const hasta = HORIZONTES[horizonte].hasta(hoy);
-    /* Dos corridas: la base con los variables al mínimo y la pesimista al
-       máximo. La diferencia es la frase del rango. */
-    const base = correr(datos, saldos, hoy, hasta, 'min');
-    const pesimista = correr(datos, saldos, hoy, hasta, 'max');
+  pintarPlan(contenedor, {
+    v: evaluar({ base, pesimista }),
+    base,
+    nombres: indiceDeNombres(datos),
+    horizonte,
+    hasta,
+    sinVariables: !hayGastosVariables(datos.planItems),
+    sinFecha: ingresosSinFecha(datos.planItems),
+    horizontes: Object.entries(HORIZONTES).map(([k, h]) => [k, h.etiqueta]),
+  });
+}
 
-    pintarPlan(contenedor, {
-      v: evaluar({ base, pesimista }),
-      base,
-      nombres: indiceDeNombres(datos),
-      horizonte,
-      hasta,
-      sinVariables: !hayGastosVariables(datos.planItems),
-      horizontes: Object.entries(HORIZONTES).map(([k, h]) => [k, h.etiqueta]),
-    });
-  }
-
+/* Se engancha una sola vez: el contenedor es nuevo en cada navegación y los
+   listeners delegados sobreviven a los repintados. */
+function conectar(contenedor, estado, repintar) {
   contenedor.addEventListener('click', (evento) => {
     const boton = evento.target.closest('[data-sobre]');
     if (!boton) return;
     alternarSobre(boton.dataset.sobre, boton.dataset.abierto === '1');
-    pintar();
+    repintar();
   });
 
   contenedor.addEventListener('change', (evento) => {
     if (evento.target.id !== 'sel-horizonte') return;
-    horizonte = evento.target.value;
-    localStorage.setItem(CLAVE_HORIZONTE, horizonte);
-    pintar();
+    estado.horizonte = evento.target.value;
+    localStorage.setItem(CLAVE_HORIZONTE, estado.horizonte);
+    repintar();
   });
+}
+
+export async function montarPlan(contenedor, contexto) {
+  const estado = { horizonte: localStorage.getItem(CLAVE_HORIZONTE) || 'mes', datos: null, saldos: {} };
+  const repintar = () => pintarConDatos(contenedor, estado);
+  conectar(contenedor, estado, repintar);
 
   contenedor.innerHTML = '<p class="tenue">Calculando…</p>';
   try {
-    await cargar();
-    pintar();
+    Object.assign(estado, await cargarDatos(contexto));
+    repintar();
   } catch (e) {
     contenedor.innerHTML = '<p class="campo-error">No se pudo calcular el plan.</p>';
     avisoError(e);
