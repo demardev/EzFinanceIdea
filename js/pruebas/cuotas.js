@@ -107,6 +107,28 @@ describir('regeneración de cuotas al editar', (caso) => {
     igual(sumar(...plan.aCrear.map((c) => c.monto)), 1200);
   });
 
+  /* Una compra a meses no cambia de fecha en la vida real: si la fecha cambia
+     es que se registró mal, y entonces las fechas viejas nunca fueron
+     ciertas. Los MONTOS cobrados se respetan; las FECHAS se corrigen todas. */
+  caso('corregir la fecha mueve también las cuotas ya cobradas', () => {
+    const plan = planRegeneracion({ ...COMPRA, fecha_compra: '2026-09-20' }, existentes, '2026-11-20');
+    igual(plan.aMover, [
+      { id: 'm1', fecha: '2026-09-20' },
+      { id: 'm2', fecha: '2026-10-20' },
+      { id: 'm3', fecha: '2026-11-20' },
+    ]);
+    igual(plan.aCrear[0].fecha, '2026-12-20');   // y las pendientes, desde la nueva
+  });
+
+  caso('sin cambiar la fecha no se mueve ninguna cobrada', () => {
+    igual(planRegeneracion({ ...COMPRA, monto_total: 1500 }, existentes, '2026-11-20').aMover, []);
+  });
+
+  caso('al corregir la fecha, lo cobrado conserva su monto', () => {
+    const plan = planRegeneracion({ ...COMPRA, fecha_compra: '2026-09-20' }, existentes, '2026-11-20');
+    igual(sumar(...plan.aCrear.map((c) => c.monto)), 900);   // 1200 − 3 × 100 intactas
+  });
+
   caso('acortar el plazo por debajo de lo ya cobrado no borra historial', () => {
     const plan = planRegeneracion({ ...COMPRA, num_cuotas: 2 }, existentes, '2026-11-20');
     igual(plan.aCrear.length, 0);

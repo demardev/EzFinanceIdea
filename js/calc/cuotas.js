@@ -52,16 +52,24 @@ export function planRegeneracion(compra, cuotasExistentes, hoy = hoyISO()) {
       yaCobradas: cobradas.length,
       aBorrar: [],
       aCrear: [],
+      aMover: [],
       aviso: `Ya se cobraron ${cobradas.length} cuotas: no se puede acortar el plazo por debajo de eso.`,
     };
   }
+
+  /* Una compra a meses no cambia de fecha en la vida real: si cambió es que se
+     registró mal, y las fechas viejas nunca fueron ciertas. Las cobradas se
+     mueven a su fecha correcta; su MONTO no se toca. */
+  const aMover = cobradas
+    .map((c) => ({ id: c.id, fecha: sumarMeses(compra.fecha_compra, c.cuota_num - 1) }))
+    .filter((m, i) => m.fecha !== cobradas[i].fecha);
 
   const yaPagado = sumar(...cobradas.map((c) => c.monto));
   const porRepartir = redondear(compra.monto_total - yaPagado);
   const montos = repartir(porRepartir, restantes);
   const aCrear = montos.map((monto, i) => cuota(compra, cobradas.length + i + 1, monto));
 
-  return { yaCobradas: cobradas.length, aBorrar, aCrear, aviso: '' };
+  return { yaCobradas: cobradas.length, aBorrar, aCrear, aMover, aviso: '' };
 }
 
 /** Para la lista del detalle: "3/12" y lo que falta por cobrar. */

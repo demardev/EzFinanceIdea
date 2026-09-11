@@ -28,12 +28,20 @@ export async function editarCompra({ compras, movimientos }, compra, datos) {
   if (plan.aviso) throw new Error(plan.aviso);
 
   const actualizada = await compras.actualizar(compra.id, datos);
-  await movimientos.eliminarPendientesDeCompra(compra.id, hoyISO());
-  await movimientos.crearVarios(planRegeneracion(actualizada, existentes, hoyISO()).aCrear);
+  const final = planRegeneracion(actualizada, existentes, hoyISO());
 
-  aviso(plan.yaCobradas
-    ? `Se regeneraron ${plural(plan.aCrear.length, 'cuota', 'cuotas')} pendientes.`
-    : 'Compra actualizada.');
+  /* El orden importa. Las pendientes se borran por su fecha VIEJA; si antes se
+     movieran las cobradas, una corrida hacia adelante quedaría con fecha
+     futura y el borrado se la llevaría. */
+  await movimientos.eliminarPendientesDeCompra(compra.id, hoyISO());
+  await Promise.all(final.aMover.map((m) => movimientos.actualizar(m.id, { fecha: m.fecha })));
+  await movimientos.crearVarios(final.aCrear);
+
+  aviso(final.aMover.length
+    ? `Fechas corregidas: ${plural(final.aMover.length, 'cuota cobrada', 'cuotas cobradas')} y las pendientes.`
+    : plan.yaCobradas
+      ? `Se regeneraron ${plural(plan.aCrear.length, 'cuota', 'cuotas')} pendientes.`
+      : 'Compra actualizada.');
   return actualizada;
 }
 
