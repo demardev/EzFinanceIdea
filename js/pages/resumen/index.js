@@ -30,12 +30,19 @@ function ultimosDe(todos, ambito, hoy) {
   return todos.filter((m) => m.fecha <= hoy && esDelAmbito(m, ambito)).slice(0, 5);
 }
 
+/* El mes es lo que YA pasó, igual que en Movimientos: una cuota fechada el 29
+   no es gasto del día 11. Sin este corte el "salió" cobra dinero que sigue en
+   la cuenta, y las dos pantallas dirían cosas distintas del mismo mes. */
+function loQueVaDelMes(delMes, hoy) {
+  return delMes.filter((m) => m.fecha <= hoy);
+}
+
 function estadoDeResumen({ hoy, lista, todos, delMes, tjs, cmps, items, negocio }) {
   return {
     cuentas: lista,
     saldos: saldosPorCuenta(lista, todos),
     patrimonio: patrimonioLiquido(lista, todos),
-    totales: totalesDelMes(soloPersonales(delMes)),
+    totales: totalesDelMes(soloPersonales(loQueVaDelMes(delMes, hoy))),
     deuda: deudaTotalDeTarjetas(tjs, todos, cmps),
     vencimientos: proximosVencimientos(
       { tarjetas: tjs, movimientos: todos, compras: cmps, planItems: items },
