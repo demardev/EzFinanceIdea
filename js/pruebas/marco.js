@@ -17,16 +17,24 @@ export function cierto(condicion, nota = '') {
   if (!condicion) throw new Error(nota || 'se esperaba verdadero');
 }
 
+/* Se espera cada caso: los hay async —los repos devuelven promesas— y si no
+   se esperaran, pasarían siempre sin haberse ejecutado. `await` sobre una
+   función normal no cambia nada. */
 /** Corre todo y pinta la lista de pasa/falla en el contenedor dado. */
-export function correr(contenedor) {
+export async function correr(contenedor) {
   let pasan = 0, fallan = 0;
-  const partes = grupos.map(({ nombre, casos }) => {
-    const filas = casos.map(({ titulo, fn }) => {
-      try { fn(); pasan++; return `<li class="ok">✓ ${titulo}</li>`; }
-      catch (e) { fallan++; return `<li class="mal">✗ ${titulo}<br><small>${e.message}</small></li>`; }
-    });
-    return `<section><h2>${nombre}</h2><ul>${filas.join('')}</ul></section>`;
-  });
+  const partes = [];
+  for (const { nombre, casos } of grupos) {
+    const filas = [];
+    for (const { titulo, fn } of casos) {
+      try { await fn(); pasan++; filas.push(`<li class="ok">✓ ${titulo}</li>`); }
+      catch (e) {
+        fallan++;
+        filas.push(`<li class="mal">✗ ${titulo}<br><small>${e.message}</small></li>`);
+      }
+    }
+    partes.push(`<section><h2>${nombre}</h2><ul>${filas.join('')}</ul></section>`);
+  }
   const clase = fallan ? 'mal' : 'ok';
   contenedor.innerHTML =
     `<p class="marcador ${clase}">${pasan} pasan · ${fallan} fallan</p>` + partes.join('');

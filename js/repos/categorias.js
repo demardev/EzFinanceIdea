@@ -4,7 +4,7 @@
 import { crearRepo } from './base.js';
 
 export function repoCategorias(cliente) {
-  const base = crearRepo(cliente, 'categorias', { orden: 'orden.asc' });
+  const base = crearRepo(cliente, 'categorias', { orden: 'orden.asc', cachear: true });
 
   function listarActivas() {
     return base.listar({ archivada: 'eq.false' });

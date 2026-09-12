@@ -6,7 +6,7 @@
 import { crearRepo } from './base.js';
 
 export function repoCompras(cliente) {
-  const base = crearRepo(cliente, 'compras_cuotas', { orden: 'fecha_compra.desc' });
+  const base = crearRepo(cliente, 'compras_cuotas', { orden: 'fecha_compra.desc', cachear: true });
 
   function listarDeTarjeta(tarjetaId) {
     return base.listar({ tarjeta_id: `eq.${tarjetaId}` });

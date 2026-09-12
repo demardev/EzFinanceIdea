@@ -91,6 +91,18 @@ describir('saldos — lo que todavía no pasa no cuenta', (caso) => {
                             '2026-09-11'), 100);
   });
 
+  /* Para no bajar el historial entero, Postgres suma los movimientos por
+     ruteo y devuelve filas con la misma forma: tipo, cuentas y monto. La regla
+     del dinero no se mueve de aquí, allá solo se suma. */
+  caso('una fila agregada se lee igual que un movimiento suelto', () => {
+    const agregadas = [
+      { tipo: 'ingreso', cuenta_id: 'banco', monto: 2400 },
+      { tipo: 'egreso', cuenta_id: 'banco', monto: 300 },
+      { tipo: 'transferencia', cuenta_id: 'banco', cuenta_destino_id: 'efectivo', monto: 500 },
+    ];
+    igual(saldoDeCuenta(banco, agregadas, '2026-09-11'), 1700);   // 100 + 2400 − 300 − 500
+  });
+
   caso('un movimiento sin fecha se cuenta: no se pierde dinero en silencio', () => {
     igual(saldoDeCuenta(banco, [{ tipo: 'ingreso', monto: 40, cuenta_id: 'banco' }],
                         '2026-09-11'), 140);

@@ -5,7 +5,7 @@
 import { crearRepo } from './base.js';
 
 export function repoTarjetas(cliente) {
-  const base = crearRepo(cliente, 'tarjetas', { orden: 'orden.asc' });
+  const base = crearRepo(cliente, 'tarjetas', { orden: 'orden.asc', cachear: true });
 
   function listarActivas() {
     return base.listar({ archivada: 'eq.false' });

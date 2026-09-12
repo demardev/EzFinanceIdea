@@ -39,13 +39,23 @@ function indiceDeNombres({ cuentas, tarjetas }) {
 }
 
 async function cargarDatos({ planItems, cuentas, tarjetas, movimientos, compras }) {
-  const [items, cts, tjs, movs, cmps] = await Promise.all([
-    planItems.listarActivos(), cuentas.listarActivas(),
-    tarjetas.listarActivas(), movimientos.listar(), compras.listar(),
+  const hoy = hoyISO();
+  const [items, cts, tjs, totales, deTarjetas, futuros, cmps] = await Promise.all([
+    planItems.listarActivos(), cuentas.listarActivas(), tarjetas.listarActivas(),
+    movimientos.totalesPorCuenta(hoy),   // el saldo de hoy, ya sumado
+    movimientos.listarDeTarjetas(),      // lo que proyecta cada tarjeta
+    movimientos.listarFuturos(hoy),      // los pendientes sueltos
+    compras.listar(),
   ]);
+  /* Una cuota futura está en las dos listas: si no se deduplica, el plan la
+     cobraría dos veces. */
+  const porId = new Map([...deTarjetas, ...futuros].map((m) => [m.id, m]));
   return {
-    datos: { planItems: items, tarjetas: tjs, movimientos: movs, compras: cmps, cuentas: cts },
-    saldos: saldosPorCuenta(cts, movs),
+    datos: {
+      planItems: items, tarjetas: tjs, compras: cmps, cuentas: cts,
+      movimientos: [...porId.values()],
+    },
+    saldos: saldosPorCuenta(cts, totales, hoy),
   };
 }
 

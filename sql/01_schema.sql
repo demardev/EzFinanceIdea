@@ -150,6 +150,27 @@ begin
   end loop;
 end $$;
 
+-- ------------------------------------------------------------- saldos ------
+-- Suma los movimientos por combinación de ruteo para que el cliente no tenga
+-- que bajarse el historial entero solo para calcular saldos.
+--
+-- Devuelve filas con la MISMA forma que un movimiento (tipo, las dos cuentas y
+-- un monto), así que deltaEnCuenta() de js/calc/saldos.js las lee igual: la
+-- regla del dinero NO se duplica aquí, esto solo suma.
+--
+-- `hasta` lo manda el cliente con SU hoy: el del servidor es UTC y adelantaría
+-- el corte unas horas, contando como tuyo dinero que todavía no llega.
+create or replace function totales_de_movimientos(hasta date)
+returns table (tipo tipo_mov, cuenta_id uuid, cuenta_destino_id uuid, monto numeric)
+language sql stable security invoker as $$
+  select m.tipo, m.cuenta_id, m.cuenta_destino_id, sum(m.monto)
+  from movimientos m
+  where m.user_id = auth.uid() and m.fecha <= hasta
+  group by m.tipo, m.cuenta_id, m.cuenta_destino_id;
+$$;
+
+grant execute on function totales_de_movimientos(date) to authenticated;
+
 -- ------------------------------------------------------- datos por defecto -
 create or replace function sembrar_datos_iniciales()
 returns json language plpgsql security invoker as $$

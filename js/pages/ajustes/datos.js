@@ -93,6 +93,9 @@ export function montarDatos(contenedor, contexto) {
       const respaldo = revisarRespaldo(texto);
       if (!await confirmarImportacion(respaldo)) return;
       const n = await importarTodo(cliente, respaldo);
+      /* Se escribió por fuera de los repos, así que lo guardado en memoria
+         quedó viejo. */
+      Object.values(contexto).forEach((repo) => repo?.olvidar?.());
       aviso(`Se importaron ${plural(n, 'fila', 'filas')}.`);
     } catch (e) { fallar(e); }
   }

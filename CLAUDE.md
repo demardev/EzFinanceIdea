@@ -52,6 +52,12 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
 - `js/calc/` son funciones puras sin red ni DOM, y **todo lo que vive ahí va con pruebas** en
   `test.html` (los casos se escriben antes que la implementación).
 - Solo `js/api/client.js` hace `fetch` y sabe que existe Supabase.
+- **Cero dependencias y cero scripts externos.** Ni npm, ni CDN, ni fuentes remotas: todo
+  se sirve del mismo origen. No es estilo, es seguridad — el token de sesión vive en
+  `localStorage`, así que cualquier script de terceros comprometido entregaría la sesión, y
+  ese es el vector más probable contra esta app. Lo que la protege hoy es que no existe.
+  Por lo mismo, todo texto del usuario se pinta con `escapar()`; `confirmar()` escapa su
+  título y su mensaje, y los toast usan `textContent`.
 - Las vistas no hacen `fetch` ni aritmética de dinero.
 - Fechas siempre `DD/mmm/YYYY`. Nunca `new Date('2026-09-08')`: ese constructor lee UTC y corre
   el día. Usar `js/calc/fechas.js`.

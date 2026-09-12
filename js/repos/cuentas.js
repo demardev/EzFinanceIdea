@@ -4,7 +4,7 @@
 import { crearRepo } from './base.js';
 
 export function repoCuentas(cliente) {
-  const base = crearRepo(cliente, 'cuentas', { orden: 'orden.asc' });
+  const base = crearRepo(cliente, 'cuentas', { orden: 'orden.asc', cachear: true });
 
   /** Las que se muestran en la app: sin archivar. */
   function listarActivas() {

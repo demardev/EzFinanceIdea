@@ -4,7 +4,7 @@
 import { crearRepo } from './base.js';
 
 export function repoPlanItems(cliente) {
-  const base = crearRepo(cliente, 'plan_items', { orden: 'orden.asc' });
+  const base = crearRepo(cliente, 'plan_items', { orden: 'orden.asc', cachear: true });
 
   /** Solo los activos: los pausados no entran al plan. */
   function listarActivos() {

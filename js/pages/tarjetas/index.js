@@ -45,7 +45,7 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
   async function cargar() {
     const [t, c, k, m, p] = await Promise.all([
       tarjetas.listar(), cuentas.listarActivas(), categorias.listarActivas(),
-      movimientos.listar(), compras.listar(),
+      movimientos.listarDeTarjetas(), compras.listar(),   // solo lo que toca tarjetas
     ]);
     datos = { tarjetas: t, cuentas: c, categorias: k, movimientos: m, compras: p };
   }

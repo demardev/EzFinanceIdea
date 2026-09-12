@@ -38,15 +38,18 @@ function loQueVaDelMes(delMes, hoy) {
   return delMes.filter((m) => m.fecha <= hoy);
 }
 
-function estadoDeResumen({ hoy, lista, todos, delMes, tjs, cmps, items, negocio }) {
+function estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes, tjs, cmps, items, negocio }) {
   return {
     cuentas: lista,
-    saldos: saldosPorCuenta(lista, todos),
-    patrimonio: patrimonioLiquido(lista, todos),
-    totales: totalesDelMes(soloPersonales(loQueVaDelMes(delMes, hoy))),
-    deuda: deudaTotalDeTarjetas(tjs, todos, cmps),
+    /* `totales` son los movimientos ya sumados por Postgres; `deTarjetas`,
+       solo los que tocan una tarjeta. Antes esto bajaba el historial entero
+       tres veces por vuelta a la app. */
+    saldos: saldosPorCuenta(lista, totales, hoy),
+    patrimonio: patrimonioLiquido(lista, totales, hoy),
+    totalesMes: totalesDelMes(soloPersonales(loQueVaDelMes(delMes, hoy))),
+    deuda: deudaTotalDeTarjetas(tjs, deTarjetas, cmps),
     vencimientos: proximosVencimientos(
-      { tarjetas: tjs, movimientos: todos, compras: cmps, planItems: items },
+      { tarjetas: tjs, movimientos: deTarjetas, compras: cmps, planItems: items },
       { hoy, dias: 14 }),
     negocio,
   };
@@ -99,20 +102,25 @@ export async function montarResumen(contenedor, contexto) {
   contenedor.innerHTML = hayRodillo('patrimonio') ? '' : '<p class="tenue">Cargando…</p>';
   try {
     const hoy = hoyISO();
-    const [lista, todos, delMes, tjs, cmps, items] = await Promise.all([
+    const [lista, totales, deTarjetas, recientes, delMes, tjs, cmps, items] = await Promise.all([
       cuentas.listarActivas(),
-      movimientos.listar(),               // el saldo real necesita todo el historial
+      movimientos.totalesPorCuenta(hoy),    // saldos ya sumados: unas pocas filas
+      movimientos.listarDeTarjetas(),       // deuda y vencimientos
+      movimientos.listarUltimos(hoy),       // la lista corta de abajo
       movimientos.listarDelMes(mesDe(hoy)),
       tarjetas.listarActivas(),
       compras.listar(),
       planItems.listarActivos(),
     ]);
     const { negocio, pendientes } = await datosDeNegocio(contexto, mesDe(hoy));
-    const estado = estadoDeResumen({ hoy, lista, todos, delMes, tjs, cmps, items, negocio });
+    const estado = estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes,
+                                     tjs, cmps, items, negocio });
     let ambito = ambitoGuardado();
 
     const pintar = () => {
-      pintarResumen(contenedor, { ...estado, ambito, ultimos: ultimosDe(todos, ambito, hoy) });
+      pintarResumen(contenedor, { ...estado, ambito,
+                                  totales: estado.totalesMes,
+                                  ultimos: ultimosDe(recientes, ambito, hoy) });
       conectarPorCobrar(contenedor, contexto, pendientes);
       conectarDeslizar(contenedor);          // hay que rehacerlo en cada repintado
       animarRodillos(contenedor);
@@ -125,7 +133,7 @@ export async function montarResumen(contenedor, contexto) {
       guardarAmbito(valor);
       pintar();
     });
-    conectarMovimientos(contenedor, contexto, () => todos, recargar);
+    conectarMovimientos(contenedor, contexto, () => recientes, recargar);
     conectarArqueo(contenedor, contexto, lista, recargar);
   } catch (e) {
     contenedor.innerHTML = '<p class="campo-error">No se pudo cargar.</p>';

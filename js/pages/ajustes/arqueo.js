@@ -106,8 +106,9 @@ function abrirArqueo(cuenta, { esperado, alAjustar }) {
    mañana haría "cuadrar" con dinero que todavía no existe. */
 export async function abrirArqueoDe(cuenta, contexto, alTerminar) {
   const { movimientos, categorias } = contexto;
-  const movs = await movimientos.listar();
-  const esperado = saldoDeCuenta(cuenta, movs);   // saldoDeCuenta ya descarta el futuro
+  /* Ya sumado por Postgres, y sin el futuro: el arqueo compara contra lo que
+     de verdad debería haber en la caja hoy. */
+  const esperado = saldoDeCuenta(cuenta, await movimientos.totalesPorCuenta(hoyISO()));
 
   abrirArqueo(cuenta, {
     esperado,
