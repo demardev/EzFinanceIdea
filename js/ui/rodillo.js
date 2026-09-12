@@ -13,7 +13,7 @@ import { escapar } from './texto.js';
 
 const anteriores = new Map();
 const DIGITOS = [...Array(10).keys()].map((d) => `<span>${d}</span>`).join('');
-const RETRASO = 22;          // ms entre dígito y dígito, de izquierda a derecha
+const RETRASO = 30;          // ms entre dígito y dígito, de izquierda a derecha
 
 /** ¿Ya se pintó esta cifra alguna vez en esta sesión? */
 export function hayRodillo(id) {
