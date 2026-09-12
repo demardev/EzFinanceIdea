@@ -10,6 +10,9 @@ import { textoMonto } from '../../ui/privacidad.js';
 import { escapar } from '../../ui/texto.js';
 import { formatear } from '../../calc/dinero.js';
 import { DENOMINACIONES, arqueo } from '../../calc/arqueo.js';
+import { saldoDeCuenta } from '../../calc/saldos.js';
+import { hoyISO } from '../../calc/fechas.js';
+import { aviso } from '../../ui/toast.js';
 
 /* La denominación se escribe con formatear() y no con textoMonto(): es una
    etiqueta fija, no un dato tuyo que haya que esconder. */
@@ -77,7 +80,7 @@ function conectar(hoja, form, esperado) {
  *                  ya pasó
  * @param alAjustar (resultado) => Promise, registra el movimiento
  */
-export function abrirArqueo(cuenta, { esperado, alAjustar }) {
+function abrirArqueo(cuenta, { esperado, alAjustar }) {
   /* alGuardar() recibe los datos del formulario, no el formulario: las
      unidades se leen por data-den, así que hay que guardarse la referencia. */
   let formulario = null;
@@ -95,6 +98,31 @@ export function abrirArqueo(cuenta, { esperado, alAjustar }) {
       const r = arqueo(leerConteo(formulario), esperado);
       if (!r.ajuste) throw new Error('Cuadra exacto: no hay nada que ajustar.');
       await alAjustar(r);
+    },
+  });
+}
+
+/* El esperado se calcula solo con lo que YA pasó: un movimiento fechado
+   mañana haría "cuadrar" con dinero que todavía no existe. */
+export async function abrirArqueoDe(cuenta, contexto, alTerminar) {
+  const { movimientos, categorias } = contexto;
+  const movs = await movimientos.listar();
+  const esperado = saldoDeCuenta(cuenta, movs.filter((m) => m.fecha <= hoyISO()));
+
+  abrirArqueo(cuenta, {
+    esperado,
+    alAjustar: async (r) => {
+      const cats = await categorias.listarActivas();
+      const cat = cats.find((c) => c.tipo === r.ajuste.tipo && /ajuste de caja/i.test(c.nombre));
+      await movimientos.crear({
+        tipo: r.ajuste.tipo, monto: r.ajuste.monto, fecha: hoyISO(),
+        descripcion: 'Ajuste de caja', categoria_id: cat?.id ?? null,
+        cuenta_id: cuenta.id, cuenta_destino_id: null,
+        tarjeta_id: null, tarjeta_destino_id: null,
+        nota: `Contado ${formatear(r.contado)} contra ${formatear(r.esperado)} esperados.`,
+      });
+      aviso(`Ajuste registrado: ${formatear(r.ajuste.monto)}.`);
+      await alTerminar();
     },
   });
 }

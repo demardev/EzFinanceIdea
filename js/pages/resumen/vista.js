@@ -24,15 +24,20 @@ function cuandoTexto(dias) {
   return dias === 0 ? 'hoy' : `en ${dias} ${dias === 1 ? 'día' : 'días'}`;
 }
 
-function filaCuenta(cuenta, saldos) {
-  return `
-    <div class="lista-fila">
-      <span class="fila-cuerpo" style="cursor:default">
-        <span class="icono-caja">${icono(ICONO_POR_TIPO[cuenta.tipo] || 'wallet', 18)}</span>
-        <span class="crece truncar"><span class="titulo">${escapar(cuenta.nombre)}</span></span>
-        <span class="monto">${textoMonto(saldos[cuenta.id])}</span>
-      </span>
-    </div>`;
+/* Con el negocio encendido, la cuenta de efectivo abre el arqueo: es lo que
+   más se repite en el día, y desde aquí son dos toques menos que por Ajustes.
+   Las demás cuentas siguen sin hacer nada al tocarlas. */
+function filaCuenta(cuenta, saldos, contable) {
+  const cuerpo = `
+    <span class="icono-caja">${icono(ICONO_POR_TIPO[cuenta.tipo] || 'wallet', 18)}</span>
+    <span class="crece truncar"><span class="titulo">${escapar(cuenta.nombre)}</span></span>
+    ${contable ? '<span class="badge">contar</span>' : ''}
+    <span class="monto">${textoMonto(saldos[cuenta.id])}</span>`;
+
+  const interior = contable
+    ? `<button type="button" class="fila-cuerpo" data-arqueo="${cuenta.id}">${cuerpo}</button>`
+    : `<span class="fila-cuerpo" style="cursor:default">${cuerpo}</span>`;
+  return `<div class="lista-fila">${interior}</div>`;
 }
 
 /* Igual que en Movimientos: la fila abre el movimiento y se desliza para
@@ -138,7 +143,9 @@ export function pintarResumen(contenedor, e) {
       ${e.negocio ? panelNegocio(e.negocio) : ''}
       ${e.vencimientos.length
         ? seccion('Próximos vencimientos', e.vencimientos.map(filaVencimiento), '') : ''}
-      ${seccion('Cuentas', e.cuentas.map((c) => filaCuenta(c, e.saldos)),
+      ${seccion('Cuentas',
+                e.cuentas.map((c) => filaCuenta(c, e.saldos,
+                  Boolean(e.negocio) && c.tipo === 'efectivo')),
                 'Todavía no hay cuentas.')}
       ${seccion('Últimos movimientos', e.ultimos.map(filaMovimiento),
                 e.ambito ? 'Nada de este ámbito todavía.' : 'Aún no registras nada. Usa el botón +.',

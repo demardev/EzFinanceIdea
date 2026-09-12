@@ -10,6 +10,7 @@ import { ambitoGuardado, guardarAmbito, esDelAmbito } from '../../ui/ambito.js';
 import { conectarPastillas } from '../../ui/pastillas.js';
 import { animarRodillos, hayRodillo } from '../../ui/rodillo.js';
 import { conectarMovimientos } from './acciones.js';
+import { abrirArqueoDe } from '../ajustes/arqueo.js';
 import { conectarDeslizar } from '../../ui/deslizar.js';
 import { avisoError } from '../../ui/toast.js';
 
@@ -81,6 +82,18 @@ function conectarPorCobrar(contenedor, contexto, pendientes) {
   });
 }
 
+/* Se engancha una vez: el contenedor es nuevo en cada navegación. */
+function conectarArqueo(contenedor, contexto, cuentas, alTerminar) {
+  contenedor.addEventListener('click', async (evento) => {
+    const boton = evento.target.closest('[data-arqueo]');
+    if (!boton) return;
+    try {
+      await abrirArqueoDe(cuentas.find((c) => c.id === boton.dataset.arqueo),
+                          contexto, alTerminar);
+    } catch (e) { avisoError(e); }
+  });
+}
+
 export async function montarResumen(contenedor, contexto) {
   const { cuentas, movimientos, tarjetas, compras, planItems } = contexto;
   contenedor.innerHTML = hayRodillo('patrimonio') ? '' : '<p class="tenue">Cargando…</p>';
@@ -113,6 +126,7 @@ export async function montarResumen(contenedor, contexto) {
       pintar();
     });
     conectarMovimientos(contenedor, contexto, () => todos, recargar);
+    conectarArqueo(contenedor, contexto, lista, recargar);
   } catch (e) {
     contenedor.innerHTML = '<p class="campo-error">No se pudo cargar.</p>';
     avisoError(e);
