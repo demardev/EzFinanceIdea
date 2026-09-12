@@ -34,14 +34,25 @@
 /* --------------------------------------------------------------- campos --- */
 .campo{ display:flex; flex-direction:column; gap:6px; }
 .campo label{ font-size:13px; font-weight:550; color:var(--fg-2); }
+/* Alto DECLARADO y no heredado del contenido: si cada control decide su
+   propio alto, el de fecha se va 2px arriba del de texto y el select 2px
+   abajo, y la columna de campos se ve desalineada (en iOS, peor). */
+.campo input, .campo select{ height:48px; }
 .campo input, .campo select, .campo textarea{
   width:100%; min-height:var(--toque);
-  padding:11px 13px;
+  padding:0 13px;
   border:1px solid var(--line); border-radius:var(--r);
   background:var(--bg-2);
   font-size:16px;                     /* 16px o iOS hace zoom al enfocar */
   transition:border-color var(--transicion);
 }
+/* El navegador le da al input de fecha su propio alto y, en iOS, centra el
+   valor: se ve más grande y desalineado frente a los demás campos. Quitarle la
+   apariencia nativa lo devuelve a la misma caja que un campo de texto; el
+   selector de fecha del sistema se sigue abriendo igual al tocarlo. */
+.campo input[type="date"]{ -webkit-appearance:none; appearance:none; }
+.campo input[type="date"]::-webkit-date-and-time-value{ text-align:left; margin:0; }
+
 .campo input:focus, .campo select:focus, .campo textarea:focus{
   outline:none; border-color:var(--fg-2);
 }
