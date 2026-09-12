@@ -176,6 +176,10 @@
   text-transform:uppercase; letter-spacing:0.05em;
 }
 
+/* Los pendientes se atenúan: se leen igual, pero no se confunden con lo que
+   ya pasó al bajar por la lista. */
+.programados .lista{ opacity:.72; }
+
 /* ------------------------------------------------- cuotas por cobrar ---- */
 /* Cuelgan de su compra, dentro de la misma lista. */
 .contador-cuotas{

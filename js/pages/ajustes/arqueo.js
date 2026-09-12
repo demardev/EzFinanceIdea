@@ -107,7 +107,7 @@ function abrirArqueo(cuenta, { esperado, alAjustar }) {
 export async function abrirArqueoDe(cuenta, contexto, alTerminar) {
   const { movimientos, categorias } = contexto;
   const movs = await movimientos.listar();
-  const esperado = saldoDeCuenta(cuenta, movs.filter((m) => m.fecha <= hoyISO()));
+  const esperado = saldoDeCuenta(cuenta, movs);   // saldoDeCuenta ya descarta el futuro
 
   abrirArqueo(cuenta, {
     esperado,

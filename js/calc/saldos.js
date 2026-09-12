@@ -1,10 +1,11 @@
-/* Saldos a partir de movimientos. Función PURA: sin red, sin DOM, sin imports.
+/* Saldos a partir de movimientos. Función PURA: sin red, sin DOM.
 
    El saldo de una cuenta NO se guarda en la base: se calcula cada vez como
    saldo_inicial + ingresos − egresos − transferencias salientes
    + transferencias entrantes. */
 
 import { redondear, sumar } from './dinero.js';
+import { hoyISO } from './fechas.js';
 
 /**
  * Cuánto mueve este movimiento en esa cuenta. Firmado.
@@ -26,20 +27,30 @@ export function deltaEnCuenta(mov, cuentaId) {
   return 0;
 }
 
-export function saldoDeCuenta(cuenta, movimientos) {
-  const deltas = movimientos.map((m) => deltaEnCuenta(m, cuenta.id));
+/* Un movimiento con fecha futura es un PENDIENTE: no es dinero que ya tengas,
+   así que no entra al saldo hasta que llega su día. Ese día entra solo, sin
+   confirmar nada. La deuda de tarjetas ya hacía este mismo corte. */
+function yaOcurrieron(movimientos, hoy) {
+  /* Sin fecha no debería llegar ninguno —la base la exige— pero si llega, se
+     cuenta: perder dinero en silencio es peor que contarlo antes de tiempo. */
+  return movimientos.filter((m) => !m.fecha || m.fecha <= hoy);
+}
+
+export function saldoDeCuenta(cuenta, movimientos, hoy = hoyISO()) {
+  const deltas = yaOcurrieron(movimientos, hoy).map((m) => deltaEnCuenta(m, cuenta.id));
   return sumar(Number(cuenta.saldo_inicial) || 0, ...deltas);
 }
 
 /** { idDeCuenta: saldo } — lo que consumen las listas. */
-export function saldosPorCuenta(cuentas, movimientos) {
+export function saldosPorCuenta(cuentas, movimientos, hoy = hoyISO()) {
+  const ocurridos = yaOcurrieron(movimientos, hoy);
   const mapa = {};
-  cuentas.forEach((c) => { mapa[c.id] = saldoDeCuenta(c, movimientos); });
+  cuentas.forEach((c) => { mapa[c.id] = saldoDeCuenta(c, ocurridos, hoy); });
   return mapa;
 }
 
-export function patrimonioLiquido(cuentas, movimientos) {
-  return sumar(...cuentas.map((c) => saldoDeCuenta(c, movimientos)));
+export function patrimonioLiquido(cuentas, movimientos, hoy = hoyISO()) {
+  return sumar(...cuentas.map((c) => saldoDeCuenta(c, movimientos, hoy)));
 }
 
 /**

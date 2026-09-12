@@ -63,3 +63,41 @@ describir('saldos', (caso) => {
     igual(totalesDelMes([]), { entro: 0, salio: 0, neto: 0 });
   });
 });
+
+/* Un movimiento con fecha futura es un pendiente: no es dinero que tengas
+   hoy. El día que llega entra solo, sin confirmar nada. */
+describir('saldos — lo que todavía no pasa no cuenta', (caso) => {
+  const banco = { id: 'banco', saldo_inicial: 100 };
+  const efectivo = { id: 'efectivo', saldo_inicial: 0 };
+  const mov = (tipo, monto, fecha, extra = {}) =>
+    ({ tipo, monto, fecha, cuenta_id: 'banco', ...extra });
+
+  caso('un ingreso de la semana que viene no sube el saldo de hoy', () => {
+    igual(saldoDeCuenta(banco, [mov('ingreso', 500, '2026-09-20')], '2026-09-11'), 100);
+  });
+
+  caso('el día que le toca, entra solo', () => {
+    igual(saldoDeCuenta(banco, [mov('ingreso', 500, '2026-09-20')], '2026-09-20'), 600);
+  });
+
+  caso('una transferencia futura no mueve ninguna de las dos cuentas', () => {
+    const movs = [mov('transferencia', 50, '2026-09-20', { cuenta_destino_id: 'efectivo' })];
+    igual(saldoDeCuenta(banco, movs, '2026-09-11'), 100);
+    igual(saldoDeCuenta(efectivo, movs, '2026-09-11'), 0);
+  });
+
+  caso('el patrimonio tampoco cuenta el futuro', () => {
+    igual(patrimonioLiquido([banco, efectivo], [mov('ingreso', 500, '2026-09-20')],
+                            '2026-09-11'), 100);
+  });
+
+  caso('un movimiento sin fecha se cuenta: no se pierde dinero en silencio', () => {
+    igual(saldoDeCuenta(banco, [{ tipo: 'ingreso', monto: 40, cuenta_id: 'banco' }],
+                        '2026-09-11'), 140);
+  });
+
+  caso('saldosPorCuenta hace el mismo corte', () => {
+    igual(saldosPorCuenta([banco], [mov('egreso', 30, '2026-09-20')], '2026-09-11'),
+          { banco: 100 });
+  });
+});

@@ -2,7 +2,8 @@
    que la implementación. Salieron de plan-linea-tiempo.js por tamaño. */
 
 import { describir, igual, cierto } from './marco.js';
-import { eventosDeTarjeta, construirLineaTiempo } from '../calc/plan/linea-tiempo.js';
+import { eventosDeTarjeta } from '../calc/plan/proyeccion-tarjeta.js';
+import { construirLineaTiempo } from '../calc/plan/linea-tiempo.js';
 
 const ITEMS = [
   { id: 'p1', nombre: 'Sueldo', clase: 'ingreso', variabilidad: 'fijo',

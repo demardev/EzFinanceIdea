@@ -15,6 +15,10 @@ import { avisoError } from '../../ui/toast.js';
 
 const POR_PAGINA = 50;
 const CLAVE_ORDEN = 'finanzas.orden-movimientos';
+const CLAVE_PROGRAMADOS = 'finanzas.ver-programados';
+
+/* Fuera de montarMovimientos para que sobreviva a los repintados. */
+let verProgramados = localStorage.getItem(CLAVE_PROGRAMADOS) === '1';
 
 /** { id: nombre } de cuentas, tarjetas y categorías, para pintar las filas. */
 function indiceDeNombres({ cuentas, tarjetas, categorias }) {
@@ -36,6 +40,7 @@ export async function montarMovimientos(contenedor, contexto) {
   let orden = localStorage.getItem(CLAVE_ORDEN) === 'asc' ? 'asc' : 'desc';
   let datos = { cuentas: [], tarjetas: [], categorias: [] };
   let delMes = [];
+  let programados = [];
   let pagina = 1;
 
   async function cargarCatalogos() {
@@ -58,6 +63,10 @@ export async function montarMovimientos(contenedor, contexto) {
       mes: filtros.mes,
       activos: cuantosActivos(filtros),
       ambito: filtros.ambito,
+      /* Los pendientes van del más cercano al más lejano, sin importar el
+         orden que tenga la lista del mes: lo que sigue va primero. */
+      programados: ordenarPorFecha(aplicar(programados, filtros), 'asc'),
+      verProgramados,
       negocio: Boolean(contexto.perfil?.negocio),
       orden,
     });
@@ -69,11 +78,20 @@ export async function montarMovimientos(contenedor, contexto) {
      además inflaría el "salió" con dinero que sigue en la cuenta. Lo que falta
      por venir se ve en el Plan y dentro de su compra. */
   async function recargar() {
-    const todos = await movimientos.listarDelMes(filtros.mes);
+    const [todos, futuros] = await Promise.all([
+      movimientos.listarDelMes(filtros.mes),
+      movimientos.listarFuturos(hoyISO()),
+    ]);
     delMes = todos.filter((m) => m.fecha <= hoyISO());
+    /* Las cuotas de una compra a meses se ven dentro de su compra: aquí serían
+       decenas de filas tapando lo que de verdad viene. */
+    programados = futuros.filter((m) => !m.compra_id);
     pagina = 1;
     pintar();
   }
+
+  /** Una fila puede ser del mes o de los pendientes. */
+  const buscar = (id) => delMes.find((m) => m.id === id) ?? programados.find((m) => m.id === id);
 
   function abrirFiltros() {
     abrirSheetFiltros(filtros, datos, async (nuevos) => {
@@ -86,10 +104,16 @@ export async function montarMovimientos(contenedor, contexto) {
 
   contenedor.addEventListener('click', async (evento) => {
     const objetivo = evento.target.closest(
-      '[data-editar], [data-borrar], [data-operacion], [data-pastilla],'
+      '[data-editar], [data-borrar], [data-operacion], [data-pastilla], [data-programados],'
       + ' #btn-filtros, #btn-mes, #btn-mas, #btn-orden');
     if (!objetivo) return;
     try {
+      if (objetivo.hasAttribute('data-programados')) {
+        verProgramados = !verProgramados;
+        localStorage.setItem(CLAVE_PROGRAMADOS, verProgramados ? '1' : '0');
+        pintar();
+        return;
+      }
       /* La pastilla "Todo" vale "", así que se pregunta por el atributo. */
       if (objetivo.hasAttribute('data-pastilla')) {
         filtros.ambito = objetivo.dataset.pastilla;
@@ -107,7 +131,7 @@ export async function montarMovimientos(contenedor, contexto) {
       }
       if (objetivo.dataset.borrar) {
         cerrarDeslizada();
-        const mov = delMes.find((m) => m.id === objetivo.dataset.borrar);
+        const mov = buscar(objetivo.dataset.borrar);
         await eliminarMovimiento(contexto, mov, recargar);
         return;
       }
@@ -120,7 +144,7 @@ export async function montarMovimientos(contenedor, contexto) {
         if (pago) await abrirPagoRecibo(contexto, pago, datos, recargar);
         return;
       }
-      const mov = delMes.find((m) => m.id === objetivo.dataset.editar);
+      const mov = buscar(objetivo.dataset.editar);
       await abrirRegistro(contexto, mov, recargar, datos);
     } catch (e) { avisoError(e); }
   });

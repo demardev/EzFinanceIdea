@@ -8,28 +8,13 @@
      (ver colchonDelPeriodo) y se restan del disponible. */
 
 import { sumar, redondear } from '../dinero.js';
-import { partes, aISO, clampDia, sumarMeses, diasEntre } from '../fechas.js';
-import { calcularCiclo, corteSiguiente, limiteDePago } from '../ciclo-tarjeta.js';
-import { calcularDeuda } from '../deuda-tarjeta.js';
+import { diasEntre } from '../fechas.js';
 import { sinCuotasYaPagadas } from '../cuotas.js';
+import { ocurrenciasMensuales, montoDe } from './recurrencia.js';
+import { eventosDeTarjeta } from './proyeccion-tarjeta.js';
 
-/** Todas las veces que cae ese día del mes dentro del rango. */
-export function ocurrenciasMensuales(diaMes, desde, hasta) {
-  const fechas = [];
-  const { anio, mes } = partes(desde);
-  let cursor = aISO(anio, mes, clampDia(anio, mes, diaMes));
-  while (cursor <= hasta) {
-    if (cursor >= desde) fechas.push(cursor);
-    const p = partes(sumarMeses(cursor, 1));
-    cursor = aISO(p.anio, p.mes, clampDia(p.anio, p.mes, diaMes));
-  }
-  return fechas;
-}
-
-function montoDe(item, escenario) {
-  if (item.variabilidad === 'fijo') return Number(item.monto) || 0;
-  return Number(escenario === 'max' ? item.monto_max : item.monto_min) || 0;
-}
+export { ocurrenciasMensuales } from './recurrencia.js';
+export { eventosDeTarjeta } from './proyeccion-tarjeta.js';
 
 function evento(item, fecha, clase, escenario) {
   return {
@@ -99,72 +84,27 @@ export function colchonDelPeriodo(planItems, escenario, desde, hasta) {
   return redondear((mensual * dias) / 30);
 }
 
-/**
- * Pagos de una tarjeta dentro del horizonte: lo que ya se debe al último
- * corte, más los cortes siguientes proyectando el ciclo abierto, las cuotas
- * futuras y los gastos fijos que se le cargan.
- */
-export function eventosDeTarjeta(tarjeta, movimientos, gastosFijosDeTarjeta, hoy, hasta,
-                                 { variables = [], escenarioGastos = 'min' } = {}) {
-  const ciclo = calcularCiclo(tarjeta.dia_corte, tarjeta.dia_limite_pago, hoy);
-  const deuda = calcularDeuda(movimientos, ciclo, tarjeta.limite_credito);
-  const eventos = [];
+/* Un movimiento con fecha futura es un pendiente: no está en el saldo, así que
+   el plan lo proyecta en su día. Lo que toca una TARJETA se queda fuera —eso
+   lo proyecta la tarjeta en su fecha de pago, y contarlo aquí sacaría el
+   dinero dos veces— y una transferencia entre cuentas propias no cambia el
+   total, así que tampoco entra. */
+const CLASE_DE_MOVIMIENTO = { ingreso: 'ingreso', egreso: 'obligacion' };
 
-  const comoPago = (monto, fecha, nota) => ({
-    clase: 'obligacion',
-    fecha,
-    nombre: `Pago ${tarjeta.nombre}`,
-    nota,
-    monto,
-    cuentaId: tarjeta.cuenta_pago_id ?? null,
-    tarjetaId: tarjeta.id,
-    origen: 'tarjeta',
-  });
-
-  if (deuda.aPagarAhora > 0 && ciclo.fechaLimiteDelCorte <= hasta) {
-    eventos.push(comoPago(deuda.aPagarAhora, ciclo.fechaLimiteDelCorte, 'saldo al corte'));
-  }
-
-  const previstos = { movimientos, gastosFijos: gastosFijosDeTarjeta, variables, escenarioGastos };
-  eventos.push(...cortesFuturos(tarjeta, previstos, ciclo, hasta, comoPago));
-  return eventos;
-}
-
-/* Lo que se gastará con variables en un tramo del ciclo, prorrateado sobre 30
-   días como el colchón. Del ciclo abierto solo cuentan los días que faltan:
-   lo ya gastado de verdad está en los cargos. */
-function variablesDelTramo(variables, escenario, desde, hasta) {
-  const dias = diasEntre(desde, hasta);
-  return variables.map((v) => redondear((montoDe(v, escenario) * dias) / 30));
-}
-
-/** Lo que cobrará cada corte siguiente que venza dentro del horizonte. */
-function cortesFuturos(tarjeta, previstos, ciclo, hasta, comoPago) {
-  const { movimientos, gastosFijos, variables, escenarioGastos } = previstos;
-  const eventos = [];
-  let corte = ciclo.fechaUltimoCorte;
-  let siguiente = ciclo.fechaProximoCorte;
-  let vence = limiteDePago(siguiente, tarjeta.dia_limite_pago);
-
-  while (vence <= hasta) {
-    const cargos = movimientos.filter(
-      (m) => m.tipo === 'egreso' && m.tarjeta_id === tarjeta.id
-          && m.fecha > corte && m.fecha <= siguiente);
-    const recurrentes = gastosFijos.flatMap((item) =>
-      ocurrenciasMensuales(item.dia_mes, corte, siguiente)
-        .filter((f) => f > corte)
-        .map(() => Number(item.monto) || 0));
-
-    const estimados = variablesDelTramo(variables, escenarioGastos,
-                                        corte > ciclo.hoy ? corte : ciclo.hoy, siguiente);
-    const monto = sumar(...cargos.map((m) => m.monto), ...recurrentes, ...estimados);
-    if (monto > 0) eventos.push(comoPago(monto, vence, `corte del ${siguiente}`));
-
-    corte = siguiente;
-    siguiente = corteSiguiente(corte, tarjeta.dia_corte);
-    vence = limiteDePago(siguiente, tarjeta.dia_limite_pago);
-  }
-  return eventos;
+export function eventosDeMovimientos(movimientos, desde, hasta) {
+  return movimientos
+    .filter((m) => m.fecha > desde && m.fecha <= hasta
+                && !m.tarjeta_id && !m.tarjeta_destino_id
+                && CLASE_DE_MOVIMIENTO[m.tipo])
+    .map((m) => ({
+      clase: CLASE_DE_MOVIMIENTO[m.tipo],
+      fecha: m.fecha,
+      nombre: m.descripcion,
+      monto: redondear(m.monto),
+      cuentaId: m.cuenta_id ?? null,
+      tarjetaId: null,
+      origen: 'movimiento',
+    }));
 }
 
 /* En empate de fecha el pago va PRIMERO. Conservador: no se cuenta con que
@@ -175,6 +115,7 @@ const PESO = { obligacion: 0, ingreso: 1 };
 export function construirLineaTiempo({ planItems, tarjetas, movimientos, compras },
                                      { hoy, hasta, escenario = 'min', escenarioGastos = 'min' }) {
   const eventos = eventosDePlan(planItems, hoy, hasta, escenario);
+  eventos.push(...eventosDeMovimientos(movimientos, hoy, hasta));
 
   tarjetas.filter((t) => !t.archivada).forEach((tarjeta) => {
     const suyos = movimientos.filter(

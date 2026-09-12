@@ -24,6 +24,11 @@ export function repoMovimientos(cliente) {
     return cliente.insertar('movimientos', filas);
   }
 
+  /** Los que todavía no ocurren: pendientes que se cargarán solos. */
+  function listarFuturos(hoy) {
+    return base.listar({ fecha: `gt.${hoy}`, order: 'fecha.asc' });
+  }
+
   function listarDeCompra(compraId) {
     return base.listar({ compra_id: `eq.${compraId}`, order: 'cuota_num.asc' });
   }
@@ -63,6 +68,6 @@ export function repoMovimientos(cliente) {
     return origen + destino;
   }
 
-  return { ...base, listarDelMes, ultimos, crearVarios, listarDeCompra, eliminarPorPago,
+  return { ...base, listarDelMes, listarFuturos, ultimos, crearVarios, listarDeCompra, eliminarPorPago,
            eliminarPendientesDeCompra, contarPorCategoria, contarPorCuenta };
 }

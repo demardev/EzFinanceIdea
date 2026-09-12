@@ -119,6 +119,28 @@ function barra({ mes, activos, orden }) {
     </div>`;
 }
 
+/* Lo que tiene fecha adelante: todavía no está en tu saldo y se cargará solo
+   el día que le toca. Va plegado por omisión para no tapar el mes, con el
+   número al lado. Las cuotas no salen aquí: viven dentro de su compra. */
+function bloqueProgramados({ programados, verProgramados, nombres, iconos }) {
+  if (!programados.length) return '';
+  return `
+    <div>
+      <button type="button" class="seccion-titulo titulo-plegable" data-programados>
+        Programados ${icono(verProgramados ? 'arriba' : 'abajo', 13)}
+        <span class="crece"></span>
+        <span class="tenue-2" style="text-transform:none">${programados.length}</span>
+      </button>
+      ${verProgramados ? `
+        <p class="tenue-2" style="font-size:12px;margin:-4px 0 8px">
+          Se cargan solos el día que les toca. Todavía no cuentan en tu saldo.
+        </p>
+        <div class="programados">
+          ${porDia(programados).map(([f, ms]) => grupoDia(f, ms, nombres, iconos)).join('')}
+        </div>` : ''}
+    </div>`;
+}
+
 export function pintarMovimientos(contenedor, estado) {
   const { visibles, totales, nombres, iconos, mes, activos, orden, hayMas, total } = estado;
   contenedor.innerHTML = `
@@ -126,6 +148,7 @@ export function pintarMovimientos(contenedor, estado) {
       ${barra({ mes, activos, orden })}
       ${estado.negocio ? pastillasAmbito(estado.ambito) : ''}
       ${resumenMes(totales)}
+      ${bloqueProgramados(estado)}
       ${visibles.length
         ? porDia(visibles).map(([f, ms]) => grupoDia(f, ms, nombres, iconos)).join('')
         : `<div class="vacio"><span class="icono-caja">${icono('movimientos', 22)}</span>
