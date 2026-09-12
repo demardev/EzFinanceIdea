@@ -100,6 +100,20 @@ export async function iniciarSesion(email, password) {
   return guardar(datos);
 }
 
+/**
+ * Alta de cuenta. Si el proyecto exige confirmar por correo, Supabase NO
+ * devuelve sesión: no hay a dónde entrar hasta que el usuario confirme.
+ * @returns { confirmar } true si hay que ir a revisar el correo
+ */
+export async function registrar(email, password) {
+  const datos = await peticionAuth('/signup', {
+    cuerpo: { email: email.trim(), password },
+  });
+  if (!datos?.access_token) return { confirmar: true };
+  guardar(datos);
+  return { confirmar: false };
+}
+
 export async function cerrarSesion() {
   const token = sesion?.access_token;
   borrar();

@@ -60,10 +60,14 @@ async function cargarPerfil() {
 }
 
 async function sembrarSiHaceFalta() {
-  if (localStorage.getItem(CLAVE_SIEMBRA) === '1') return;
+  /* La marca es POR USUARIO: si en este teléfono entra una cuenta nueva,
+     también necesita sus cuentas y categorías, y con una marca compartida se
+     quedaría vacía. */
+  const clave = `${CLAVE_SIEMBRA}.${idUsuario() ?? 'anon'}`;
+  if (localStorage.getItem(clave) === '1') return;
   try {
     await contexto.cuentas.sembrarIniciales();
-    localStorage.setItem(CLAVE_SIEMBRA, '1');
+    localStorage.setItem(clave, '1');
   } catch (e) {
     avisoError(e);
   }

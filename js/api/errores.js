@@ -18,7 +18,8 @@ const POR_ESTADO = {
 /* Mensajes crudos de GoTrue/PostgREST que sí conviene traducir uno por uno. */
 const POR_TEXTO = [
   ['invalid login credentials', 'Email o contraseña incorrectos.'],
-  ['email not confirmed',       'Ese usuario no está confirmado. Actívalo en Supabase.'],
+  ['email_not_confirmed',       'Falta confirmar la cuenta: abre el correo que te mandamos.'],
+  ['email not confirmed',       'Falta confirmar la cuenta: abre el correo que te mandamos.'],
   ['invalid refresh token',     'Tu sesión expiró. Vuelve a entrar.'],
   ['violates row-level security', 'No tienes permiso sobre ese registro.'],
   ['violates check constraint', 'Esa combinación de datos no está permitida.'],
@@ -27,15 +28,28 @@ const POR_TEXTO = [
   ['could not find the table',  'Esa tabla no existe. ¿Corriste sql/01_schema.sql en Supabase?'],
   ['schema cache',              'Esa tabla no existe todavía. Corre sql/01_schema.sql y recarga.'],
   ['could not find the function','Falta el RPC. Vuelve a correr sql/01_schema.sql completo.'],
+  ['signup_disabled',           'Este proyecto no admite cuentas nuevas. Se habilita en '
+                              + 'Supabase → Authentication → Sign In / Providers.'],
+  ['signups not allowed',       'Este proyecto no admite cuentas nuevas. Se habilita en '
+                              + 'Supabase → Authentication → Sign In / Providers.'],
+  ['user_already_exists',       'Ya existe una cuenta con ese email.'],
+  ['user already registered',   'Ya existe una cuenta con ese email.'],
+  ['weak_password',             'Esa contraseña es demasiado débil o corta.'],
+  ['password should be at least', 'La contraseña es demasiado corta.'],
+  ['email_address_invalid',     'Supabase no acepta ese email. Usa una dirección real.'],
+  ['unable to validate email',  'Ese email no tiene un formato válido.'],
+  ['over_email_send_rate_limit', 'Demasiados intentos. Espera un momento.'],
   ['invalid api key',           'La ANON_KEY de js/config.js no es válida.'],
   ['no api key',                'Falta la ANON_KEY en js/config.js.'],
 ];
 
+/* Se mira también `error_code`: Supabase lo manda estable ('signup_disabled')
+   mientras el texto cambia de redacción entre versiones. */
 function textoCrudo(cuerpo) {
   if (!cuerpo) return '';
   const bruto = cuerpo.message || cuerpo.error_description || cuerpo.msg ||
                 cuerpo.error || cuerpo.hint || '';
-  return String(bruto).toLowerCase();
+  return `${cuerpo.error_code ?? ''} ${bruto}`.toLowerCase();
 }
 
 export function traducirError(estado, cuerpo) {
