@@ -1,10 +1,9 @@
-/* Pruebas de negocio/pago-recibo.js y negocio/agrupar.js — escritas antes
-   que la implementación. */
+/* Pruebas de negocio/pago-recibo.js — escritas antes que la implementación.
+   Las de agrupar viven en pruebas/agrupar.js. */
 
-import { describir, igual, cierto } from './marco.js';
+import { describir, igual } from './marco.js';
 import { movimientosDePago, estaPendiente, totalPorCobrar,
          totalesDeNegocio } from '../negocio/pago-recibo.js';
-import { agruparOperaciones } from '../negocio/agrupar.js';
 
 const CATS = { pago: 'cat-pago', cobro: 'cat-cobro', comision: 'cat-comision' };
 
@@ -79,6 +78,25 @@ describir('pago de recibo — movimientos generados', (caso) => {
     igual(egreso.tarjeta_destino_id, null);
   });
 
+  caso('abono parcial: sale solo el cobro de lo abonado, la comisión espera', () => {
+    const parcial = { ...PENDIENTE, abonos: [
+      { fecha: '2026-09-01', cuenta_id: 'efectivo', monto: 35 }] };
+    igual(movimientosDePago(parcial, CATS).map((m) => `${m.tipo} ${m.monto} ${m.cuenta_id}`),
+          ['egreso 50 banco', 'ingreso 35 efectivo']);
+  });
+
+  caso('cada abono entra en su día y en su cuenta', () => {
+    const saldado = { ...PENDIENTE, abonos: [
+      { fecha: '2026-09-01', cuenta_id: 'efectivo', monto: 35 },
+      { fecha: '2026-09-05', cuenta_id: 'banco', monto: 16 }] };
+    igual(movimientosDePago(saldado, CATS).map((m) => `${m.tipo} ${m.monto} ${m.fecha} ${m.cuenta_id}`), [
+      'egreso 50 2026-09-01 banco',
+      'ingreso 35 2026-09-01 efectivo',
+      'ingreso 15 2026-09-05 banco',
+      'ingreso 1 2026-09-05 banco',
+    ]);
+  });
+
   caso('el neto de una operación cobrada es la comisión', () => {
     const movs = movimientosDePago(COBRADO, CATS);
     const neto = movs.reduce((n, m) => n + (m.tipo === 'ingreso' ? m.monto : -m.monto), 0);
@@ -94,6 +112,13 @@ describir('pago de recibo — por cobrar', (caso) => {
 
   caso('te deben el recibo más la comisión', () => {
     igual(totalPorCobrar([PENDIENTE]), 51);
+  });
+
+  caso('con un abono parcial sigue pendiente y te deben solo el resto', () => {
+    const parcial = { ...PENDIENTE, abonos: [
+      { fecha: '2026-09-01', cuenta_id: 'efectivo', monto: 35 }] };
+    igual(estaPendiente(parcial), true);
+    igual(totalPorCobrar([parcial]), 16);
   });
 
   caso('lo ya cobrado no cuenta', () => {
@@ -122,68 +147,19 @@ describir('pago de recibo — totales del mes', (caso) => {
     igual(totalesDeNegocio(delMes, '2026-09').ganado, 2);
   });
 
+  caso('la comisión se gana el día del abono que la cubre', () => {
+    const enPartes = { ...PENDIENTE, fecha_pago: '2026-08-30', abonos: [
+      { fecha: '2026-08-30', cuenta_id: 'efectivo', monto: 35 },
+      { fecha: '2026-09-02', cuenta_id: 'banco', monto: 16 }] };
+    igual(totalesDeNegocio([enPartes], '2026-08').ganado, 0);
+    igual(totalesDeNegocio([enPartes], '2026-09').ganado, 1);
+  });
+
   caso('operaciones cuenta las del mes', () => {
     igual(totalesDeNegocio(delMes, '2026-09').operaciones, 2);
   });
 
   caso('un mes sin nada da ceros', () => {
     igual(totalesDeNegocio(delMes, '2026-12'), { movido: 0, ganado: 0, operaciones: 0 });
-  });
-});
-
-describir('agrupar operaciones en la lista', (caso) => {
-  const m = (id, pago_id, tipo, monto, fecha) =>
-    ({ id, pago_id, tipo, monto, fecha, ambito: pago_id ? 'negocio' : 'personal' });
-
-  caso('los movimientos sueltos pasan tal cual', () => {
-    const sueltos = [m('x', null, 'egreso', 10, '2026-09-08')];
-    const filas = agruparOperaciones(sueltos);
-    igual(filas.length, 1);
-    igual(filas[0].grupo, false);
-    igual(filas[0].movimiento.id, 'x');
-  });
-
-  caso('una operación del mismo día se colapsa en una fila', () => {
-    const filas = agruparOperaciones([
-      m('1', 'p1', 'egreso', 50, '2026-09-08'),
-      m('2', 'p1', 'ingreso', 50, '2026-09-08'),
-      m('3', 'p1', 'ingreso', 1, '2026-09-08'),
-    ]);
-    igual(filas.length, 1);
-    igual(filas[0].grupo, true);
-    igual(filas[0].neto, 1);
-    igual(filas[0].pagoId, 'p1');
-    igual(filas[0].incluyeEgreso, true);
-  });
-
-  caso('si el cobro es otro día, son dos filas', () => {
-    const filas = agruparOperaciones([
-      m('1', 'p1', 'egreso', 50, '2026-09-01'),
-      m('2', 'p1', 'ingreso', 50, '2026-09-08'),
-      m('3', 'p1', 'ingreso', 1, '2026-09-08'),
-    ]);
-    igual(filas.length, 2);
-    igual(filas.map((f) => `${f.fecha} ${f.neto}`), ['2026-09-01 -50', '2026-09-08 51']);
-    igual(filas[0].incluyeEgreso, true);
-    igual(filas[1].incluyeEgreso, false);
-  });
-
-  caso('conserva el orden en que venían', () => {
-    const filas = agruparOperaciones([
-      m('a', null, 'egreso', 5, '2026-09-09'),
-      m('1', 'p1', 'egreso', 50, '2026-09-08'),
-      m('2', 'p1', 'ingreso', 50, '2026-09-08'),
-      m('b', null, 'ingreso', 7, '2026-09-07'),
-    ]);
-    igual(filas.map((f) => f.fecha), ['2026-09-09', '2026-09-08', '2026-09-07']);
-  });
-
-  caso('dos operaciones distintas el mismo día no se mezclan', () => {
-    const filas = agruparOperaciones([
-      m('1', 'p1', 'egreso', 50, '2026-09-08'),
-      m('2', 'p2', 'egreso', 30, '2026-09-08'),
-    ]);
-    igual(filas.length, 2);
-    cierto(filas.every((f) => f.grupo));
   });
 });

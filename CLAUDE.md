@@ -36,9 +36,12 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
 - `perfiles.negocio` decide si la función existe para ese usuario. **La restricción
   vive en la base**: las políticas de `pagos_recibo` y del bucket exigen `es_negocio()`.
   Ocultar el botón no protege nada.
-- Una operación son hasta 3 movimientos con `ambito = 'negocio'` y `pago_id`. Con
-  `fecha_cobro` en null está **pendiente**: solo existe el egreso y te deben el
-  monto más la comisión.
+- Una operación es el egreso más los ingresos de sus **abonos** (`pagos_recibo.abonos`,
+  lista de `{fecha, cuenta_id, monto}`), todos con `ambito = 'negocio'` y `pago_id`.
+  Cada abono cubre primero el recibo; la comisión es **una por operación** y entra con
+  el abono que la completa. Mientras falte algo está **pendiente** (`fecha_cobro` en
+  null) y te deben el recibo más la comisión menos lo abonado. `fecha_cobro` y
+  `cuenta_cobro_id` son del abono que saldó: se calculan con `conAbonos()`, no a mano.
 - El **flujo personal del Resumen excluye el negocio**; el **patrimonio los suma
   todos**, porque ese dinero sí está en la cuenta. No los confundas.
 - Los movimientos generados **nunca se editan uno por uno**: se borran y se

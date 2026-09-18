@@ -61,12 +61,12 @@ exception when duplicate_object then null; end $$;
 alter table movimientos add column if not exists ambito ambito_mov not null default 'personal';
 
 -- ------------------------------------------------------------ operaciones --
--- Un pago de recibo genera hasta tres movimientos:
+-- Un pago de recibo genera:
 --   egreso  monto_recibo   el día que pagas                     (siempre)
---   ingreso monto_recibo   el día que te pagan                  (al cobrar)
---   ingreso comision       el día que te pagan                  (al cobrar)
+--   ingreso cobro          el día y en la cuenta de cada abono  (al cobrar)
+--   ingreso comision       con el abono que la cubre, al final  (al cobrar)
 -- Con `fecha_cobro` en null la operación está PENDIENTE: pagaste de tu
--- bolsa y todavía te deben monto_recibo + comision.
+-- bolsa y todavía te deben monto_recibo + comision, menos lo abonado.
 create table if not exists pagos_recibo (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid not null default auth.uid() references auth.users(id) on delete cascade,
@@ -87,6 +87,23 @@ create table if not exists pagos_recibo (
 -- La descripción es de quién es el recibo: encabeza los movimientos generados
 -- y es por donde se busca la operación. Las filas viejas se quedan en null.
 alter table pagos_recibo add column if not exists descripcion text;
+
+-- Abonos: te pueden pagar en partes, cada una otro día y en otra cuenta.
+-- Es una lista de {fecha, cuenta_id, monto} dentro de la operación y no otra
+-- tabla porque siempre se leen y se guardan con ella: un solo PATCH, y nunca
+-- queda la operación con la mitad de sus abonos.
+-- `fecha_cobro` y `cuenta_cobro_id` pasan a ser los del abono que SALDÓ la
+-- cuenta (null = pendiente, como antes). Los calcula y escribe la app.
+alter table pagos_recibo add column if not exists abonos jsonb not null default '[]'::jsonb;
+alter table pagos_recibo drop constraint if exists abonos_es_lista;
+alter table pagos_recibo add constraint abonos_es_lista check (jsonb_typeof(abonos) = 'array');
+
+-- Lo cobrado antes de existir los abonos fue un solo pago por todo.
+update pagos_recibo
+   set abonos = jsonb_build_array(jsonb_build_object(
+         'fecha', fecha_cobro, 'cuenta_id', cuenta_cobro_id,
+         'monto', monto_recibo + comision))
+ where fecha_cobro is not null and abonos = '[]'::jsonb;
 
 create index if not exists idx_pagos_pendientes on pagos_recibo (user_id, fecha_cobro);
 

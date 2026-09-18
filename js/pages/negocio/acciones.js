@@ -1,9 +1,10 @@
-/* Crear, editar, cobrar y eliminar un pago de recibo. Una operación vive en
+/* Crear, editar, abonar y eliminar un pago de recibo. Una operación vive en
    tres sitios —la fila de `pagos_recibo`, sus movimientos y la foto en
    Storage— así que aquí se coordinan los tres. La aritmética la hace
    negocio/pago-recibo.js. */
 
 import { movimientosDePago } from '../../negocio/pago-recibo.js';
+import { agregarAbono, problemaDeAbonos, saldoDe } from '../../negocio/abonos.js';
 import { confirmar } from '../../ui/confirmar.js';
 import { aviso } from '../../ui/toast.js';
 import { textoMonto } from '../../ui/privacidad.js';
@@ -55,13 +56,23 @@ export async function editarPago(contexto, pago, datos, { foto, categorias }) {
   return actualizado;
 }
 
-/** Marcar como cobrado: aquí nacen los dos ingresos, con la fecha del cobro. */
-export async function cobrarPago(contexto, pago, { fecha, cuentaId, comision, categorias }) {
+/**
+ * Te pagaron todo o una parte. `abono.monto` en null es todo lo que falta;
+ * la comisión se ajusta aquí porque a veces ese día fue otra.
+ */
+export async function abonarPago(contexto, pago, { abono, comision, categorias }) {
+  const nuevo = agregarAbono({ ...pago, comision }, abono);
+  const problema = problemaDeAbonos(nuevo);
+  if (problema) throw new Error(problema);
+
   const actualizado = await contexto.pagos.actualizar(pago.id, {
-    fecha_cobro: fecha, cuenta_cobro_id: cuentaId, comision,
+    comision, abonos: nuevo.abonos,
+    fecha_cobro: nuevo.fecha_cobro, cuenta_cobro_id: nuevo.cuenta_cobro_id,
   });
   await regenerarMovimientos(contexto, actualizado, categorias);
-  aviso(`Cobrado. Ganaste ${textoMonto(comision)}.`);
+  const falta = saldoDe(actualizado);
+  aviso(falta > 0 ? `Abono registrado. Faltan ${textoMonto(falta)}.`
+                  : `Cobrado. Ganaste ${textoMonto(comision)}.`);
   return actualizado;
 }
 

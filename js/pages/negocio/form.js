@@ -6,13 +6,29 @@ import { campoMonto, campoSelect, campoTexto, campoInterruptor } from '../../ui/
 import { campoFoto, conectarFoto } from '../../ui/foto.js';
 import { hoyISO } from '../../calc/fechas.js';
 import { redondear } from '../../calc/dinero.js';
+import { abonosDe, agregarAbono, conAbonos, problemaDeAbonos, saldoDe } from '../../negocio/abonos.js';
+import { opcionesCuenta, mostrarCon, camposAbono, conectarAbono, abonoDeDatos,
+         listaAbonos, conectarListaAbonos } from './campos-abono.js';
 
-function opcionesCuenta(cuentas) {
-  return [['', 'Elige una cuenta'], ...cuentas.map((c) => [c.id, c.nombre])];
+/* Una operación nueva pregunta si ya te pagaron; una con abonos los enseña
+   y deja registrar otro mientras falte algo. */
+function seccionCobro(pago, { cuentas, perfil }) {
+  const abonos = abonosDe(pago);
+  const puedeAbonar = !abonos.length || saldoDe(pago) > 0;
+  return `
+    ${listaAbonos(pago, abonos, cuentas)}
+    <div ${puedeAbonar ? '' : 'hidden'}>
+      ${campoInterruptor({ nombre: 'cobrado',
+                           etiqueta: abonos.length ? 'Registrar otro abono' : 'Ya me pagaron',
+                           ayuda: abonos.length ? 'Lo que te pagaron después.'
+                             : 'Si no, queda pendiente de cobro y se registra solo la salida.' })}
+    </div>
+    <div data-solo-cobrado hidden>
+      ${camposAbono({ cuentas, cuentaId: perfil.cuenta_cobro_id ?? '' })}
+    </div>`;
 }
 
 function campos(pago, { cuentas, perfil }) {
-  const cobrado = Boolean(pago.fecha_cobro);
   return `
     ${campoTexto({ nombre: 'descripcion', etiqueta: 'Descripción',
                    valor: pago.descripcion ?? '',
@@ -31,41 +47,19 @@ function campos(pago, { cuentas, perfil }) {
                       opciones: opcionesCuenta(cuentas) })}
     </div>
 
-    ${campoInterruptor({ nombre: 'cobrado', etiqueta: 'Ya me pagaron', activo: cobrado,
-                         ayuda: 'Si no, queda pendiente de cobro y se registra solo la salida.' })}
-    <div data-solo-cobrado ${cobrado ? '' : 'hidden'}>
-      <div class="campo-fila">
-        ${campoTexto({ nombre: 'fecha_cobro', etiqueta: 'Día del cobro',
-                       valor: pago.fecha_cobro ?? hoyISO(), tipo: 'date' })}
-        ${campoSelect({ nombre: 'cuenta_cobro_id', etiqueta: 'Cobrado en',
-                        valor: pago.cuenta_cobro_id ?? perfil.cuenta_cobro_id ?? '',
-                        opciones: opcionesCuenta(cuentas) })}
-      </div>
-    </div>
+    ${seccionCobro(pago, { cuentas, perfil })}
 
     ${campoTexto({ nombre: 'nota', etiqueta: 'Nota', valor: pago.nota ?? '', requerido: false })}
     ${campoFoto({})}`;
 }
 
-/** Los campos del cobro solo estorban mientras no te hayan pagado. */
-function conectarCobrado(hoja, form) {
-  const interruptor = form.querySelector('[name="cobrado"]');
-  const caja = form.querySelector('[data-solo-cobrado]');
-  const aplicar = () => { caja.hidden = !interruptor.checked; };
-  interruptor.addEventListener('change', aplicar);
-  aplicar();
-}
-
 function aFila(d) {
-  const cobrado = Boolean(d.cobrado);
   return {
     descripcion: d.descripcion.trim(),
     monto_recibo: redondear(d.monto_recibo),
     comision: redondear(d.comision || 0),
     fecha_pago: d.fecha_pago,
     cuenta_pago_id: d.cuenta_pago_id || null,
-    fecha_cobro: cobrado ? d.fecha_cobro : null,
-    cuenta_cobro_id: cobrado ? (d.cuenta_cobro_id || null) : null,
     nota: d.nota.trim() || null,
   };
 }
@@ -74,16 +68,22 @@ function validar(d) {
   if (!d.descripcion.trim()) throw new Error('Ponle una descripción, el nombre del cliente.');
   if (!(d.monto_recibo > 0)) throw new Error('Pon el monto del recibo.');
   if (!d.cuenta_pago_id) throw new Error('Elige de qué cuenta salió el pago.');
-  if (d.cobrado && !d.cuenta_cobro_id) throw new Error('Elige en qué cuenta te pagaron.');
-  if (d.cobrado && d.fecha_cobro < d.fecha_pago) {
-    throw new Error('No te pueden haber pagado antes de que pagaras el recibo.');
-  }
+}
+
+/** La fila con sus abonos: los que quedaron y, si lo hay, el nuevo. */
+function conSusAbonos(d, abonosQuedan) {
+  const fila = conAbonos(aFila(d), abonosQuedan);
+  const lista = d.cobrado ? agregarAbono(fila, abonoDeDatos(d)) : fila;
+  const problema = problemaDeAbonos(lista);
+  if (problema) throw new Error(problema);
+  return lista;
 }
 
 /** @param alGuardar (fila, foto): foto es un Blob, null si la quitaron o
  *  undefined si no la tocaron. */
 export function abrirFormPago(pago, datos, { alGuardar, alEliminar, urlFoto = null }) {
   let foto;
+  let abonosQuedan = () => abonosDe(pago);
 
   abrirSheetFormulario({
     titulo: pago.id ? 'Editar pago de recibo' : 'Pago de recibo',
@@ -93,9 +93,14 @@ export function abrirFormPago(pago, datos, { alGuardar, alEliminar, urlFoto = nu
     textoBorrar: pago.id ? 'Eliminar operación' : '',
     alEliminar: pago.id ? alEliminar : null,
     alPintar: (hoja, form) => {
-      conectarCobrado(hoja, form);
+      mostrarCon(form, 'cobrado', '[data-solo-cobrado]');
+      conectarAbono(form);
+      abonosQuedan = conectarListaAbonos(form, pago, abonosDe(pago));
       conectarFoto(hoja, { alCambiar: (blob) => { foto = blob; }, urlPrevia: urlFoto });
     },
-    alGuardar: (d) => { validar(d); return alGuardar(aFila(d), foto); },
+    alGuardar: (d) => {
+      validar(d);
+      return alGuardar(conSusAbonos(d, abonosQuedan()), foto);
+    },
   });
 }

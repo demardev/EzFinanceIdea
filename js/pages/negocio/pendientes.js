@@ -4,14 +4,26 @@
 
 import { abrirSheet } from '../../ui/sheet.js';
 import { abrirSheetFormulario } from '../../ui/sheet-formulario.js';
-import { campoMonto, campoSelect, campoTexto } from '../../ui/campos.js';
+import { campoMonto } from '../../ui/campos.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { escapar } from '../../ui/texto.js';
 import { formatearFecha, hoyISO, diasEntre } from '../../calc/fechas.js';
 import { redondear } from '../../calc/dinero.js';
 import { totalPorCobrar } from '../../negocio/pago-recibo.js';
-import { cobrarPago } from './acciones.js';
+import { cobradoDe, saldoDe, totalDe } from '../../negocio/abonos.js';
+import { abonarPago } from './acciones.js';
 import { categoriasDeNegocio } from './registrar.js';
+import { camposAbono, conectarAbono, abonoDeDatos } from './campos-abono.js';
+
+/* Sin abonos se lee "recibo + comisión"; con alguno, lo que falta de cuánto. */
+function cifra(pago) {
+  if (cobradoDe(pago) > 0) {
+    return `${textoMonto(saldoDe(pago))}
+            <span class="tenue-2">faltan de ${textoMonto(totalDe(pago))}</span>`;
+  }
+  return `${textoMonto(pago.monto_recibo)}
+          <span class="tenue-2">+ ${textoMonto(pago.comision)}</span>`;
+}
 
 function fila(pago) {
   const dias = diasEntre(pago.fecha_pago, hoyISO());
@@ -19,10 +31,7 @@ function fila(pago) {
     <div class="lista-fila">
       <button type="button" class="fila-cuerpo" data-cobrar="${pago.id}">
         <span class="crece" style="min-width:0">
-          <span class="titulo truncar" style="display:block">
-            ${textoMonto(pago.monto_recibo)}
-            <span class="tenue-2">+ ${textoMonto(pago.comision)}</span>
-          </span>
+          <span class="titulo truncar" style="display:block">${cifra(pago)}</span>
           <span class="sub ${dias >= 7 ? 'warn' : ''}">
             ${pago.descripcion ? `${escapar(pago.descripcion)} · ` : ''}pagado ${formatearFecha(pago.fecha_pago)} · hace ${dias} ${dias === 1 ? 'día' : 'días'}
             ${pago.nota ? `· ${escapar(pago.nota)}` : ''}
@@ -33,25 +42,19 @@ function fila(pago) {
     </div>`;
 }
 
-/** Pide fecha, cuenta y comisión final; ahí nacen los dos ingresos. */
+/** Pide día, cuenta, si fue solo una parte y la comisión final. */
 function abrirCobro(contexto, pago, datos, alCambiar) {
   abrirSheetFormulario({
-    titulo: `Cobrar ${textoMonto(pago.monto_recibo)}`,
+    titulo: `Cobrar ${textoMonto(saldoDe(pago))}`,
     id: 'form-cobro',
     cuerpo: `
-      ${campoTexto({ nombre: 'fecha', etiqueta: 'Día que te pagaron',
-                     valor: hoyISO(), tipo: 'date' })}
-      ${campoMonto({ nombre: 'comision', etiqueta: 'Comisión', valor: pago.comision })}
-      ${campoSelect({ nombre: 'cuenta', etiqueta: 'Cobrado en',
-                      valor: contexto.perfil.cuenta_cobro_id ?? '',
-                      opciones: [['', 'Elige una cuenta'],
-                                 ...datos.cuentas.map((c) => [c.id, c.nombre])] })}`,
+      ${camposAbono({ cuentas: datos.cuentas, cuentaId: contexto.perfil.cuenta_cobro_id ?? '' })}
+      ${campoMonto({ nombre: 'comision', etiqueta: 'Comisión', valor: pago.comision })}`,
     textoGuardar: 'Registrar cobro',
+    alPintar: (hoja, form) => conectarAbono(form),
     alGuardar: async (d) => {
-      if (!d.cuenta) throw new Error('Elige en qué cuenta te pagaron.');
-      if (d.fecha < pago.fecha_pago) throw new Error('El cobro no puede ser antes del pago.');
-      await cobrarPago(contexto, pago, {
-        fecha: d.fecha, cuentaId: d.cuenta, comision: redondear(d.comision || 0),
+      await abonarPago(contexto, pago, {
+        abono: abonoDeDatos(d), comision: redondear(d.comision || 0),
         categorias: categoriasDeNegocio(datos.categorias),
       });
       await alCambiar();

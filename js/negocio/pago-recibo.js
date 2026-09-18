@@ -1,12 +1,14 @@
 /* Un pago de recibo y los movimientos que genera. Función PURA: sin red,
    sin DOM.
 
-   La operación tiene dos momentos. Al PAGAR sale el dinero de tu cuenta; al
-   COBRAR entra el monto más la comisión, con la fecha real del cobro. Mientras
-   no te paguen, solo existe el egreso y esos pesos están en la calle. */
+   Al PAGAR sale el dinero de tu cuenta. Después te lo devuelven en uno o
+   varios abonos, cada uno con su fecha y su cuenta; cómo se reparte cada
+   abono entre recibo y comisión lo decide negocio/abonos.js. Mientras falte
+   algo, esos pesos están en la calle. */
 
 import { redondear, sumar } from '../calc/dinero.js';
 import { mesDe } from '../calc/fechas.js';
+import { repartirAbonos, saldoDe } from './abonos.js';
 
 /* Las columnas de ruteo que cada movimiento no usa van en nulo, igual que en
    movimientos/tipos.js: si no, un PATCH dejaría restos del tipo anterior. */
@@ -33,7 +35,7 @@ function textoDe(pago, generico) {
 }
 
 export function estaPendiente(pago) {
-  return !pago.fecha_cobro;
+  return saldoDe(pago) > 0;
 }
 
 /**
@@ -49,34 +51,27 @@ export function movimientosDePago(pago, categorias = {}) {
     cuenta_id: pago.cuenta_pago_id ?? null,
   })];
 
-  if (estaPendiente(pago)) return movs;
-
-  movs.push(movimiento(pago, {
+  const ingreso = (abono, monto, generico, categoria) => movimiento(pago, {
     tipo: 'ingreso',
-    monto: redondear(pago.monto_recibo),
-    fecha: pago.fecha_cobro,
-    descripcion: textoDe(pago, 'Cobro de recibo'),
-    categoria_id: categorias.cobro ?? null,
-    cuenta_id: pago.cuenta_cobro_id ?? null,
-  }));
+    monto,
+    fecha: abono.fecha,
+    descripcion: textoDe(pago, generico),
+    categoria_id: categoria ?? null,
+    cuenta_id: abono.cuenta_id ?? null,
+  });
 
-  if (Number(pago.comision) > 0) {
-    movs.push(movimiento(pago, {
-      tipo: 'ingreso',
-      monto: redondear(pago.comision),
-      fecha: pago.fecha_cobro,
-      descripcion: textoDe(pago, 'Comisión'),
-      categoria_id: categorias.comision ?? null,
-      cuenta_id: pago.cuenta_cobro_id ?? null,
-    }));
-  }
+  /* Un abono puede traer recibo, comisión o las dos; una parte en cero no
+     se vuelve un movimiento. */
+  repartirAbonos(pago).forEach((abono) => {
+    if (abono.recibo > 0) movs.push(ingreso(abono, abono.recibo, 'Cobro de recibo', categorias.cobro));
+    if (abono.comision > 0) movs.push(ingreso(abono, abono.comision, 'Comisión', categorias.comision));
+  });
   return movs;
 }
 
-/** Lo que te deben: el recibo más su comisión, de todo lo no cobrado. */
+/** Lo que te deben: de cada operación sin saldar, lo que le falta. */
 export function totalPorCobrar(pagos) {
-  return sumar(...pagos.filter(estaPendiente)
-    .map((p) => sumar(p.monto_recibo, p.comision)));
+  return sumar(...pagos.filter(estaPendiente).map(saldoDe));
 }
 
 /**
@@ -86,10 +81,11 @@ export function totalPorCobrar(pagos) {
  */
 export function totalesDeNegocio(pagos, mes) {
   const pagados = pagos.filter((p) => mesDe(p.fecha_pago) === mes);
-  const cobrados = pagos.filter((p) => p.fecha_cobro && mesDe(p.fecha_cobro) === mes);
+  const comisiones = pagos.flatMap(repartirAbonos)
+    .filter((a) => mesDe(a.fecha) === mes).map((a) => a.comision);
   return {
     movido: sumar(...pagados.map((p) => p.monto_recibo)),
-    ganado: sumar(...cobrados.map((p) => p.comision)),
+    ganado: sumar(...comisiones),
     operaciones: pagados.length,
   };
 }

@@ -4,8 +4,6 @@
    de Storage da 1 GB. A 1400px y JPEG al 72% un ticket baja a 100–200 KB y se
    sigue leyendo perfecto. La diferencia es entre ~250 fotos y varios miles. */
 
-import { icono } from '../iconos/render.js';
-
 const MAX_LADO = 1400;
 const CALIDAD = 0.72;
 
@@ -78,6 +76,15 @@ export function campoFoto({ nombre = 'foto', etiqueta = 'Foto del recibo' } = {}
     </div>`;
 }
 
+/** Cada botón abre su entrada: la de la galería o la de la cámara. */
+function engancharEntradas(caja, alElegir) {
+  for (const boton of caja.querySelectorAll('[data-elegir]')) {
+    const entrada = caja.querySelector(`[data-entrada="${boton.dataset.elegir}"]`);
+    boton.addEventListener('click', () => entrada.click());
+    entrada.addEventListener('change', () => alElegir(entrada));
+  }
+}
+
 /**
  * Engancha el campo. `alCambiar(blob|null)` recibe la imagen ya comprimida.
  * @param urlPrevia para editar algo que ya tenía foto
@@ -116,11 +123,6 @@ export function conectarFoto(raiz, { alCambiar, urlPrevia = null } = {}) {
     }
   }
 
-  for (const boton of caja.querySelectorAll('[data-elegir]')) {
-    const entrada = caja.querySelector(`[data-entrada="${boton.dataset.elegir}"]`);
-    boton.addEventListener('click', () => entrada.click());
-    entrada.addEventListener('change', () => alElegir(entrada));
-  }
-
+  engancharEntradas(caja, alElegir);
   quitar.addEventListener('click', () => { mostrar(null); alCambiar?.(null); });
 }
