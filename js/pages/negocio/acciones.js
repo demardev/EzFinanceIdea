@@ -38,12 +38,18 @@ export async function crearPago(contexto, datos, { foto, categorias }) {
   return pago;
 }
 
+/** `foto`: un Blob la pone o la cambia, null la quita, undefined la deja. */
 export async function editarPago(contexto, pago, datos, { foto, categorias }) {
   const { pagos, almacen, userId } = contexto;
   const cambios = { ...datos };
   if (foto) cambios.foto_ruta = await almacen.subir(BUCKET, rutaFoto(userId, pago.id), foto);
+  if (foto === null && pago.foto_ruta) cambios.foto_ruta = null;
 
   const actualizado = await pagos.actualizar(pago.id, cambios);
+  if (foto === null && pago.foto_ruta) {
+    /* Como al eliminar: si el archivo no se borra, queda huérfano y ya. */
+    try { await almacen.borrar(BUCKET, pago.foto_ruta); } catch { /* ignorado */ }
+  }
   await regenerarMovimientos(contexto, actualizado, categorias);
   aviso('Operación actualizada.');
   return actualizado;

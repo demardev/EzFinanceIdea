@@ -80,9 +80,10 @@ function validar(d) {
   }
 }
 
-/** @param alGuardar (fila, foto) */
+/** @param alGuardar (fila, foto): foto es un Blob, null si la quitaron o
+ *  undefined si no la tocaron. */
 export function abrirFormPago(pago, datos, { alGuardar, alEliminar, urlFoto = null }) {
-  let foto = null;
+  let foto;
 
   abrirSheetFormulario({
     titulo: pago.id ? 'Editar pago de recibo' : 'Pago de recibo',

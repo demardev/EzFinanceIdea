@@ -142,11 +142,13 @@ export function crearClienteAlmacen(obtenerToken) {
       return ruta;
     },
 
-    /** @returns un Blob; el bucket es privado, así que va con el token. */
+    /** @returns un Blob; el bucket es privado, así que va con el token.
+        Sin cache: cambiar la foto la sube a la MISMA ruta, y el navegador
+        seguiría mostrando la vieja durante la hora que Storage le permite. */
     async descargar(bucket, ruta) {
       const respuesta = await enviarArchivo(
         `${ALMACEN}/object/authenticated/${bucket}/${ruta}`,
-        { method: 'GET', headers: await cabecerasArchivo() });
+        { method: 'GET', headers: await cabecerasArchivo(), cache: 'no-store' });
       return respuesta.blob();
     },
 

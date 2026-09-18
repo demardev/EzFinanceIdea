@@ -59,16 +59,19 @@ export async function comprimirImagen(archivo, { maxLado = MAX_LADO, calidad = C
 
 /* --------------------------------------------------------------- campo --- */
 
+/* Dos entradas y no una: con `capture` el teléfono abre directo la cámara y
+   no deja ir a la galería, y sin él cada navegador ofrece la cámara a su
+   manera (o no la ofrece). Así los dos caminos quedan a un toque. */
 export function campoFoto({ nombre = 'foto', etiqueta = 'Foto del recibo' } = {}) {
   return `
     <div class="campo campo-foto" data-foto>
       <label>${etiqueta}</label>
-      <input type="file" name="${nombre}" accept="image/*" capture="environment" hidden>
+      <input type="file" name="${nombre}" accept="image/*" hidden data-entrada="galeria">
+      <input type="file" accept="image/*" capture="environment" hidden data-entrada="camara">
       <div class="foto-vista" hidden><img alt="Foto adjunta"></div>
       <div class="fila" style="gap:8px">
-        <button type="button" class="btn btn-sm crece" data-elegir>
-          ${icono('card', 15)} Tomar o elegir foto
-        </button>
+        <button type="button" class="btn btn-sm crece" data-elegir="galeria">Galería</button>
+        <button type="button" class="btn btn-sm crece" data-elegir="camara">Cámara</button>
         <button type="button" class="btn btn-sm btn-peligro" data-quitar hidden>Quitar</button>
       </div>
       <span class="tenue-2" style="font-size:12px" data-peso></span>
@@ -82,7 +85,6 @@ export function campoFoto({ nombre = 'foto', etiqueta = 'Foto del recibo' } = {}
 export function conectarFoto(raiz, { alCambiar, urlPrevia = null } = {}) {
   const caja = raiz.querySelector('[data-foto]');
   if (!caja) return;
-  const entrada = caja.querySelector('input[type="file"]');
   const vista = caja.querySelector('.foto-vista');
   const img = vista.querySelector('img');
   const quitar = caja.querySelector('[data-quitar]');
@@ -97,9 +99,7 @@ export function conectarFoto(raiz, { alCambiar, urlPrevia = null } = {}) {
 
   if (urlPrevia) mostrar(urlPrevia);
 
-  caja.querySelector('[data-elegir]').addEventListener('click', () => entrada.click());
-
-  entrada.addEventListener('change', async () => {
+  async function alElegir(entrada) {
     const [archivo] = entrada.files;
     if (!archivo) return;
     peso.textContent = 'Procesando…';
@@ -109,12 +109,18 @@ export function conectarFoto(raiz, { alCambiar, urlPrevia = null } = {}) {
               `${r.ancho}×${r.alto} · ${Math.round(r.bytes / 1024)} KB`);
       alCambiar?.(r.blob);
     } catch (e) {
+      /* Sin avisar null: eso significa "quitar", y al editar borraría la que había. */
       peso.textContent = e.message;
-      alCambiar?.(null);
     } finally {
       entrada.value = '';
     }
-  });
+  }
+
+  for (const boton of caja.querySelectorAll('[data-elegir]')) {
+    const entrada = caja.querySelector(`[data-entrada="${boton.dataset.elegir}"]`);
+    boton.addEventListener('click', () => entrada.click());
+    entrada.addEventListener('change', () => alElegir(entrada));
+  }
 
   quitar.addEventListener('click', () => { mostrar(null); alCambiar?.(null); });
 }
