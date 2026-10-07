@@ -5,11 +5,11 @@ import { saldosPorCuenta, patrimonioLiquido, totalesDelMes } from '../../calc/sa
 import { deudaTotalDeTarjetas } from '../../calc/deuda-tarjeta.js';
 import { proximosVencimientos } from '../../calc/vencimientos.js';
 import { totalesDeNegocio, totalPorCobrar, estaPendiente } from '../../negocio/pago-recibo.js';
-import { mesDe, hoyISO } from '../../calc/fechas.js';
+import { mesDe, hoyISO, sumarDias } from '../../calc/fechas.js';
 import { ambitoGuardado, guardarAmbito, esDelAmbito } from '../../ui/ambito.js';
 import { conectarPastillas } from '../../ui/pastillas.js';
 import { animarRodillos, hayRodillo } from '../../ui/rodillo.js';
-import { conectarMovimientos } from './acciones.js';
+import { conectarMovimientos, conectarVencimientos } from './acciones.js';
 import { abrirArqueoDe } from '../ajustes/arqueo.js';
 import { conectarDeslizar } from '../../ui/deslizar.js';
 import { avisoError } from '../../ui/toast.js';
@@ -38,7 +38,8 @@ function loQueVaDelMes(delMes, hoy) {
   return delMes.filter((m) => m.fecha <= hoy);
 }
 
-function estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes, tjs, cmps, items, negocio }) {
+function estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes, cercanos,
+                           tjs, cmps, items, negocio }) {
   return {
     cuentas: lista,
     /* `totales` son los movimientos ya sumados por Postgres; `deTarjetas`,
@@ -49,7 +50,8 @@ function estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes, tjs, cmps, i
     totalesMes: totalesDelMes(soloPersonales(loQueVaDelMes(delMes, hoy))),
     deuda: deudaTotalDeTarjetas(tjs, deTarjetas, cmps),
     vencimientos: proximosVencimientos(
-      { tarjetas: tjs, movimientos: deTarjetas, compras: cmps, planItems: items },
+      { tarjetas: tjs, movimientos: deTarjetas, compras: cmps, planItems: items,
+        registrados: cercanos },
       { hoy, dias: 14 }),
     negocio,
   };
@@ -97,24 +99,33 @@ function conectarArqueo(contenedor, contexto, cuentas, alTerminar) {
   });
 }
 
-export async function montarResumen(contenedor, contexto) {
+/* Los gastos fijos se dan por pagados con un egreso de unos días antes o
+   después de su fecha: este rango cubre todos los que el aviso puede mirar. */
+async function cargar(contexto, hoy) {
   const { cuentas, movimientos, tarjetas, compras, planItems } = contexto;
-  contenedor.innerHTML = hayRodillo('patrimonio') ? '' : '<p class="tenue">Cargando…</p>';
-  try {
-    const hoy = hoyISO();
-    const [lista, totales, deTarjetas, recientes, delMes, tjs, cmps, items] = await Promise.all([
+  const [lista, totales, deTarjetas, recientes, delMes, cercanos, tjs, cmps, items] =
+    await Promise.all([
       cuentas.listarActivas(),
       movimientos.totalesPorCuenta(hoy),    // saldos ya sumados: unas pocas filas
       movimientos.listarDeTarjetas(),       // deuda y vencimientos
       movimientos.listarUltimos(hoy),       // la lista corta de abajo
       movimientos.listarDelMes(mesDe(hoy)),
+      movimientos.listarEntre(sumarDias(hoy, -13), sumarDias(hoy, 17)),
       tarjetas.listarActivas(),
       compras.listar(),
       planItems.listarActivos(),
     ]);
-    const { negocio, pendientes } = await datosDeNegocio(contexto, mesDe(hoy));
-    const estado = estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes,
-                                     tjs, cmps, items, negocio });
+  const { negocio, pendientes } = await datosDeNegocio(contexto, mesDe(hoy));
+  const estado = estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes, cercanos,
+                                   tjs, cmps, items, negocio });
+  return { estado, lista, recientes, pendientes };
+}
+
+export async function montarResumen(contenedor, contexto) {
+  contenedor.innerHTML = hayRodillo('patrimonio') ? '' : '<p class="tenue">Cargando…</p>';
+  try {
+    const hoy = hoyISO();
+    const { estado, lista, recientes, pendientes } = await cargar(contexto, hoy);
     let ambito = ambitoGuardado();
 
     const pintar = () => {
@@ -126,14 +137,15 @@ export async function montarResumen(contenedor, contexto) {
       animarRodillos(contenedor);
     };
     pintar();
-    /* El contenedor es nuevo en cada navegación (ver router.js), así que este
-       listener se engancha una sola vez y sobrevive a los repintados. */
+    /* El contenedor es nuevo en cada navegación (ver router.js), así que estos
+       listeners se enganchan una sola vez y sobreviven a los repintados. */
     conectarPastillas(contenedor, (valor) => {
       ambito = valor;
       guardarAmbito(valor);
       pintar();
     });
     conectarMovimientos(contenedor, contexto, () => recientes, recargar);
+    conectarVencimientos(contenedor, contexto, estado.vencimientos, recargar);
     conectarArqueo(contenedor, contexto, lista, recargar);
   } catch (e) {
     contenedor.innerHTML = '<p class="campo-error">No se pudo cargar.</p>';

@@ -43,7 +43,7 @@ describir('próximos vencimientos', (caso) => {
                                        { hoy: '2026-09-16', dias: 14 });
     igual(lista.length, 1);
     igual(lista[0], { clase: 'gasto', nombre: 'Renta', fecha: '2026-09-20',
-                      monto: 12000, dias: 4, estado: 'urgente' });
+                      monto: 12000, dias: 4, estado: 'urgente', item: GASTO });
   });
 
   caso('lo que cae fuera del horizonte no aparece', () => {
@@ -102,5 +102,36 @@ describir('próximos vencimientos', (caso) => {
       movimientos: [cuota(1, '2026-08-05'), cuota(2, '2026-09-05'), cuota(3, '2026-09-14')],
     }, { hoy: '2026-09-16', dias: 30 });
     igual(lista.find((v) => v.clase === 'pago').monto, 100);   // solo la cuota 3
+  });
+
+  caso('un gasto fijo sigue apareciendo hasta 3 días después de vencido', () => {
+    const a3 = proximosVencimientos({ ...vacio, planItems: [GASTO] },
+                                    { hoy: '2026-09-23', dias: 14 });
+    igual(a3.length, 1);
+    igual(a3[0].dias, -3);
+    igual(a3[0].estado, 'vencido');
+    igual(proximosVencimientos({ ...vacio, planItems: [GASTO] },
+                               { hoy: '2026-09-24', dias: 14 }), []);
+  });
+
+  caso('un gasto fijo ya registrado deja de aparecer', () => {
+    const pagado = { tipo: 'egreso', descripcion: ' renta ', monto: 11500, fecha: '2026-09-21' };
+    igual(proximosVencimientos({ ...vacio, planItems: [GASTO], registrados: [pagado] },
+                               { hoy: '2026-09-22', dias: 14 }), []);
+  });
+
+  caso('también lo reconoce por categoría y monto aunque cambie el nombre', () => {
+    const conCategoria = { ...GASTO, categoria_id: 'vivienda' };
+    const pagado = { tipo: 'egreso', descripcion: 'Depto', categoria_id: 'vivienda',
+                     monto: 12000, fecha: '2026-09-15' };
+    igual(proximosVencimientos({ ...vacio, planItems: [conCategoria], registrados: [pagado] },
+                               { hoy: '2026-09-16', dias: 14 }), []);
+  });
+
+  caso('el pago del mes pasado no tapa el de este mes', () => {
+    const viejo = { tipo: 'egreso', descripcion: 'Renta', monto: 12000, fecha: '2026-08-20' };
+    const lista = proximosVencimientos({ ...vacio, planItems: [GASTO], registrados: [viejo] },
+                                       { hoy: '2026-09-16', dias: 14 });
+    igual(lista.length, 1);
   });
 });

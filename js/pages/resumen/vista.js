@@ -72,10 +72,10 @@ function filaMovimiento(mov) {
     </div>`;
 }
 
-function filaVencimiento(v) {
-  return `
-    <div class="lista-fila">
-      <span class="fila-cuerpo" style="cursor:default">
+/* Los gastos fijos se tocan para registrarlos; los avisos de tarjeta no
+   hacen nada, porque su pago se hace desde Tarjetas. */
+function filaVencimiento(v, indice) {
+  const cuerpo = `
         <span class="icono-caja">${icono(ICONO_VENCIMIENTO[v.clase], 18)}</span>
         <span class="crece" style="min-width:0">
           <span class="titulo truncar" style="display:block">${escapar(v.nombre)}</span>
@@ -83,9 +83,11 @@ function filaVencimiento(v) {
             ${QUE_ES[v.clase]} ${formatearFecha(v.fecha)} · ${cuandoTexto(v.dias)}
           </span></span>
         </span>
-        <span class="monto">${textoMonto(v.monto)}</span>
-      </span>
-    </div>`;
+        <span class="monto">${textoMonto(v.monto)}</span>`;
+  const interior = v.clase === 'gasto'
+    ? `<button type="button" class="fila-cuerpo" data-vencimiento="${indice}">${cuerpo}</button>`
+    : `<span class="fila-cuerpo" style="cursor:default">${cuerpo}</span>`;
+  return `<div class="lista-fila">${interior}</div>`;
 }
 
 /** @param encabezado va entre el título y la lista; hoy solo las pastillas. */

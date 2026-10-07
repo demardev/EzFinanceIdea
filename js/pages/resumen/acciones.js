@@ -4,6 +4,7 @@
 
 import { abrirRegistro, eliminarMovimiento } from '../../movimientos/registrar.js';
 import { cerrarDeslizada } from '../../ui/deslizar.js';
+import { unirDestino } from '../../ui/campos.js';
 import { avisoError } from '../../ui/toast.js';
 
 /* Un movimiento del negocio no se edita solo: se abre su operación y desde
@@ -41,6 +42,31 @@ export function conectarMovimientos(contenedor, contexto, movimientos, alCambiar
         return;
       }
       await abrirRegistro(contexto, buscar(objetivo.dataset.editar), alCambiar);
+    } catch (e) { avisoError(e); }
+  });
+}
+
+/* Un gasto fijo del plan ya trae casi todo el movimiento: se abre el mismo
+   formulario de "nuevo" con eso puesto, y la fecha de hoy, que es cuando lo
+   estás pagando. */
+function borradorDeGasto(item) {
+  return {
+    tipo: 'egreso',
+    monto: Number(item.monto) || 0,
+    descripcion: item.nombre,
+    categoria_id: item.categoria_id ?? '',
+    origen: unirDestino(item, 'cuenta_id', 'tarjeta_id'),
+  };
+}
+
+/** Tocar un gasto fijo de "Próximos vencimientos" lo registra. */
+export function conectarVencimientos(contenedor, contexto, vencimientos, alCambiar) {
+  contenedor.addEventListener('click', async (evento) => {
+    const objetivo = evento.target.closest('[data-vencimiento]');
+    if (!objetivo) return;
+    const { item } = vencimientos[Number(objetivo.dataset.vencimiento)];
+    try {
+      await abrirRegistro(contexto, borradorDeGasto(item), alCambiar);
     } catch (e) { avisoError(e); }
   });
 }

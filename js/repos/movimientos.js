@@ -19,6 +19,11 @@ export function repoMovimientos(cliente) {
     return base.listar({ fecha: [`gte.${desde}`, `lte.${hasta}`], ...extra });
   }
 
+  /** Un rango corto de días, ambos incluidos. */
+  function listarEntre(desde, hasta) {
+    return base.listar({ fecha: [`gte.${desde}`, `lte.${hasta}`] });
+  }
+
   /** Las N cuotas de una compra se insertan de un viaje, no una por una. */
   function crearVarios(filas) {
     return cliente.insertar('movimientos', filas);
@@ -95,7 +100,7 @@ export function repoMovimientos(cliente) {
     return origen + destino;
   }
 
-  return { ...base, listarDelMes, listarFuturos, totalesPorCuenta, listarDeTarjetas,
-           listarUltimos, ultimos, crearVarios, listarDeCompra, eliminarPorPago,
+  return { ...base, listarDelMes, listarEntre, listarFuturos, totalesPorCuenta,
+           listarDeTarjetas, listarUltimos, ultimos, crearVarios, listarDeCompra, eliminarPorPago,
            eliminarPendientesDeCompra, contarPorCategoria, contarPorCuenta };
 }

@@ -19,8 +19,9 @@ function selectorTipo(activo) {
   return `<div class="pastillas">${botones}</div>`;
 }
 
+/* Un nuevo puede venir con valores puestos (un gasto fijo del plan). */
 function valoresIniciales(mov) {
-  if (!mov?.id) return { fecha: hoyISO() };
+  if (!mov?.id) return { fecha: hoyISO(), ...mov };
   return {
     monto: mov.monto, fecha: mov.fecha, descripcion: mov.descripcion,
     categoria_id: mov.categoria_id ?? '', nota: mov.nota ?? '',
@@ -29,7 +30,7 @@ function valoresIniciales(mov) {
 }
 
 /**
- * @param mov       {} para nuevo, o el movimiento a editar
+ * @param mov       {} para nuevo (o con valores ya puestos), o el movimiento a editar
  * @param datos     { cuentas, tarjetas, categorias } ya cargados
  * @param acciones  { alGuardar(fila), alEliminar() }
  */

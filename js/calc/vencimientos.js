@@ -40,22 +40,45 @@ function deTarjetas(tarjetas, movimientos, compras, hoy, hasta) {
   return avisos;
 }
 
-function deGastosFijos(planItems, hoy, hasta) {
+/* Un gasto fijo sigue a la vista unos días después de su fecha: es cuando
+   más falta hace el recordatorio. Al registrarlo deja de aparecer. */
+const GRACIA_VENCIDO = 3;
+const ADELANTO_PAGO = 10;   // pagar la renta unos días antes también cuenta
+
+const normal = (texto) => String(texto || '').trim().toLowerCase();
+
+/* No hay liga entre el movimiento y el item del plan, así que se reconoce
+   por el nombre o, si se lo cambiaste, por categoría y monto. */
+function yaRegistrado(item, fecha, registrados) {
+  const desde = sumarDias(fecha, -ADELANTO_PAGO);
+  const hasta = sumarDias(fecha, GRACIA_VENCIDO);
+  return registrados.some((m) => m.tipo === 'egreso' && m.fecha >= desde && m.fecha <= hasta
+    && (normal(m.descripcion) === normal(item.nombre)
+        || (item.categoria_id && m.categoria_id === item.categoria_id
+            && Number(m.monto) === Number(item.monto))));
+}
+
+function deGastosFijos(planItems, registrados, hoy, hasta) {
+  const desde = sumarDias(hoy, -GRACIA_VENCIDO);
   return planItems
     .filter((i) => i.activo && i.clase === 'gasto' && i.variabilidad === 'fijo' && i.dia_mes)
-    .flatMap((item) => ocurrenciasMensuales(item.dia_mes, hoy, hasta)
-      .map((fecha) => aviso('gasto', item.nombre, fecha, Number(item.monto) || 0, hoy)));
+    .flatMap((item) => ocurrenciasMensuales(item.dia_mes, desde, hasta)
+      .filter((fecha) => !yaRegistrado(item, fecha, registrados))
+      .map((fecha) => ({ ...aviso('gasto', item.nombre, fecha, Number(item.monto) || 0, hoy),
+                         item })));
 }
 
 /**
+ * @param registrados egresos recientes, para no avisar de un gasto fijo ya pagado
  * @param dias cuántos días hacia adelante mirar (el Resumen usa 14)
  * @returns avisos ordenados por fecha, lo más próximo primero
  */
-export function proximosVencimientos({ tarjetas, movimientos, compras, planItems },
+export function proximosVencimientos({ tarjetas, movimientos, compras, planItems,
+                                       registrados = [] },
                                      { hoy, dias = 14 }) {
   const hasta = sumarDias(hoy, dias);
   return [
     ...deTarjetas(tarjetas, movimientos, compras, hoy, hasta),
-    ...deGastosFijos(planItems, hoy, hasta),
+    ...deGastosFijos(planItems, registrados, hoy, hasta),
   ].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
 }
