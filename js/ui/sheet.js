@@ -5,6 +5,15 @@ import { conectarMontos } from './monto-input.js';
 
 const ABIERTOS = [];
 
+/* La X cierra igual que tocar fuera o Escape: sin guardar ni confirmar nada. */
+const BOTON_CERRAR = `
+  <button class="sheet-cerrar" type="button" data-cerrar-sheet aria-label="Cerrar">
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" fill="none"/>
+    </svg>
+  </button>`;
+
 function quitar(pieza) {
   pieza.fondo.remove();
   pieza.hoja.remove();
@@ -32,7 +41,8 @@ export function abrirSheet({ titulo, cuerpo, alCerrar }) {
   hoja.className = 'sheet';
   hoja.setAttribute('role', 'dialog');
   hoja.setAttribute('aria-modal', 'true');
-  hoja.innerHTML = `<div class="sheet-agarre"></div><h2>${titulo}</h2>${cuerpo}`;
+  hoja.innerHTML = `<div class="sheet-agarre"></div>
+    <div class="sheet-cabeza"><h2>${titulo}</h2>${BOTON_CERRAR}</div>${cuerpo}`;
 
   const pieza = { fondo, hoja, cerrar: null };
   pieza.cerrar = () => {
@@ -42,11 +52,12 @@ export function abrirSheet({ titulo, cuerpo, alCerrar }) {
   };
 
   fondo.addEventListener('click', pieza.cerrar);
+  hoja.querySelector('[data-cerrar-sheet]').addEventListener('click', pieza.cerrar);
   document.body.append(fondo, hoja);
   if (ABIERTOS.length === 0) document.addEventListener('keydown', alTecla);
   ABIERTOS.push(pieza);
 
   conectarMontos(hoja);
-  hoja.querySelector('input, select, textarea, button')?.focus({ preventScroll: true });
+  hoja.querySelector('input, select, textarea, button:not([data-cerrar-sheet])')?.focus({ preventScroll: true });
   return { hoja, cerrar: pieza.cerrar };
 }

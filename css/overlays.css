@@ -20,7 +20,18 @@
   width:38px; height:4px; border-radius:999px;
   background:var(--line); margin:6px auto 14px;
 }
-.sheet h2{ font-size:17px; font-weight:620; letter-spacing:-0.02em; margin-bottom:14px; }
+.sheet-cabeza{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  margin-bottom:14px;
+}
+.sheet h2{ font-size:17px; font-weight:620; letter-spacing:-0.02em; }
+.sheet-cerrar{
+  flex:none; display:grid; place-items:center;
+  width:30px; height:30px; margin:-3px -4px 0 0; border-radius:999px;
+  border:none; cursor:pointer;
+  color:var(--neg); background:color-mix(in srgb, var(--neg) 14%, transparent);
+}
+.sheet-cerrar:active{ background:color-mix(in srgb, var(--neg) 26%, transparent); }
 @keyframes subir{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
 @keyframes aparecer{ from{ opacity:0; } to{ opacity:1; } }
 
