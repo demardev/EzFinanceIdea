@@ -32,13 +32,17 @@ export function pasosDelAtajo({ url, apikey }) {
         <li>Pega la URL:${copiable(url)}</li>
         <li>Toca la flecha de la acción: Método <strong>POST</strong>, y en Encabezados
           agrega <strong>apikey</strong> con este valor:${copiable(apikey)}</li>
-        <li>Cuerpo de solicitud: <strong>JSON</strong>, con cuatro campos:
+        <li>Cuerpo de solicitud: <strong>JSON</strong>, con cuatro campos. Los tres
+          últimos NO se escriben: se inserta <em>Entrada de shortcut</em> desde la
+          barra de variables, se toca y se elige la propiedad.
           <ul style="padding-left:16px;margin:6px 0 0">
             ${campoJson('clave', 'tu clave, la de arriba')}
-            ${campoJson('monto', 'la variable <em>Importe</em> (Amount)')}
-            ${campoJson('comercio', 'la variable <em>Comercio</em> (Merchant)')}
-            ${campoJson('tarjeta', 'la variable <em>Tarjeta o pase</em> (Card or Pass)')}
+            ${campoJson('monto', '<em>Cantidad</em> (Amount)')}
+            ${campoJson('comercio', '<em>Comercio</em> (Merchant)')}
+            ${campoJson('tarjeta', '<em>Tarjeta o pase</em> (Card or Pass)')}
           </ul></li>
+        <li>Para probarlo paga algo de verdad: con ▶ no hay transacción y el
+          servidor responde "Monto no válido".</li>
         <li>Paga algo con Apple Pay y abre el Resumen: aparece en
           <strong>Por confirmar</strong>.</li>
       </ol>
