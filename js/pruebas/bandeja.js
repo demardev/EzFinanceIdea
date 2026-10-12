@@ -2,7 +2,7 @@
    Lo que llega del atajo de Apple Pay y cómo se vuelve un movimiento. */
 
 import { describir, igual } from './marco.js';
-import { fechaLocalDe, borradorDeBandeja } from '../calc/bandeja.js';
+import { fechaLocalDe, borradorDeBandeja, claveDeComercio } from '../calc/bandeja.js';
 
 const COMPRA = { id: 'b1', origen: 'applepay', monto: 15.75, comercio: 'ISHOP PASEO',
                  tarjeta: 'Cuscatlán Visa', created_at: '2026-10-08T21:30:00Z' };
@@ -40,5 +40,32 @@ describir('bandeja de por confirmar', (caso) => {
 
   caso('el monto llega de la base como texto y sale como número', () => {
     igual(borradorDeBandeja({ ...COMPRA, monto: '15.75' }, {}).monto, 15.75);
+  });
+
+  caso('el comercio se compara sin mayúsculas ni espacios de más', () => {
+    igual(claveDeComercio('  Starbucks   Paseo '), 'starbucks paseo');
+    igual(claveDeComercio(null), '');
+  });
+
+  caso('la categoría que confirmaste para ese comercio llega puesta', () => {
+    const b = borradorDeBandeja(COMPRA, {}, { aprendidas: { 'ishop paseo': 'k-tec' } });
+    igual(b.categoria_id, 'k-tec');
+  });
+
+  caso('si no la has confirmado, se toma la de tu historial', () => {
+    const b = borradorDeBandeja(COMPRA, {}, { historial: { 'ishop paseo': 'k-hist' } });
+    igual(b.categoria_id, 'k-hist');
+  });
+
+  caso('lo confirmado gana sobre el historial', () => {
+    const b = borradorDeBandeja(COMPRA, {}, { aprendidas: { 'ishop paseo': 'k-tec' },
+                                              historial: { 'ishop paseo': 'k-hist' } });
+    igual(b.categoria_id, 'k-tec');
+  });
+
+  caso('sin nada que la diga, la categoría queda por elegir', () => {
+    igual(borradorDeBandeja(COMPRA, {}).categoria_id, '');
+    igual(borradorDeBandeja({ ...COMPRA, comercio: null }, {},
+                            { historial: { '': 'k' } }).categoria_id, '');
   });
 });

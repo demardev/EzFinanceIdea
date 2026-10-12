@@ -51,6 +51,23 @@ drop policy if exists "propio_wallet_origenes" on wallet_origenes;
 create policy "propio_wallet_origenes" on wallet_origenes for all to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
+-- --------------------------------------------------- comercio -> categoría --
+-- "starbucks" va en Comida. Se aprende al confirmar una compra; `comercio`
+-- está normalizado (sin mayúsculas ni espacios de más, ver claveDeComercio()
+-- en js/calc/bandeja.js). Si borras la categoría, se olvida sola.
+create table if not exists comercio_categorias (
+  user_id      uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  comercio     text not null,
+  categoria_id uuid not null references categorias(id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  primary key (user_id, comercio)
+);
+
+alter table comercio_categorias enable row level security;
+drop policy if exists "propio_comercio_categorias" on comercio_categorias;
+create policy "propio_comercio_categorias" on comercio_categorias for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
 -- ------------------------------------------------------------------ clave --
 -- Una por usuario. Solo el hash: la clave en claro se enseña una vez, al
 -- generarla, y no se puede volver a leer.

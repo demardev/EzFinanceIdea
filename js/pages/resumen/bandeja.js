@@ -11,7 +11,7 @@ import { unirDestino } from '../../ui/campos.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { aviso, avisoError } from '../../ui/toast.js';
 import { formatearFecha } from '../../calc/fechas.js';
-import { fechaLocalDe, borradorDeBandeja } from '../../calc/bandeja.js';
+import { fechaLocalDe, borradorDeBandeja, claveDeComercio } from '../../calc/bandeja.js';
 import { abrirRegistro } from '../../movimientos/registrar.js';
 
 function fila(item) {
@@ -26,16 +26,34 @@ function fila(item) {
   });
 }
 
-/* Lo que se hace al registrar: sacarla de la bandeja y, si es un egreso de
-   una tarjeta de Wallet que aún no tenía pareja (o la cambiaste), recordarla. */
-function alRegistrarDe(contexto, item, origenes) {
+/* Lo que se hace al registrar: sacarla de la bandeja y recordar lo que
+   elegiste si es nuevo o lo cambiaste — la tarjeta de Wallet y la categoría
+   del comercio. Solo de egresos: es lo que llega de Apple Pay. */
+function alRegistrarDe(contexto, item, { origenes, categorias }) {
+  const { bandeja, userId } = contexto;
   return async (fila) => {
-    await contexto.bandeja.eliminar(item.id);
+    await bandeja.eliminar(item.id);
+    if (fila.tipo !== 'egreso') return;
     const origen = unirDestino(fila, 'cuenta_id', 'tarjeta_id');
-    if (fila.tipo === 'egreso' && item.tarjeta && origen && origenes[item.tarjeta] !== origen) {
-      await contexto.bandeja.recordarOrigen(contexto.userId, item.tarjeta, origen);
+    if (item.tarjeta && origen && origenes[item.tarjeta] !== origen) {
+      await bandeja.recordarOrigen(userId, item.tarjeta, origen);
+    }
+    const comercio = claveDeComercio(item.comercio);
+    if (comercio && fila.categoria_id && categorias.aprendidas[comercio] !== fila.categoria_id) {
+      await bandeja.recordarCategoria(userId, comercio, fila.categoria_id);
     }
   };
+}
+
+/* El historial solo se consulta para los comercios que aún no tienen
+   categoría confirmada. */
+async function cargarSugerencias(bandeja, items) {
+  const [origenes, aprendidas] = await Promise.all([bandeja.origenes(), bandeja.aprendidas()]);
+  const porBuscar = new Map(items
+    .map((i) => [claveDeComercio(i.comercio), i.comercio])
+    .filter(([clave]) => clave && !aprendidas[clave]));
+  const historial = await bandeja.delHistorial([...porBuscar]);
+  return { origenes, categorias: { aprendidas, historial } };
 }
 
 async function descartar(contexto, item, alCambiar) {
@@ -52,7 +70,7 @@ async function descartar(contexto, item, alCambiar) {
 }
 
 export async function abrirPorConfirmar(contexto, items, alCambiar) {
-  const origenes = await contexto.bandeja.origenes();
+  const sugerencias = await cargarSugerencias(contexto.bandeja, items);
   const { hoja, cerrar } = abrirSheet({
     titulo: `Por confirmar · ${items.length}`,
     cuerpo: `
@@ -73,8 +91,9 @@ export async function abrirPorConfirmar(contexto, items, alCambiar) {
         return;
       }
       cerrar();
-      await abrirRegistro(contexto, borradorDeBandeja(item, origenes), alCambiar, undefined,
-                          { alRegistrar: alRegistrarDe(contexto, item, origenes) });
+      const borrador = borradorDeBandeja(item, sugerencias.origenes, sugerencias.categorias);
+      await abrirRegistro(contexto, borrador, alCambiar, undefined,
+                          { alRegistrar: alRegistrarDe(contexto, item, sugerencias) });
     } catch (e) { avisoError(e); }
   });
 }
