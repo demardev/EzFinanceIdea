@@ -2,7 +2,8 @@
    Lo que llega del atajo de Apple Pay y cómo se vuelve un movimiento. */
 
 import { describir, igual } from './marco.js';
-import { fechaLocalDe, borradorDeBandeja, claveDeComercio } from '../calc/bandeja.js';
+import { fechaLocalDe, borradorDeBandeja, claveDeComercio,
+         listasParaRegistrar } from '../calc/bandeja.js';
 
 const COMPRA = { id: 'b1', origen: 'applepay', monto: 15.75, comercio: 'ISHOP PASEO',
                  tarjeta: 'Cuscatlán Visa', created_at: '2026-10-08T21:30:00Z' };
@@ -67,5 +68,41 @@ describir('bandeja de por confirmar', (caso) => {
     igual(borradorDeBandeja(COMPRA, {}).categoria_id, '');
     igual(borradorDeBandeja({ ...COMPRA, comercio: null }, {},
                             { historial: { '': 'k' } }).categoria_id, '');
+  });
+
+});
+
+describir('registrar todas las de la bandeja', (caso) => {
+  const SUGERENCIAS = {
+    origenes: { 'Cuscatlán Visa': 'tarjeta:cus' },
+    categorias: { aprendidas: { 'ishop paseo': 'k-tec' }, historial: { starbucks: 'k-comida' } },
+  };
+  const VIGENTES = { origenes: new Set(['tarjeta:cus']), categorias: new Set(['k-tec', 'k-comida']) };
+  const compra = (id, comercio, monto, tarjeta = 'Cuscatlán Visa') =>
+    ({ ...COMPRA, id, comercio, monto, tarjeta });
+
+  caso('solo entran las que ya traen tarjeta y categoría', () => {
+    const r = listasParaRegistrar([
+      compra('a', 'ISHOP PASEO', 15.75),             // las dos aprendidas
+      compra('b', 'STARBUCKS', '4.50'),              // categoría del historial
+      compra('c', 'TIENDA NUEVA', 9),                // sin categoría
+      compra('d', 'ISHOP PASEO', 3, 'BAC Visa'),     // tarjeta sin pareja
+    ], SUGERENCIAS, VIGENTES);
+    igual(r.listas.map((l) => l.item.id), ['a', 'b']);
+    igual(r.listas[1].borrador.categoria_id, 'k-comida');
+    igual(r.total, 20.25);
+    igual(r.faltan, 2);
+  });
+
+  caso('una tarjeta o categoría que ya no está activa no cuenta como puesta', () => {
+    const r = listasParaRegistrar([compra('a', 'ISHOP PASEO', 15.75)], SUGERENCIAS,
+      { origenes: new Set(), categorias: new Set(['k-tec']) });
+    igual(r.listas, []);
+    igual(r.faltan, 1);
+  });
+
+  caso('sin ninguna completa, total cero', () => {
+    const r = listasParaRegistrar([compra('c', 'TIENDA NUEVA', 9)], SUGERENCIAS, VIGENTES);
+    igual(r.total, 0);
   });
 });

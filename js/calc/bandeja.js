@@ -2,6 +2,7 @@
    vuelve un movimiento. Función PURA: sin red, sin DOM. */
 
 import { aISO } from './fechas.js';
+import { sumar } from './dinero.js';
 
 const POR_ORIGEN = { applepay: 'Compra con Apple Pay', sms: 'Compra (SMS)', correo: 'Compra (correo)' };
 
@@ -41,5 +42,28 @@ export function borradorDeBandeja(item, origenes, categorias = {}) {
     descripcion: item.comercio || POR_ORIGEN[item.origen] || 'Compra',
     categoria_id: categoriaDe(item, categorias),
     origen: (item.tarjeta && origenes[item.tarjeta]) || '',
+  };
+}
+
+/**
+ * Las que se pueden registrar sin abrir el formulario: traen una tarjeta y
+ * una categoría que siguen activas. Las demás se quedan para revisarlas.
+ *
+ * @param sugerencias { origenes, categorias } como para borradorDeBandeja()
+ * @param vigentes    { origenes: Set('tarjeta:<id>'), categorias: Set(id) }
+ * @returns { listas: [{ item, borrador }], total, faltan }
+ */
+export function listasParaRegistrar(items, sugerencias, vigentes) {
+  const listas = items
+    .map((item) => ({
+      item, borrador: borradorDeBandeja(item, sugerencias.origenes, sugerencias.categorias),
+    }))
+    .filter(({ borrador }) => borrador.monto > 0
+      && vigentes.origenes.has(borrador.origen)
+      && vigentes.categorias.has(borrador.categoria_id));
+  return {
+    listas,
+    total: sumar(...listas.map((l) => l.borrador.monto)),
+    faltan: items.length - listas.length,
   };
 }
