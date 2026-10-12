@@ -34,7 +34,7 @@ function lineaTraspaso(t) {
   const recibe = t.monto > 0;
   return `
     <div class="sobre-linea">
-      <span class="crece truncar">${recibe ? 'Cubierto con lo que sobró de' : 'Cubre a'}
+      <span class="crece truncar">${recibe ? 'Recibe de' : 'Le pasa a'}
         ${escapar(t.nombre)} <span class="tenue-2">· ${formatearFecha(t.fecha)}</span></span>
       <span class="monto ${recibe ? 'pos' : 'tenue'}">
         ${recibe ? '+' : '−'}${textoMonto(Math.abs(t.monto))}</span>
