@@ -21,14 +21,17 @@ async function cargarCatalogos({ cuentas, tarjetas, categorias }) {
  * @param mov       {} para nuevo, o el movimiento a editar
  * @param alCambiar se llama después de guardar o eliminar
  * @param catalogos opcional: si quien llama ya los tiene, evita 3 peticiones
+ * @param alRegistrar opcional: (fila) => Promise, después de crear uno NUEVO y
+ *                  antes de alCambiar. La bandeja lo usa para sacar la compra.
  */
-export async function abrirRegistro(contexto, mov, alCambiar, catalogos) {
+export async function abrirRegistro(contexto, mov, alCambiar, catalogos, { alRegistrar } = {}) {
   const { movimientos } = contexto;
   const datos = catalogos ?? await cargarCatalogos(contexto);
 
   abrirFormMovimiento(mov, datos, {
     alGuardar: async (fila) => {
       await (mov?.id ? movimientos.actualizar(mov.id, fila) : movimientos.crear(fila));
+      if (!mov?.id) await alRegistrar?.(fila);
       aviso(mov?.id ? 'Movimiento guardado.' : 'Movimiento registrado.');
       await alCambiar();
     },

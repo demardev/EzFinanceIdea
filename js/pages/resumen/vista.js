@@ -101,6 +101,15 @@ function seccion(titulo, filas, vacio, encabezado = '') {
     </div>`;
 }
 
+/* Lo que llegó solo (Apple Pay) y espera que lo confirmes. */
+function botonPorConfirmar(n) {
+  return `
+    <button class="btn btn-bloque" id="btn-por-confirmar" type="button">
+      ${icono('card', 16)} Por confirmar
+      <span class="badge badge-warn">${n}</span>
+    </button>`;
+}
+
 /* Del negocio no se dice "entró/salió": eso mentiría. MOVIDO es lo que pasó
    por tus manos; GANADO son las comisiones que ya cobraste. */
 function panelNegocio(n) {
@@ -142,6 +151,7 @@ export function pintarResumen(contenedor, e) {
           <span class="monto">${rodillo('neto', e.totales.neto)}</span></span>
       </div>
 
+      ${e.porConfirmar ? botonPorConfirmar(e.porConfirmar) : ''}
       ${e.negocio ? panelNegocio(e.negocio) : ''}
       ${e.vencimientos.length
         ? seccion('Próximos vencimientos', e.vencimientos.map(filaVencimiento), '') : ''}

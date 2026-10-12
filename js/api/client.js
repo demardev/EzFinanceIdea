@@ -99,6 +99,15 @@ export function crearClienteDatos(obtenerToken) {
   };
 }
 
+/**
+ * Lo que necesita el atajo del iPhone para dejar compras en la bandeja: la
+ * función que las recibe y la llave pública. Vive aquí porque es el único
+ * archivo que sabe que existe Supabase; Ajustes solo lo enseña.
+ */
+export function datosParaAtajo() {
+  return { url: `${REST}/rpc/recibir_en_bandeja`, apikey: ANON_KEY };
+}
+
 /* ------------------------------------------------------------- archivos --- */
 
 /** Como enviar(), pero para bytes: no intenta interpretar la respuesta. */
