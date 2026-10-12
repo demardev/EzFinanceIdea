@@ -39,6 +39,13 @@
 .sobre-linea::before{
   content:"→"; position:absolute; margin-left:-18px; color:var(--fg-3);
 }
+/* "Total que entra / sale": sin flecha, alineado con la cabecera. */
+.sobre-total{
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  padding:9px var(--sep); border-top:1px solid var(--line);
+  font-size:14px; font-weight:600;
+}
+.sobre-veredicto{ padding:0 var(--sep) 11px; background:var(--bg-2); font-size:12.5px; }
 .sobre-pie{
   display:flex; align-items:baseline; justify-content:space-between;
   padding:11px var(--sep); border-top:1px solid var(--line);

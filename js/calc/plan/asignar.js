@@ -86,6 +86,13 @@ function cubrirConSobrantes(sobres) {
   });
 }
 
+/* Lo que entra y lo que sale de cada sobre, ya con los traspasos, para que
+   se pueda seguir a mano: lo que entra − lo que sale = libre. */
+function cerrarTotales(sobre) {
+  sobre.totalEntra = redondear(sobre.monto + sumar(...sobre.traspasos.map((t) => t.monto)));
+  sobre.totalSale = sumar(...sobre.asignaciones.map((a) => a.monto), sobre.colchon);
+}
+
 /** Recorre la línea de tiempo llevando el saldo de cada cuenta. */
 function recorrer(eventos, estado, caja) {
   let abierto = caja.sobres[0];
@@ -133,6 +140,7 @@ export function asignar({ eventos, saldos, colchon = 0, desde, hasta }) {
     s.libre = redondear(s.monto - sumar(...s.asignaciones.map((a) => a.monto)) - s.colchon);
   });
   cubrirConSobrantes(sobres);
+  sobres.forEach(cerrarTotales);
 
   const serie = serieDiaria(desde, hasta, { saldoInicial, deltas });
   const diaMasAjustado = serie.reduce((peor, p) => (p.total < peor.total ? p : peor), serie[0]);

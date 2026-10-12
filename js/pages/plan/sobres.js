@@ -53,11 +53,30 @@ function lineaColchon(s, nombresColchon) {
     </div>`;
 }
 
+function total(etiqueta, monto) {
+  return `
+    <div class="sobre-total">
+      <span>${etiqueta}</span><span class="monto">${textoMonto(monto)}</span>
+    </div>`;
+}
+
+/* Lo que trae, lo que recibe o pasa, y el total que entra; luego lo que paga
+   y el total que sale. Lo que entra − lo que sale es el Libre del pie. */
 function contenido(s, nombresColchon) {
   return `
-    ${s.asignaciones.map(lineaSobre).join('')}
     ${(s.traspasos ?? []).map(lineaTraspaso).join('')}
-    ${s.colchon > 0 ? lineaColchon(s, nombresColchon) : ''}`;
+    ${total('Total que entra', s.totalEntra)}
+    ${s.asignaciones.map(lineaSobre).join('')}
+    ${s.colchon > 0 ? lineaColchon(s, nombresColchon) : ''}
+    ${total('Total que sale', s.totalSale)}`;
+}
+
+/* La respuesta a "¿con esto se paga?", debajo del Libre. */
+function veredicto(s) {
+  if (!s.asignaciones.length) return '';
+  return s.libre < 0
+    ? `<p class="sobre-veredicto neg">Faltan ${textoMonto(Math.abs(s.libre))} para pagar todo</p>`
+    : `<p class="sobre-veredicto pos">${icono('check', 13)} Con eso se pagan todos</p>`;
 }
 
 function sobre(s, abierto, nombresColchon) {
@@ -79,6 +98,7 @@ function sobre(s, abierto, nombresColchon) {
         <span>Libre</span>
         <span class="monto ${s.libre < 0 ? 'neg' : 'pos'}">${textoMonto(s.libre)}</span>
       </div>
+      ${abierto ? veredicto(s) : ''}
     </div>`;
 }
 
