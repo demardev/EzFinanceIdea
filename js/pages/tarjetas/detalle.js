@@ -11,6 +11,7 @@ import { formatearFecha, hoyISO } from '../../calc/fechas.js';
 import { esCuotaYaPagada } from '../../calc/cuotas.js';
 import { ordenarPorFecha, direccionOpuesta, DIRECCIONES } from '../../movimientos/orden.js';
 import { bloqueCompras } from './detalle-compras.js';
+import { bloqueDesglose } from './detalle-desglose.js';
 
 const CLAVE_ORDEN = 'finanzas.orden-tarjeta';
 const CLAVE_BLOQUES = 'finanzas.bloques-tarjeta';
@@ -108,7 +109,7 @@ function barraOrden() {
     </div>`;
 }
 
-function cabecera(tarjeta, deuda) {
+function cabecera(tarjeta, deuda, desglose) {
   return `
     <div class="card">
       <p class="cifra-etiqueta">Deuda total</p>
@@ -117,11 +118,13 @@ function cabecera(tarjeta, deuda) {
         ${escapar(tarjeta.banco || '')}${tarjeta.ultimos_4 ? ` · •••• ${escapar(tarjeta.ultimos_4)}` : ''}
         · corte día ${tarjeta.dia_corte} · pago día ${tarjeta.dia_limite_pago}
       </p>
+      ${bloqueDesglose(desglose)}
     </div>`;
 }
 
 export function pintarDetalle(contenedor, {
-  tarjeta, ciclo, deuda, movimientos, compras, todasLasCompras = compras, nombres, iconos,
+  tarjeta, ciclo, deuda, desglose, movimientos, compras, todasLasCompras = compras,
+  nombres, iconos,
 }) {
   const ordenar = (movs) => ordenarPorFecha(movs, orden);
   /* Las cuotas por cobrar salen de los bloques del ciclo: se ven dentro de su
@@ -133,7 +136,7 @@ export function pintarDetalle(contenedor, {
 
   contenedor.innerHTML = `
     <div class="pila">
-      ${cabecera(tarjeta, deuda)}
+      ${cabecera(tarjeta, deuda, desglose)}
       ${bloqueCompras(compras, movimientos, { abierta: compraAbierta, ordenar })}
       ${barraOrden()}
       ${pintarBloque('anteriores', 'Anterior al corte',

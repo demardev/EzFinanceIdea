@@ -17,6 +17,13 @@ export function corteSiguiente(fechaCorte, diaCorte) {
   return diaDelMesDe(sumarMeses(fechaCorte, 1), diaCorte);
 }
 
+/** El corte en cuyo estado de cuenta entra un cargo de esa fecha. El día
+    del corte todavía es de ese corte. */
+export function corteQueIncluye(fecha, diaCorte) {
+  const enSuMes = diaDelMesDe(fecha, diaCorte);
+  return enSuMes >= fecha ? enSuMes : corteSiguiente(enSuMes, diaCorte);
+}
+
 /**
  * Fecha límite de pago de un corte concreto: el primer `diaLimitePago`
  * DESPUÉS de ese corte. Si el día de pago es menor o igual al de corte,

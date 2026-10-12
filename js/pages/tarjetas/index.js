@@ -10,7 +10,9 @@ import { abrirFormCompra } from './cuotas-form.js';
 import { crearCompra, editarCompra, eliminarCompra } from './compras.js';
 import { calcularCiclo } from '../../calc/ciclo-tarjeta.js';
 import { calcularDeuda } from '../../calc/deuda-tarjeta.js';
-import { sinCuotasYaPagadas } from '../../calc/cuotas.js';
+import { cargosDeTarjeta, conSaldoInicial } from '../../calc/saldo-inicial-tarjeta.js';
+import { desgloseDeDeuda, efectoDeSaldoInicial } from '../../calc/desglose-tarjeta.js';
+import { hoyISO } from '../../calc/fechas.js';
 import { confirmar } from '../../ui/confirmar.js';
 import { aviso, avisoError } from '../../ui/toast.js';
 import { plural } from '../../ui/texto.js';
@@ -23,13 +25,24 @@ function deLaTarjeta(movimientos, id) {
 }
 
 function calcularTodo(tarjeta, movimientos, compras) {
-  const propios = deLaTarjeta(movimientos, tarjeta.id);
+  /* El saldo inicial también se lista, en su corte, para que se vea de dónde sale. */
+  const propios = conSaldoInicial(deLaTarjeta(movimientos, tarjeta.id), tarjeta);
   const ciclo = calcularCiclo(tarjeta.dia_corte, tarjeta.dia_limite_pago);
   /* Las cuotas que ya venían pagadas siguen en el historial pero no son deuda. */
-  const deudores = sinCuotasYaPagadas(propios, compras);
+  const deudores = cargosDeTarjeta(tarjeta, movimientos, compras);
   /* `comprometido` sale del propio cálculo: si se sumara aparte, el
      disponible y esa línea podrían contar cosas distintas. */
-  return { ciclo, propios, deuda: calcularDeuda(deudores, ciclo, tarjeta.limite_credito) };
+  return { ciclo, propios, deuda: calcularDeuda(deudores, ciclo, tarjeta.limite_credito),
+           desglose: desgloseDeDeuda(deudores, ciclo) };
+}
+
+/** Lo que haría el saldo inicial escrito en el formulario, con su día de corte. */
+function simuladorDe(tarjeta, datos) {
+  return (form) => efectoDeSaldoInicial({
+    tarjeta: { ...tarjeta, dia_corte: Number(form.dia_corte),
+               dia_limite_pago: Number(form.dia_limite_pago) },
+    movimientos: datos.movimientos, compras: datos.compras,
+  }, { monto: form.saldo_inicial, fecha: form.fecha_saldo_inicial }, hoyISO());
 }
 
 function indices(categorias) {
@@ -76,9 +89,10 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
     const tarjeta = pantalla.sub ? datos.tarjetas.find((t) => t.id === pantalla.sub) : null;
     if (!tarjeta) { pantalla.ponerCabecera('Tarjetas'); pintarLista(); return; }
     pantalla.ponerCabecera(tarjeta.nombre, '#/tarjetas');
-    const { ciclo, deuda, propios } = calcularTodo(tarjeta, datos.movimientos, datos.compras);
+    const { ciclo, deuda, desglose, propios } =
+      calcularTodo(tarjeta, datos.movimientos, datos.compras);
     pintarDetalle(contenedor, {
-      tarjeta, ciclo, deuda, movimientos: propios,
+      tarjeta, ciclo, deuda, desglose, movimientos: propios,
       compras: datos.compras.filter((c) => c.tarjeta_id === tarjeta.id),
       todasLasCompras: datos.compras,
       ...indices(datos.categorias),
@@ -87,6 +101,7 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
 
   function editar(tarjeta) {
     abrirFormTarjeta(tarjeta, datos.cuentas, {
+      simular: simuladorDe(tarjeta, datos),
       alGuardar: async (fila) => {
         await (tarjeta.id ? tarjetas.actualizar(tarjeta.id, fila) : tarjetas.crear(fila));
         await recargar();

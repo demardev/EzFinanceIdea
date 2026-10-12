@@ -7,7 +7,7 @@
 import { diasEntre, sumarDias } from './fechas.js';
 import { calcularCiclo } from './ciclo-tarjeta.js';
 import { calcularDeuda } from './deuda-tarjeta.js';
-import { sinCuotasYaPagadas } from './cuotas.js';
+import { cargosDeTarjeta } from './saldo-inicial-tarjeta.js';
 import { ocurrenciasMensuales } from './plan/linea-tiempo.js';
 
 /** Rojo si ya venció, ámbar si faltan 5 días o menos. */
@@ -24,10 +24,9 @@ function aviso(clase, nombre, fecha, monto, hoy) {
 function deTarjetas(tarjetas, movimientos, compras, hoy, hasta) {
   const avisos = [];
   tarjetas.filter((t) => !t.archivada).forEach((tarjeta) => {
-    const suyos = movimientos.filter(
-      (m) => m.tarjeta_id === tarjeta.id || m.tarjeta_destino_id === tarjeta.id);
     const ciclo = calcularCiclo(tarjeta.dia_corte, tarjeta.dia_limite_pago, hoy);
-    const deuda = calcularDeuda(sinCuotasYaPagadas(suyos, compras), ciclo, tarjeta.limite_credito);
+    const deuda = calcularDeuda(cargosDeTarjeta(tarjeta, movimientos, compras), ciclo,
+                                tarjeta.limite_credito);
 
     /* El pago se muestra aunque ya haya vencido: es justo lo que hay que ver. */
     if (deuda.aPagarAhora > 0 && ciclo.fechaLimiteDelCorte <= hasta) {

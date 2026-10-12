@@ -12,7 +12,7 @@
 import { redondear, sumar } from './dinero.js';
 import { hoyISO } from './fechas.js';
 import { calcularCiclo } from './ciclo-tarjeta.js';
-import { sinCuotasYaPagadas } from './cuotas.js';
+import { cargosDeTarjeta } from './saldo-inicial-tarjeta.js';
 
 const esCargo = (m) => m.tipo === 'egreso' && m.tarjeta_id;
 const esPago  = (m) => m.tipo === 'transferencia' && m.tarjeta_destino_id;
@@ -91,8 +91,7 @@ export function movimientosDeTarjeta(movimientos, tarjetaId) {
 /** Lo que se debe hoy sumando todas las tarjetas. Lo usa el Resumen. */
 export function deudaTotalDeTarjetas(tarjetas, movimientos, compras, hoy = hoyISO()) {
   return sumar(...tarjetas.map((t) => {
-    const suyos = sinCuotasYaPagadas(movimientosDeTarjeta(movimientos, t.id), compras);
     const ciclo = calcularCiclo(t.dia_corte, t.dia_limite_pago, hoy);
-    return calcularDeuda(suyos, ciclo).deudaTotal;
+    return calcularDeuda(cargosDeTarjeta(t, movimientos, compras), ciclo).deudaTotal;
   }));
 }

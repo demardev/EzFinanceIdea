@@ -51,6 +51,17 @@ create table if not exists tarjetas (
   created_at       timestamptz not null default now()
 );
 
+-- Lo que ya debías en la tarjeta cuando empezaste a registrarla aquí. Entra
+-- como un cargo con esa fecha, para que caiga en su corte (ver
+-- js/calc/saldo-inicial-tarjeta.js). Sin fecha no cuenta.
+alter table tarjetas add column if not exists saldo_inicial numeric(14,2) not null default 0;
+alter table tarjetas add column if not exists fecha_saldo_inicial date;
+do $$ begin
+  alter table tarjetas drop constraint if exists tarjeta_saldo_inicial_valido;
+  alter table tarjetas add constraint tarjeta_saldo_inicial_valido
+    check (saldo_inicial >= 0 and (saldo_inicial = 0 or fecha_saldo_inicial is not null));
+end $$;
+
 -- Compras diferidas a meses SIN INTERESES (tasa cero).
 create table if not exists compras_cuotas (
   id           uuid primary key default gen_random_uuid(),

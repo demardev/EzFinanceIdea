@@ -9,7 +9,7 @@
 
 import { sumar, redondear } from '../dinero.js';
 import { diasEntre } from '../fechas.js';
-import { sinCuotasYaPagadas } from '../cuotas.js';
+import { cargosDeTarjeta } from '../saldo-inicial-tarjeta.js';
 import { ocurrenciasMensuales, montoDe } from './recurrencia.js';
 import { eventosDeTarjeta } from './proyeccion-tarjeta.js';
 
@@ -118,14 +118,12 @@ export function construirLineaTiempo({ planItems, tarjetas, movimientos, compras
   eventos.push(...eventosDeMovimientos(movimientos, hoy, hasta));
 
   tarjetas.filter((t) => !t.archivada).forEach((tarjeta) => {
-    const suyos = movimientos.filter(
-      (m) => m.tarjeta_id === tarjeta.id || m.tarjeta_destino_id === tarjeta.id);
     const gastos = planItems.filter(
       (i) => i.activo && i.clase === 'gasto' && i.variabilidad === 'fijo'
           && i.tarjeta_id === tarjeta.id);
     const variables = planItems.filter((i) => esGastoVariable(i) && i.tarjeta_id === tarjeta.id);
     eventos.push(...eventosDeTarjeta(
-      tarjeta, sinCuotasYaPagadas(suyos, compras), gastos, hoy, hasta,
+      tarjeta, cargosDeTarjeta(tarjeta, movimientos, compras), gastos, hoy, hasta,
       { variables, escenarioGastos }));
   });
 
