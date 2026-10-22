@@ -1,7 +1,7 @@
 /* Pruebas de calc/vencimientos.js — escritas antes que la implementación. */
 
 import { describir, igual, cierto } from './marco.js';
-import { proximosVencimientos } from '../calc/vencimientos.js';
+import { proximosVencimientos, esGastoFijo } from '../calc/vencimientos.js';
 
 const TARJETA = { id: 'bbva', nombre: 'BBVA', dia_corte: 15, dia_limite_pago: 5,
                   limite_credito: 50000, archivada: false };
@@ -133,5 +133,33 @@ describir('próximos vencimientos', (caso) => {
     const lista = proximosVencimientos({ ...vacio, planItems: [GASTO], registrados: [viejo] },
                                        { hoy: '2026-09-16', dias: 14 });
     igual(lista.length, 1);
+  });
+});
+
+describir('reconocer un gasto fijo', (caso) => {
+  const STREAMING = { ...GASTO, nombre: 'Netflix', categoria_id: 'k9', monto: 299 };
+  const egreso = (extra) => ({ tipo: 'egreso', monto: 100, fecha: '2026-09-20', ...extra });
+
+  caso('se reconoce por el nombre, sin importar mayúsculas ni espacios', () => {
+    cierto(esGastoFijo(egreso({ descripcion: ' netflix ' }), [STREAMING]));
+  });
+
+  caso('o por categoría y monto si le cambiaste el nombre', () => {
+    cierto(esGastoFijo(egreso({ descripcion: 'NFLX', categoria_id: 'k9', monto: 299 }),
+                       [STREAMING]));
+    cierto(!esGastoFijo(egreso({ descripcion: 'NFLX', categoria_id: 'k9', monto: 300 }),
+                        [STREAMING]));
+  });
+
+  caso('solo cuentan los gastos fijos activos, y solo contra egresos', () => {
+    const mov = egreso({ descripcion: 'Netflix' });
+    cierto(!esGastoFijo(mov, [{ ...STREAMING, activo: false }]));
+    cierto(!esGastoFijo(mov, [{ ...STREAMING, variabilidad: 'variable' }]));
+    cierto(!esGastoFijo(mov, [{ ...STREAMING, clase: 'ingreso' }]));
+    cierto(!esGastoFijo({ ...mov, tipo: 'transferencia' }, [STREAMING]));
+  });
+
+  caso('una cuota de compra nunca es gasto fijo', () => {
+    cierto(!esGastoFijo(egreso({ descripcion: 'Netflix', compra_id: 'c1' }), [STREAMING]));
   });
 });

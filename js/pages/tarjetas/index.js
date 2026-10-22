@@ -52,15 +52,17 @@ function indices(categorias) {
 }
 
 export async function montarTarjetas(contenedor, contexto, pantalla) {
-  const { tarjetas, cuentas, categorias, movimientos, compras } = contexto;
-  let datos = { tarjetas: [], cuentas: [], categorias: [], movimientos: [], compras: [] };
+  const { tarjetas, cuentas, categorias, movimientos, compras, planItems } = contexto;
+  let datos = { tarjetas: [], cuentas: [], categorias: [], movimientos: [], compras: [],
+                fijos: [] };
 
   async function cargar() {
-    const [t, c, k, m, p] = await Promise.all([
+    const [t, c, k, m, p, f] = await Promise.all([
       tarjetas.listar(), cuentas.listarActivas(), categorias.listarActivas(),
       movimientos.listarDeTarjetas(), compras.listar(),   // solo lo que toca tarjetas
+      planItems.listarActivos(),   // para marcar los gastos fijos en el detalle
     ]);
-    datos = { tarjetas: t, cuentas: c, categorias: k, movimientos: m, compras: p };
+    datos = { tarjetas: t, cuentas: c, categorias: k, movimientos: m, compras: p, fijos: f };
   }
 
   async function recargar() {
@@ -94,7 +96,7 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
     pintarDetalle(contenedor, {
       tarjeta, ciclo, deuda, desglose, movimientos: propios,
       compras: datos.compras.filter((c) => c.tarjeta_id === tarjeta.id),
-      todasLasCompras: datos.compras,
+      todasLasCompras: datos.compras, fijos: datos.fijos,
       ...indices(datos.categorias),
     });
   }

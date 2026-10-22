@@ -9,6 +9,7 @@ import { escapar } from '../../ui/texto.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { formatearFecha, hoyISO } from '../../calc/fechas.js';
 import { esCuotaYaPagada } from '../../calc/cuotas.js';
+import { esGastoFijo } from '../../calc/vencimientos.js';
 import { ordenarPorFecha, direccionOpuesta, DIRECCIONES } from '../../movimientos/orden.js';
 import { bloqueCompras } from './detalle-compras.js';
 import { bloqueDesglose } from './detalle-desglose.js';
@@ -44,7 +45,16 @@ export function alternarCuotasDe(compraId) {
   compraAbierta = compraAbierta === compraId ? null : compraId;
 }
 
-function fila(mov, nombres, iconos, compras = []) {
+/* Las cuotas y los gastos fijos son cargos que se repiten: una insignia los
+   separa a simple vista de las compras sueltas. */
+function insignia(mov, fijos) {
+  const marca = (nombre, texto) =>
+    `<span class="badge badge-sm" style="gap:3px">${icono(nombre, 10)}${texto}</span>`;
+  if (mov.compra_id) return marca('card', 'a cuotas');
+  return esGastoFijo(mov, fijos) ? marca('repeat', 'fijo') : '';
+}
+
+function fila(mov, { iconos, compras, fijos }) {
   const esPago = mov.tipo === 'transferencia';
   /* Se atenúa lo que no pesa en la deuda de hoy: lo que aún no se cobra, y
      las cuotas que ya venían pagadas al registrar la compra. */
@@ -57,7 +67,7 @@ function fila(mov, nombres, iconos, compras = []) {
         <span class="icono-caja">${icono(iconos[mov.categoria_id] || (esPago ? 'arrows' : 'card'), 18)}</span>
         <span class="crece truncar">
           <span class="titulo">${escapar(mov.descripcion)}</span><br>
-          <span class="sub">${formatearFecha(mov.fecha)}${nota}</span>
+          <span class="sub">${formatearFecha(mov.fecha)}${nota}${insignia(mov, fijos)}</span>
         </span>
         <span class="monto ${esPago ? 'pos' : 'neg'}">
           ${esPago ? '+' : '−'}${textoMonto(mov.monto)}
@@ -66,15 +76,15 @@ function fila(mov, nombres, iconos, compras = []) {
     </div>`;
 }
 
-function lista(movs, nombres, iconos, compras) {
+function lista(movs, ctx) {
   return movs.length
-    ? `<div class="lista">${movs.map((m) => fila(m, nombres, iconos, compras)).join('')}</div>`
+    ? `<div class="lista">${movs.map((m) => fila(m, ctx)).join('')}</div>`
     : '<p class="tenue-2" style="padding:2px">Nada en este bloque.</p>';
 }
 
 /* Los tres bloques se pliegan igual: el número de al lado dice cuántos
    movimientos hay guardados ahí dentro, para no tener que abrirlo. */
-function bloque(clave, titulo, pie, movs, nombres, iconos, compras) {
+function bloque(clave, titulo, pie, movs, ctx) {
   const abierto = abiertos[clave];
   return `
     <div>
@@ -85,7 +95,7 @@ function bloque(clave, titulo, pie, movs, nombres, iconos, compras) {
       </button>
       ${abierto ? `
         <p class="tenue-2" style="font-size:12px;margin:-4px 0 8px">${escapar(pie)}</p>
-        ${lista(movs, nombres, iconos, compras)}` : ''}
+        ${lista(movs, ctx)}` : ''}
     </div>`;
 }
 
@@ -124,7 +134,7 @@ function cabecera(tarjeta, deuda, desglose) {
 
 export function pintarDetalle(contenedor, {
   tarjeta, ciclo, deuda, desglose, movimientos, compras, todasLasCompras = compras,
-  nombres, iconos,
+  iconos, fijos = [],
 }) {
   const ordenar = (movs) => ordenarPorFecha(movs, orden);
   /* Las cuotas por cobrar salen de los bloques del ciclo: se ven dentro de su
@@ -132,7 +142,7 @@ export function pintarDetalle(contenedor, {
   const delCiclo = movimientos.filter((m) => !(m.compra_id && m.fecha > hoyISO()));
   const tramos = repartirPorCiclo(delCiclo, ciclo);
   const pintarBloque = (clave, titulo, pie, movs) =>
-    bloque(clave, titulo, pie, ordenar(movs), nombres, iconos, todasLasCompras);
+    bloque(clave, titulo, pie, ordenar(movs), { iconos, compras: todasLasCompras, fijos });
 
   contenedor.innerHTML = `
     <div class="pila">

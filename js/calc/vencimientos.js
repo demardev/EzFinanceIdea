@@ -48,19 +48,31 @@ const normal = (texto) => String(texto || '').trim().toLowerCase();
 
 /* No hay liga entre el movimiento y el item del plan, así que se reconoce
    por el nombre o, si se lo cambiaste, por categoría y monto. */
+function coincide(item, m) {
+  return m.tipo === 'egreso'
+    && (normal(m.descripcion) === normal(item.nombre)
+        || Boolean(item.categoria_id && m.categoria_id === item.categoria_id
+                   && Number(m.monto) === Number(item.monto)));
+}
+
+const esFijoActivo = (i) => i.activo && i.clase === 'gasto' && i.variabilidad === 'fijo';
+
+/** ¿Este movimiento es el pago de un gasto fijo del plan? Las cuotas nunca lo son. */
+export function esGastoFijo(movimiento, planItems) {
+  if (movimiento.compra_id) return false;
+  return planItems.some((i) => esFijoActivo(i) && coincide(i, movimiento));
+}
+
 function yaRegistrado(item, fecha, registrados) {
   const desde = sumarDias(fecha, -ADELANTO_PAGO);
   const hasta = sumarDias(fecha, GRACIA_VENCIDO);
-  return registrados.some((m) => m.tipo === 'egreso' && m.fecha >= desde && m.fecha <= hasta
-    && (normal(m.descripcion) === normal(item.nombre)
-        || (item.categoria_id && m.categoria_id === item.categoria_id
-            && Number(m.monto) === Number(item.monto))));
+  return registrados.some((m) => m.fecha >= desde && m.fecha <= hasta && coincide(item, m));
 }
 
 function deGastosFijos(planItems, registrados, hoy, hasta) {
   const desde = sumarDias(hoy, -GRACIA_VENCIDO);
   return planItems
-    .filter((i) => i.activo && i.clase === 'gasto' && i.variabilidad === 'fijo' && i.dia_mes)
+    .filter((i) => esFijoActivo(i) && i.dia_mes)
     .flatMap((item) => ocurrenciasMensuales(item.dia_mes, desde, hasta)
       .filter((fecha) => !yaRegistrado(item, fecha, registrados))
       .map((fecha) => ({ ...aviso('gasto', item.nombre, fecha, Number(item.monto) || 0, hoy),
