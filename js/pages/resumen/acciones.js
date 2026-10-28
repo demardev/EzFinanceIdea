@@ -2,9 +2,8 @@
    camino que en la pantalla de Movimientos: el mismo formulario y la misma
    confirmación de borrado, para que las dos pantallas se comporten igual. */
 
-import { abrirRegistro, eliminarMovimiento } from '../../movimientos/registrar.js';
+import { abrirRegistro, eliminarMovimiento, borradorDeFijo } from '../../movimientos/registrar.js';
 import { cerrarDeslizada } from '../../ui/deslizar.js';
-import { unirDestino } from '../../ui/campos.js';
 import { avisoError } from '../../ui/toast.js';
 
 /* Un movimiento del negocio no se edita solo: se abre su operación y desde
@@ -46,19 +45,6 @@ export function conectarMovimientos(contenedor, contexto, movimientos, alCambiar
   });
 }
 
-/* Un gasto fijo del plan ya trae casi todo el movimiento: se abre el mismo
-   formulario de "nuevo" con eso puesto, y la fecha de hoy, que es cuando lo
-   estás pagando. */
-function borradorDeGasto(item) {
-  return {
-    tipo: 'egreso',
-    monto: Number(item.monto) || 0,
-    descripcion: item.nombre,
-    categoria_id: item.categoria_id ?? '',
-    origen: unirDestino(item, 'cuenta_id', 'tarjeta_id'),
-  };
-}
-
 /** Tocar un gasto fijo de "Próximos vencimientos" lo registra. */
 export function conectarVencimientos(contenedor, contexto, vencimientos, alCambiar) {
   contenedor.addEventListener('click', async (evento) => {
@@ -66,7 +52,7 @@ export function conectarVencimientos(contenedor, contexto, vencimientos, alCambi
     if (!objetivo) return;
     const { item } = vencimientos[Number(objetivo.dataset.vencimiento)];
     try {
-      await abrirRegistro(contexto, borradorDeGasto(item), alCambiar);
+      await abrirRegistro(contexto, borradorDeFijo(item), alCambiar);
     } catch (e) { avisoError(e); }
   });
 }

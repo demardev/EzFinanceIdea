@@ -7,12 +7,13 @@
 import { icono } from '../../iconos/render.js';
 import { escapar } from '../../ui/texto.js';
 import { textoMonto } from '../../ui/privacidad.js';
-import { formatearFecha, hoyISO } from '../../calc/fechas.js';
+import { formatearFecha, hoyISO, sumarDias } from '../../calc/fechas.js';
 import { esCuotaYaPagada } from '../../calc/cuotas.js';
 import { esGastoFijo } from '../../calc/vencimientos.js';
 import { ordenarPorFecha, direccionOpuesta, DIRECCIONES } from '../../movimientos/orden.js';
 import { bloqueCompras } from './detalle-compras.js';
 import { bloqueDesglose } from './detalle-desglose.js';
+import { bloqueFijos } from './detalle-fijos.js';
 
 const CLAVE_ORDEN = 'finanzas.orden-tarjeta';
 const CLAVE_BLOQUES = 'finanzas.bloques-tarjeta';
@@ -134,28 +135,31 @@ function cabecera(tarjeta, deuda, desglose) {
 
 export function pintarDetalle(contenedor, {
   tarjeta, ciclo, deuda, desglose, movimientos, compras, todasLasCompras = compras,
-  iconos, fijos = [],
+  iconos, fijos = [], porRegistrar = [],
 }) {
   const ordenar = (movs) => ordenarPorFecha(movs, orden);
   /* Las cuotas por cobrar salen de los bloques del ciclo: se ven dentro de su
      compra, al tocar el contador. */
   const delCiclo = movimientos.filter((m) => !(m.compra_id && m.fecha > hoyISO()));
   const tramos = repartirPorCiclo(delCiclo, ciclo);
+  /* El día del corte es del ciclo que cierra: el siguiente empieza un día después. */
+  const despues = (fecha) => formatearFecha(sumarDias(fecha, 1));
   const pintarBloque = (clave, titulo, pie, movs) =>
     bloque(clave, titulo, pie, ordenar(movs), { iconos, compras: todasLasCompras, fijos });
 
   contenedor.innerHTML = `
     <div class="pila">
       ${cabecera(tarjeta, deuda, desglose)}
+      ${bloqueFijos(porRegistrar, ciclo)}
       ${bloqueCompras(compras, movimientos, { abierta: compraAbierta, ordenar })}
       ${barraOrden()}
       ${pintarBloque('anteriores', 'Anterior al corte',
                      `hasta ${formatearFecha(ciclo.fechaCorteAnterior)}`, tramos.anteriores)}
       ${pintarBloque('alCorte', 'Corte actual',
-                     `${formatearFecha(ciclo.fechaCorteAnterior)} — ${formatearFecha(ciclo.fechaUltimoCorte)}`,
+                     `${despues(ciclo.fechaCorteAnterior)} — ${formatearFecha(ciclo.fechaUltimoCorte)}`,
                      tramos.alCorte)}
       ${pintarBloque('abierto', 'Ciclo abierto',
-                     `desde ${formatearFecha(ciclo.fechaUltimoCorte)}`, tramos.abierto)}
+                     `desde ${despues(ciclo.fechaUltimoCorte)}`, tramos.abierto)}
       <button class="btn btn-bloque" type="button" data-cuotas="${tarjeta.id}">
         ${icono('card', 16)} Nueva compra a cuotas
       </button>

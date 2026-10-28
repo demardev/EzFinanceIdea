@@ -9,6 +9,7 @@ import { calcularCiclo } from './ciclo-tarjeta.js';
 import { calcularDeuda } from './deuda-tarjeta.js';
 import { cargosDeTarjeta } from './saldo-inicial-tarjeta.js';
 import { ocurrenciasMensuales } from './plan/linea-tiempo.js';
+import { coincide, esFijoActivo, fijosPorCargar } from './fijos-tarjeta.js';
 
 /** Rojo si ya venció, ámbar si faltan 5 días o menos. */
 function estadoPorDias(dias) {
@@ -44,19 +45,6 @@ function deTarjetas(tarjetas, movimientos, compras, hoy, hasta) {
 const GRACIA_VENCIDO = 3;
 const ADELANTO_PAGO = 10;   // pagar la renta unos días antes también cuenta
 
-const normal = (texto) => String(texto || '').trim().toLowerCase();
-
-/* No hay liga entre el movimiento y el item del plan, así que se reconoce
-   por el nombre o, si se lo cambiaste, por categoría y monto. */
-function coincide(item, m) {
-  return m.tipo === 'egreso'
-    && (normal(m.descripcion) === normal(item.nombre)
-        || Boolean(item.categoria_id && m.categoria_id === item.categoria_id
-                   && Number(m.monto) === Number(item.monto)));
-}
-
-const esFijoActivo = (i) => i.activo && i.clase === 'gasto' && i.variabilidad === 'fijo';
-
 /** ¿Este movimiento es el pago de un gasto fijo del plan? Las cuotas nunca lo son. */
 export function esGastoFijo(movimiento, planItems) {
   if (movimiento.compra_id) return false;
@@ -69,14 +57,25 @@ function yaRegistrado(item, fecha, registrados) {
   return registrados.some((m) => m.fecha >= desde && m.fecha <= hasta && coincide(item, m));
 }
 
-function deGastosFijos(planItems, registrados, hoy, hasta) {
+/* Los de una tarjeta activa tienen su propia regla (fijos-tarjeta.js). */
+function deGastosFijos(planItems, registrados, hoy, hasta, deTarjeta) {
   const desde = sumarDias(hoy, -GRACIA_VENCIDO);
   return planItems
-    .filter((i) => esFijoActivo(i) && i.dia_mes)
+    .filter((i) => esFijoActivo(i) && i.dia_mes && !deTarjeta.has(i.tarjeta_id))
     .flatMap((item) => ocurrenciasMensuales(item.dia_mes, desde, hasta)
       .filter((fecha) => !yaRegistrado(item, fecha, registrados))
       .map((fecha) => ({ ...aviso('gasto', item.nombre, fecha, Number(item.monto) || 0, hoy),
                          item })));
+}
+
+/* Un fijo de tarjeta no se va a los 3 días: sigue hasta que lo registras,
+   porque el banco lo cobra cuando quiere y olvidarlo descuadra la deuda. */
+function deFijosDeTarjetas(tarjetas, movimientos, planItems, hoy, hasta) {
+  return tarjetas.flatMap((tarjeta) =>
+    fijosPorCargar(tarjeta, planItems, movimientos,
+                   calcularCiclo(tarjeta.dia_corte, tarjeta.dia_limite_pago, hoy))
+      .filter((p) => p.fecha <= hasta)
+      .map((p) => ({ ...aviso('gasto', p.item.nombre, p.fecha, p.monto, hoy), item: p.item })));
 }
 
 /**
@@ -88,8 +87,11 @@ export function proximosVencimientos({ tarjetas, movimientos, compras, planItems
                                        registrados = [] },
                                      { hoy, dias = 14 }) {
   const hasta = sumarDias(hoy, dias);
+  const activas = tarjetas.filter((t) => !t.archivada);
+  const deTarjeta = new Set(activas.map((t) => t.id));
   return [
     ...deTarjetas(tarjetas, movimientos, compras, hoy, hasta),
-    ...deGastosFijos(planItems, registrados, hoy, hasta),
+    ...deGastosFijos(planItems, registrados, hoy, hasta, deTarjeta),
+    ...deFijosDeTarjetas(activas, movimientos, planItems, hoy, hasta),
   ].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
 }

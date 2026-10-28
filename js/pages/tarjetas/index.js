@@ -12,6 +12,8 @@ import { calcularCiclo } from '../../calc/ciclo-tarjeta.js';
 import { calcularDeuda } from '../../calc/deuda-tarjeta.js';
 import { cargosDeTarjeta, conSaldoInicial } from '../../calc/saldo-inicial-tarjeta.js';
 import { desgloseDeDeuda, efectoDeSaldoInicial } from '../../calc/desglose-tarjeta.js';
+import { fijosPorCargar } from '../../calc/fijos-tarjeta.js';
+import { abrirRegistro, borradorDeFijo } from '../../movimientos/registrar.js';
 import { hoyISO } from '../../calc/fechas.js';
 import { confirmar } from '../../ui/confirmar.js';
 import { aviso, avisoError } from '../../ui/toast.js';
@@ -49,6 +51,17 @@ function indices(categorias) {
   const nombres = {}; const iconos = {};
   categorias.forEach((c) => { nombres[c.id] = c.nombre; iconos[c.id] = c.icono; });
   return { nombres, iconos };
+}
+
+/* El mismo cálculo que pintó la fila: así el índice apunta al mismo fijo. */
+function registrarFijo(contexto, datos, tarjetaId, indice, alCambiar) {
+  const tarjeta = datos.tarjetas.find((t) => t.id === tarjetaId);
+  const { ciclo } = calcularTodo(tarjeta, datos.movimientos, datos.compras);
+  const { item } = fijosPorCargar(tarjeta, datos.fijos, datos.movimientos, ciclo)[indice];
+  return abrirRegistro(contexto, borradorDeFijo(item), alCambiar, {
+    cuentas: datos.cuentas, categorias: datos.categorias,
+    tarjetas: datos.tarjetas.filter((t) => !t.archivada),
+  });
 }
 
 export async function montarTarjetas(contenedor, contexto, pantalla) {
@@ -97,6 +110,7 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
       tarjeta, ciclo, deuda, desglose, movimientos: propios,
       compras: datos.compras.filter((c) => c.tarjeta_id === tarjeta.id),
       todasLasCompras: datos.compras, fijos: datos.fijos,
+      porRegistrar: fijosPorCargar(tarjeta, datos.fijos, datos.movimientos, ciclo),
       ...indices(datos.categorias),
     });
   }
@@ -143,7 +157,7 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
 
   contenedor.addEventListener('click', async (evento) => {
     const o = evento.target.closest('[data-pagar], [data-cuotas], [data-detalle], [data-compra],'
-      + ' [data-cuotas-de], [data-bloque], #btn-nueva, #btn-orden-tarjeta, #btn-editar-tarjeta');
+      + ' [data-cuotas-de], [data-bloque], [data-fijo], #btn-nueva, #btn-orden-tarjeta, #btn-editar-tarjeta');
     if (!o) return;
     try {
       /* Lo que solo cambia cómo se ve la pantalla: se repinta y ya. */
@@ -151,6 +165,9 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
       if (o.dataset.bloque) { alternarBloque(o.dataset.bloque); return pintar(); }
       if (o.dataset.cuotasDe) { alternarCuotasDe(o.dataset.cuotasDe); return pintar(); }
 
+      if (o.dataset.fijo) {
+        return registrarFijo(contexto, datos, pantalla.sub, Number(o.dataset.fijo), recargar);
+      }
       if (o.id === 'btn-nueva') return editar({});
       if (o.dataset.detalle) { location.hash = `#/tarjetas/${o.dataset.detalle}`; return; }
       if (o.dataset.compra) {

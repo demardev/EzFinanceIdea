@@ -8,12 +8,26 @@ import { aviso } from '../ui/toast.js';
 import { formatearFecha } from '../calc/fechas.js';
 import { abrirSheet } from '../ui/sheet.js';
 import { icono } from '../iconos/render.js';
+import { unirDestino } from '../ui/campos.js';
 
 async function cargarCatalogos({ cuentas, tarjetas, categorias }) {
   const [c, t, k] = await Promise.all([
     cuentas.listarActivas(), tarjetas.listarActivas(), categorias.listarActivas(),
   ]);
   return { cuentas: c, tarjetas: t, categorias: k };
+}
+
+/* Un gasto fijo del plan ya trae casi todo el movimiento: se abre el mismo
+   formulario de "nuevo" con eso puesto, y la fecha de hoy, que es cuando lo
+   estás pagando. Lo usan los avisos del Resumen y el detalle de la tarjeta. */
+export function borradorDeFijo(item) {
+  return {
+    tipo: 'egreso',
+    monto: Number(item.monto) || 0,
+    descripcion: item.nombre,
+    categoria_id: item.categoria_id ?? '',
+    origen: unirDestino(item, 'cuenta_id', 'tarjeta_id'),
+  };
 }
 
 /**
