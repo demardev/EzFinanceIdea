@@ -160,6 +160,9 @@ export function pintarDetalle(contenedor, {
                      tramos.alCorte)}
       ${pintarBloque('abierto', 'Ciclo abierto',
                      `desde ${despues(ciclo.fechaUltimoCorte)}`, tramos.abierto)}
+      <button class="btn btn-bloque" type="button" id="btn-conciliar">
+        ${icono('check', 16)} Conciliar con el banco
+      </button>
       <button class="btn btn-bloque" type="button" data-cuotas="${tarjeta.id}">
         ${icono('card', 16)} Nueva compra a cuotas
       </button>
