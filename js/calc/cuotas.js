@@ -5,14 +5,16 @@
    absorbe la última cuota, así no se pierden centavos. */
 
 import { repartir, sumar, redondear } from './dinero.js';
-import { sumarMeses, hoyISO } from './fechas.js';
+import { hoyISO } from './fechas.js';
+import { fechaDeCuota } from './fecha-cuota.js';
 
-/** Una cuota es un egreso cargado a la tarjeta, atado a su compra. */
-function cuota(compra, numero, monto) {
+/** Una cuota es un egreso cargado a la tarjeta, atado a su compra. La
+    tarjeta decide el día del cargo (ver fecha-cuota.js). */
+function cuota(compra, numero, monto, tarjeta) {
   return {
     tipo: 'egreso',
     monto,
-    fecha: sumarMeses(compra.fecha_compra, numero - 1),
+    fecha: fechaDeCuota(compra, numero, tarjeta),
     descripcion: `${compra.descripcion} — cuota ${numero}/${compra.num_cuotas}`,
     categoria_id: compra.categoria_id ?? null,
     cuenta_id: null,
@@ -27,9 +29,9 @@ function cuota(compra, numero, monto) {
 }
 
 /** Las N cuotas de una compra nueva, desde la primera. */
-export function generarCuotas(compra) {
+export function generarCuotas(compra, tarjeta = null) {
   const montos = repartir(compra.monto_total, compra.num_cuotas);
-  return montos.map((monto, i) => cuota(compra, i + 1, monto));
+  return montos.map((monto, i) => cuota(compra, i + 1, monto, tarjeta));
 }
 
 /**
@@ -39,7 +41,7 @@ export function generarCuotas(compra) {
  *
  * @returns { yaCobradas, aBorrar: [id], aCrear: [fila], aviso }
  */
-export function planRegeneracion(compra, cuotasExistentes, hoy = hoyISO()) {
+export function planRegeneracion(compra, cuotasExistentes, hoy = hoyISO(), tarjeta = null) {
   const ordenadas = [...cuotasExistentes].sort((a, b) => a.cuota_num - b.cuota_num);
   const cobradas = ordenadas.filter((c) => c.fecha <= hoy);
   const pendientes = ordenadas.filter((c) => c.fecha > hoy);
@@ -61,13 +63,13 @@ export function planRegeneracion(compra, cuotasExistentes, hoy = hoyISO()) {
      registró mal, y las fechas viejas nunca fueron ciertas. Las cobradas se
      mueven a su fecha correcta; su MONTO no se toca. */
   const aMover = cobradas
-    .map((c) => ({ id: c.id, fecha: sumarMeses(compra.fecha_compra, c.cuota_num - 1) }))
+    .map((c) => ({ id: c.id, fecha: fechaDeCuota(compra, c.cuota_num, tarjeta) }))
     .filter((m, i) => m.fecha !== cobradas[i].fecha);
 
   const yaPagado = sumar(...cobradas.map((c) => c.monto));
   const porRepartir = redondear(compra.monto_total - yaPagado);
   const montos = repartir(porRepartir, restantes);
-  const aCrear = montos.map((monto, i) => cuota(compra, cobradas.length + i + 1, monto));
+  const aCrear = montos.map((monto, i) => cuota(compra, cobradas.length + i + 1, monto, tarjeta));
 
   return { yaCobradas: cobradas.length, aBorrar, aCrear, aMover, aviso: '' };
 }

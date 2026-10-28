@@ -12,7 +12,7 @@ import { plural } from '../../ui/texto.js';
 export async function crearCompra({ compras, movimientos }, tarjeta, datos) {
   const compra = await compras.crear({ ...datos, tarjeta_id: tarjeta.id });
   try {
-    await movimientos.crearVarios(generarCuotas(compra));
+    await movimientos.crearVarios(generarCuotas(compra, tarjeta));
   } catch (e) {
     /* Sin sus cuotas la compra no significa nada: no dejarla a medias. */
     await compras.eliminar(compra.id);
@@ -22,13 +22,14 @@ export async function crearCompra({ compras, movimientos }, tarjeta, datos) {
   return compra;
 }
 
-export async function editarCompra({ compras, movimientos }, compra, datos) {
+/* La tarjeta decide el día de las cuotas; editar aplica su regla de hoy. */
+export async function editarCompra({ compras, movimientos }, tarjeta, compra, datos) {
   const existentes = await movimientos.listarDeCompra(compra.id);
-  const plan = planRegeneracion({ ...compra, ...datos }, existentes, hoyISO());
+  const plan = planRegeneracion({ ...compra, ...datos }, existentes, hoyISO(), tarjeta);
   if (plan.aviso) throw new Error(plan.aviso);
 
   const actualizada = await compras.actualizar(compra.id, datos);
-  const final = planRegeneracion(actualizada, existentes, hoyISO());
+  const final = planRegeneracion(actualizada, existentes, hoyISO(), tarjeta);
 
   /* El orden importa. Las pendientes se borran por su fecha VIEJA; si antes se
      movieran las cobradas, una corrida hacia adelante quedaría con fecha

@@ -7,6 +7,8 @@ import { hoyISO } from '../../calc/fechas.js';
 import { camposSaldoInicial, conectarEfecto } from './form-saldo.js';
 
 const DIAS = Array.from({ length: 31 }, (_, i) => [String(i + 1), String(i + 1)]);
+/* Cada banco carga las cuotas de los meses sin intereses en un día distinto. */
+const CARGO_CUOTAS = [['compra', 'El día de la compra'], ['antes_corte', 'Un día antes del corte']];
 
 function campos(t, cuentas) {
   return `
@@ -20,6 +22,8 @@ function campos(t, cuentas) {
                     valor: String(t.dia_corte ?? 15), opciones: DIAS })}
     ${campoSelect({ nombre: 'dia_limite_pago', etiqueta: 'Día límite de pago',
                     valor: String(t.dia_limite_pago ?? 5), opciones: DIAS })}
+    ${campoSelect({ nombre: 'cargo_cuotas', etiqueta: 'Las cuotas se cargan',
+                    valor: t.cargo_cuotas ?? 'compra', opciones: CARGO_CUOTAS })}
     ${campoSelect({ nombre: 'cuenta_pago_id', etiqueta: 'Cuenta con la que pagas',
                     valor: t.cuenta_pago_id ?? '',
                     opciones: [['', 'Ninguna'], ...cuentas.map((c) => [c.id, c.nombre])] })}
@@ -38,6 +42,7 @@ function aFila(datos, tarjeta) {
     limite_credito: redondear(datos.limite_credito || 0),
     dia_corte: Number(datos.dia_corte),
     dia_limite_pago: Number(datos.dia_limite_pago),
+    cargo_cuotas: datos.cargo_cuotas === 'antes_corte' ? 'antes_corte' : 'compra',
     cuenta_pago_id: datos.cuenta_pago_id || null,
     ...saldoInicialDe(datos),
     ...(tarjeta.id ? { archivada: Boolean(datos.archivada) } : {}),

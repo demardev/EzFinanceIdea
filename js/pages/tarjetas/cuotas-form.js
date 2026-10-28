@@ -33,11 +33,11 @@ function campos(compra, categorias) {
 }
 
 /** "12 cuotas de $100.00 · de 08/sep/2026 a 08/ago/2027" */
-function vistaPrevia(datos) {
+function vistaPrevia(datos, tarjeta) {
   if (!(datos.monto_total > 0) || !datos.fecha_compra) {
     return '<p class="tenue-2" style="font-size:12.5px">Pon el monto para ver el reparto.</p>';
   }
-  const cuotas = generarCuotas({ ...datos, descripcion: datos.descripcion || 'Compra' });
+  const cuotas = generarCuotas({ ...datos, descripcion: datos.descripcion || 'Compra' }, tarjeta);
   const ultima = cuotas.at(-1);
   const iguales = cuotas.every((c) => c.monto === cuotas[0].monto);
   const yaPagadas = Number(datos.cuotas_pagadas) || 0;
@@ -53,18 +53,19 @@ function vistaPrevia(datos) {
 }
 
 /** Repinta la vista previa cada vez que se toca el formulario. */
-function conectarPrevia(hoja, form) {
+function conectarPrevia(hoja, form, tarjeta) {
   const previa = hoja.querySelector('#vista-previa');
   const refrescar = () => {
     const d = datosDe(form);
-    previa.innerHTML = vistaPrevia({ ...d, num_cuotas: Number(d.num_cuotas) });
+    previa.innerHTML = vistaPrevia({ ...d, num_cuotas: Number(d.num_cuotas) }, tarjeta);
   };
   form.addEventListener('input', refrescar);
   form.addEventListener('change', refrescar);
   refrescar();
 }
 
-export function abrirFormCompra(compra, datos, { alGuardar, alEliminar }) {
+/** @param tarjeta la de la compra: su regla decide el día de las cuotas. */
+export function abrirFormCompra(compra, datos, { tarjeta, alGuardar, alEliminar }) {
   abrirSheetFormulario({
     titulo: compra.id ? 'Editar compra a cuotas' : 'Compra a meses sin intereses',
     id: 'form-compra',
@@ -72,7 +73,7 @@ export function abrirFormCompra(compra, datos, { alGuardar, alEliminar }) {
     textoGuardar: compra.id ? 'Guardar cambios' : 'Registrar compra',
     textoBorrar: compra.id ? 'Eliminar compra' : '',
     alEliminar: compra.id ? alEliminar : null,
-    alPintar: conectarPrevia,
+    alPintar: (hoja, form) => conectarPrevia(hoja, form, tarjeta),
     alGuardar: (d) => {
       if (!d.descripcion.trim()) throw new Error('Di qué compraste.');
       if (!(d.monto_total > 0)) throw new Error('El monto tiene que ser mayor que cero.');

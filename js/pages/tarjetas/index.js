@@ -127,8 +127,10 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
 
   function abrirCompra(tarjeta, compra) {
     abrirFormCompra(compra, datos, {
+      tarjeta,
       alGuardar: async (d) => {
-        await (compra.id ? editarCompra(contexto, compra, d) : crearCompra(contexto, tarjeta, d));
+        await (compra.id ? editarCompra(contexto, tarjeta, compra, d)
+                         : crearCompra(contexto, tarjeta, d));
         await recargar();
       },
       alEliminar: async () => {

@@ -27,6 +27,7 @@ self.SHELL = [
   'js/calc/bandeja.js',
   'js/calc/ciclo-tarjeta.js',
   'js/calc/cuotas.js',
+  'js/calc/fecha-cuota.js',
   'js/calc/deuda-tarjeta.js',
   'js/calc/desglose-tarjeta.js',
   'js/calc/saldo-inicial-tarjeta.js',
