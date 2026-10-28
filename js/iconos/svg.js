@@ -10,6 +10,7 @@ export const TRAZOS = {
 
   // --- acciones
   plus:     '<path d="M12 5v14"/><path d="M5 12h14"/>',
+  mas:      '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
   minus:    '<path d="M5 12h14"/>',
   x:        '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   check:    '<path d="M20 6 9 17l-5-5"/>',

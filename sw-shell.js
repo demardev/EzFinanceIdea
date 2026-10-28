@@ -97,6 +97,7 @@ self.SHELL = [
   'js/pages/tarjetas/detalle.js',
   'js/pages/tarjetas/form-saldo.js',
   'js/pages/tarjetas/form.js',
+  'js/pages/tarjetas/menu.js',
   'js/pages/tarjetas/index.js',
   'js/pages/tarjetas/pagar.js',
   'js/pages/tarjetas/registro.js',

@@ -2,8 +2,9 @@
    No calcula dinero (calc/) ni pinta (vista.js / detalle.js). */
 
 import { cardTarjeta } from './vista.js';
-import { pintarDetalle, alternarOrden, alternarBloque,
+import { pintarDetalle, alternarOrden, elegirTramo,
          alternarCuotasDe } from './detalle.js';
+import { abrirMenuTarjeta } from './menu.js';
 import { abrirFormTarjeta } from './form.js';
 import { abrirSheetPago } from './pagar.js';
 import { abrirFormCompra } from './cuotas-form.js';
@@ -19,6 +20,7 @@ import { aviso, avisoError } from '../../ui/toast.js';
 import { plural } from '../../ui/texto.js';
 import { icono } from '../../iconos/render.js';
 import { estadoVacio } from '../../ui/lista.js';
+import { conectarPastillas } from '../../ui/pastillas.js';
 
 /** Lo que haría el saldo inicial escrito en el formulario, con su día de corte. */
 function simuladorDe(tarjeta, datos) {
@@ -127,19 +129,39 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
     });
   }
 
+  /* Lo que se hace con UNA tarjeta: desde su menú ⋯, o "Pagar" en la lista. */
+  function actuar(accion, tarjeta) {
+    if (accion === 'conciliar') {
+      return abrirConciliacion(() => entradaDe(datos, tarjeta.id), acciones);
+    }
+    if (accion === 'editar') return editar(tarjeta);
+    if (accion === 'cuotas') return abrirCompra(tarjeta, {});
+    const { deuda } = calcularTodo(tarjeta, datos.movimientos, datos.compras);
+    return abrirSheetPago(tarjeta, deuda, datos, async (fila) => {
+      await movimientos.crear(fila);
+      aviso('Pago registrado.');
+      await recargar();
+    });
+  }
+
+  const tarjetaDe = (id) => datos.tarjetas.find((t) => t.id === id);
+
   contenedor.addEventListener('click', async (evento) => {
-    const o = evento.target.closest('[data-pagar], [data-cuotas], [data-detalle], [data-compra],'
-      + ' [data-cuotas-de], [data-bloque], [data-fijo], #btn-conciliar, #btn-nueva, #btn-orden-tarjeta, #btn-editar-tarjeta');
+    const o = evento.target.closest('[data-pagar], [data-cuotas], [data-acciones], [data-detalle],'
+      + ' [data-compra], [data-cuotas-de], [data-fijo], #btn-nueva, #btn-orden-tarjeta');
     if (!o) return;
     try {
       /* Lo que solo cambia cómo se ve la pantalla: se repinta y ya. */
       if (o.id === 'btn-orden-tarjeta') { alternarOrden(); return pintar(); }
-      if (o.dataset.bloque) { alternarBloque(o.dataset.bloque); return pintar(); }
       if (o.dataset.cuotasDe) { alternarCuotasDe(o.dataset.cuotasDe); return pintar(); }
 
-      if (o.id === 'btn-conciliar') {
-        return abrirConciliacion(() => entradaDe(datos, pantalla.sub), acciones);
+      if (o.dataset.acciones) {
+        const tarjeta = tarjetaDe(o.dataset.acciones);
+        return abrirMenuTarjeta(tarjeta, (accion) =>
+          Promise.resolve().then(() => actuar(accion, tarjeta)).catch(avisoError));
       }
+      if (o.dataset.pagar) return actuar('pagar', tarjetaDe(o.dataset.pagar));
+      if (o.dataset.cuotas) return actuar('cuotas', tarjetaDe(o.dataset.cuotas));
       if (o.dataset.fijo) {
         /* El mismo cálculo que pintó la fila: así el índice apunta al mismo fijo. */
         const { tarjeta, ciclo, deudores } = entradaDe(datos, pantalla.sub);
@@ -148,22 +170,11 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
       }
       if (o.id === 'btn-nueva') return editar({});
       if (o.dataset.detalle) { location.hash = `#/tarjetas/${o.dataset.detalle}`; return; }
-      if (o.dataset.compra) {
-        const compra = datos.compras.find((c) => c.id === o.dataset.compra);
-        return abrirCompra(datos.tarjetas.find((t) => t.id === compra.tarjeta_id), compra);
-      }
-      const id = o.dataset.pagar || o.dataset.cuotas || pantalla.sub;
-      const tarjeta = datos.tarjetas.find((t) => t.id === id);
-      if (o.id === 'btn-editar-tarjeta') return editar(tarjeta);
-      if (o.dataset.cuotas) return abrirCompra(tarjeta, {});
-      const { deuda } = calcularTodo(tarjeta, datos.movimientos, datos.compras);
-      abrirSheetPago(tarjeta, deuda, datos, async (fila) => {
-        await movimientos.crear(fila);
-        aviso('Pago registrado.');
-        await recargar();
-      });
+      const compra = datos.compras.find((c) => c.id === o.dataset.compra);
+      return abrirCompra(tarjetaDe(compra.tarjeta_id), compra);
     } catch (e) { avisoError(e); }
   });
+  conectarPastillas(contenedor, (valor) => { elegirTramo(valor); pintar(); });
 
   contenedor.innerHTML = '<p class="tenue">Cargando…</p>';
   await recargar();
