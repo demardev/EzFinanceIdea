@@ -13,9 +13,7 @@ function cuando(dias) {
   return dias === 1 ? 'mañana' : `en ${dias} días`;
 }
 
-function fila(p, indice, ciclo) {
-  /* Lo del corte que ya cerró es lo más urgente: el estado de cuenta ya lo trae. */
-  const delCorte = p.fecha <= ciclo.fechaUltimoCorte;
+function fila(p, indice) {
   return `
     <div class="lista-fila">
       <button type="button" class="fila-cuerpo" data-fijo="${indice}">
@@ -23,7 +21,7 @@ function fila(p, indice, ciclo) {
         <span class="crece truncar">
           <span class="titulo">${escapar(p.item.nombre)}</span><br>
           <span class="sub ${p.dias < 0 ? 'warn' : ''}">
-            ${formatearFecha(p.fecha)} · ${cuando(p.dias)}${delCorte ? ' · corte actual' : ''}
+            ${formatearFecha(p.fecha)} · ${cuando(p.dias)}
           </span>
         </span>
         <span class="monto neg">−${textoMonto(p.monto)}</span>
@@ -32,14 +30,14 @@ function fila(p, indice, ciclo) {
 }
 
 /** Nada si no falta nada: el bloque solo aparece cuando hay algo que hacer. */
-export function bloqueFijos(pendientes, ciclo) {
+export function bloqueFijos(pendientes) {
   if (!pendientes.length) return '';
   return `
     <div>
       <p class="seccion-titulo">Por registrar</p>
       <p class="tenue-2" style="font-size:12px;margin:-4px 0 8px">
-        Gastos fijos del plan con esta tarjeta que aún no están en sus movimientos.
+        Gastos fijos del plan con esta tarjeta que faltan en el ciclo abierto.
         Toca uno para registrarlo.</p>
-      <div class="lista">${pendientes.map((p, i) => fila(p, i, ciclo)).join('')}</div>
+      <div class="lista">${pendientes.map((p, i) => fila(p, i)).join('')}</div>
     </div>`;
 }

@@ -22,8 +22,13 @@ const pendientes = (items, movs) =>
   fijosPorCargar(TIGO, items, movs, CICLO).map((p) => p.fecha);
 
 describir('fijos de tarjeta por cargar', (caso) => {
-  caso('sin registrar, falta en el corte actual y en el ciclo abierto', () => {
-    igual(pendientes([fijo()], []), ['2026-09-23', '2026-10-23']);
+  caso('sin registrar, falta en el ciclo abierto', () => {
+    igual(pendientes([fijo()], []), ['2026-10-23']);
+  });
+
+  caso('el corte que ya cerró no se revisa: ya lo trae el estado de cuenta', () => {
+    // El del 23/sep tampoco está registrado, y no sale.
+    igual(pendientes([fijo({ dia_mes: 25 })], []), ['2026-10-25']);
   });
 
   caso('cada pendiente trae el item, su monto y cuántos días lleva', () => {
@@ -60,11 +65,9 @@ describir('fijos de tarjeta por cargar', (caso) => {
           ['2026-10-23']);
   });
 
-  caso('un cargo que el banco pasó después del corte también cuenta', () => {
-    // Plan dice día 5 (corte del 08/oct), el banco lo aplicó el 10/oct.
-    const items = [fijo({ dia_mes: 5 })];
-    // Solo queda el del 05/nov, que todavía no llega.
-    igual(pendientes(items, [cargo('2026-09-05'), cargo('2026-10-10')]), ['2026-11-05']);
+  caso('un cargo que el banco pasó antes del corte también cuenta', () => {
+    // Plan dice día 10 (ciclo abierto), el banco lo aplicó el 07/oct (corte anterior).
+    igual(pendientes([fijo({ dia_mes: 10 })], [cargo('2026-10-07')]), []);
   });
 
   caso('solo los gastos fijos activos de ESTA tarjeta y con día', () => {

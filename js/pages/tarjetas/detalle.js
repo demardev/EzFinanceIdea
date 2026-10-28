@@ -150,7 +150,7 @@ export function pintarDetalle(contenedor, {
   contenedor.innerHTML = `
     <div class="pila">
       ${cabecera(tarjeta, deuda, desglose)}
-      ${bloqueFijos(porRegistrar, ciclo)}
+      ${bloqueFijos(porRegistrar)}
       ${bloqueCompras(compras, movimientos, { abierta: compraAbierta, ordenar })}
       ${barraOrden()}
       ${pintarBloque('anteriores', 'Anterior al corte',

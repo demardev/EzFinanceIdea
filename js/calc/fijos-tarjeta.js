@@ -4,8 +4,8 @@
    El banco no los cobra el día exacto del plan: el seguro "del 23" llega el
    27, la línea "del 20" el 28. Por eso un cargo de hasta DERIVA días antes o
    después cuenta como el de esa fecha, y el pendiente no se va con el paso de
-   los días: se va cuando lo registras. Se miran el corte que estás por pagar
-   y el ciclo abierto, que es lo que el estado de cuenta va a traer. */
+   los días: se va cuando lo registras. Solo se mira el ciclo abierto: el
+   corte que ya cerró está en el estado de cuenta y se cuadra contra él. */
 
 import { diasEntre, sumarDias } from './fechas.js';
 import { ocurrenciasMensuales } from './plan/recurrencia.js';
@@ -34,11 +34,11 @@ function registradoEnTarjeta(item, fecha, movimientos) {
 
 /**
  * @param movimientos los de la tarjeta (los de otras se ignoran solos)
- * @param ciclo       { hoy, fechaCorteAnterior, fechaProximoCorte } de calcularCiclo()
+ * @param ciclo       { hoy, fechaUltimoCorte, fechaProximoCorte } de calcularCiclo()
  * @returns [{ item, fecha, monto, dias }] ordenados por fecha
  */
 export function fijosPorCargar(tarjeta, planItems, movimientos, ciclo) {
-  const desde = sumarDias(ciclo.fechaCorteAnterior, 1);
+  const desde = sumarDias(ciclo.fechaUltimoCorte, 1);
   return planItems
     .filter((i) => esFijoActivo(i) && i.tarjeta_id === tarjeta.id && i.dia_mes)
     .flatMap((item) => ocurrenciasMensuales(item.dia_mes, desde, ciclo.fechaProximoCorte)
