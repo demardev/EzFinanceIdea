@@ -27,9 +27,11 @@ const bancoDe = (item) => nombreDeBanco(item.aviso?.banco) ?? 'el banco';
 /* De dónde vino. De un aviso que no se reconoció se enseña el principio del
    texto: es lo único que dice qué fue. */
 function origenDe(item) {
-  if (item.junta === 'applepay') return `Apple Pay + SMS de ${bancoDe(item.partes[1])}`;
+  if (item.junta === 'applepay') return `Apple Pay + SMS de ${bancoDe(item.lados[1])}`;
+  if (item.junta === 'mismo') return `${bancoDe(item)} · SMS + correo`;
   if (item.junta === 'transferencia') return 'Envío + abono';
   if (!item.aviso) return item.tarjeta ?? '';
+  if (item.origen === 'correo' && !item.aviso.reconocido) return `Correo · ${item.texto.slice(0, 90)}`;
   if (!item.aviso.reconocido) return item.texto.slice(0, 90);
   const { origen, destino } = item.aviso;
   const ultimos = origen?.ultimos ?? destino?.ultimos;

@@ -16,6 +16,7 @@ import { icono } from '../../iconos/render.js';
 import { fechaLocalDe } from '../../calc/bandeja.js';
 import { formatearFecha } from '../../calc/fechas.js';
 import { pasosDelAtajo, pasosDeAvisos } from './atajo-pasos.js';
+import { pasosDeCorreo } from './atajo-correo.js';
 import { esClaveDeAviso, etiquetaDeClave } from '../../calc/avisos/cuentas.js';
 
 function bloqueClave({ fechaClave, claveNueva }) {
@@ -67,11 +68,12 @@ function pintar(contenedor, estado) {
   contenedor.innerHTML = `
     <div class="pila">
       <p class="tenue" style="font-size:13px">Cada pago con Apple Pay y cada aviso del
-        banco por SMS llegan solos a <strong>Por confirmar</strong>, en el Resumen. Ahí
-        los revisas y los registras.</p>
+        banco por SMS o correo llegan solos a <strong>Por confirmar</strong>, en el
+        Resumen. Ahí los revisas y los registras.</p>
       ${bloqueClave(estado)}
       ${pasosDelAtajo(datos)}
       ${pasosDeAvisos(datos)}
+      ${pasosDeCorreo(datos, estado.claveNueva)}
       ${bloqueAprendidas(estado, 'Tarjetas de Wallet aprendidas', false)}
       ${bloqueAprendidas(estado, 'Aprendido de los avisos', true)}
     </div>`;

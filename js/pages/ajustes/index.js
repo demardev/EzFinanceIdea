@@ -16,7 +16,7 @@ const SECCIONES = {
   categorias: { titulo: 'Categorías', icono: 'tag',    sub: 'Agrupadas por tipo de movimiento',   montar: montarCategorias },
   plan:       { titulo: 'Fijos y variables', icono: 'repeat', sub: 'Lo que alimenta el planificador', montar: montarFijosVariables },
   applepay:   { titulo: 'Apple Pay y avisos', icono: 'card',
-                sub: 'Compras y SMS del banco que llegan solos a Por confirmar',
+                sub: 'Compras, SMS y correos del banco que llegan a Por confirmar',
                 montar: montarAtajo },
   datos:      { titulo: 'Datos', icono: 'descarga', sub: 'Exportar e importar respaldo', montar: montarDatos },
   /* Solo aparece con la bandera del negocio encendida. */

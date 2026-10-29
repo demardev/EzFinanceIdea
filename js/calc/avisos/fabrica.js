@@ -41,7 +41,8 @@ const BAC = [
     texto: 'AlertaDebito VISA {origen}: has realizado una compra por USD {monto} en el comercio {comercio} {fecha} {*}' },
 ].map((p) => ({ ...p, banco: 'bac' }));
 
-/* Promerica escribe "$" en vez de "USD", y no avisa los pagos de servicios. */
+/* Promerica escribe "$" en vez de "USD", y no avisa por SMS los pagos de
+   servicios: esos llegan por correo (ver PROMERICA_CORREO). */
 const PROMERICA = [
   { id: 'promerica-transfer-enviada', sentido: 'sale', origen: CUENTA,
     texto: 'Su Op. Transfer365 de Transferencia de Fondos a cuenta de ahorro a {persona} por $ {monto} ha sido aplicada el {fecha}' },
@@ -49,4 +50,17 @@ const PROMERICA = [
     texto: 'Ha recibido un abono Transferencia de Fondos a cuenta de ahorro de {persona} por $ {monto} a traves de Transfer365 el {fecha}' },
 ].map((p) => ({ ...p, banco: 'promerica' }));
 
-export const DE_FABRICA = [...CUSCATLAN, ...NIU, ...BAC, ...PROMERICA];
+/* Los correos de soluciones@promericaotp.com.sv, como los manda el script de
+   Gmail: asunto + cuerpo sin HTML, cortado antes del pie. Las transferencias
+   repiten lo del SMS con más detalle; Por confirmar junta los dos. */
+const PROMERICA_CORREO = [
+  { id: 'promerica-correo-pago-servicio', sentido: 'sale', origen: CUENTA,
+    texto: '{*}Pago de Servicio{*}Referencia: {referencia} Servicio Pagado: {comercio} Valor Pagado: ${monto} Fecha: {fecha} Cuenta origen: {*} - {origen}{*}' },
+  { id: 'promerica-correo-transfer-recibida', sentido: 'entra', destino: CUENTA,
+    texto: '{*}Transfer365 del Banco Central de Reserva recibida{*}TIPO PRODUCTO {*} {fecha} {*} {destino} $ {monto} {persona} Transferencia de Fondos{*}' },
+  /* Solo si dice PAGADO: un rechazo no movió dinero. */
+  { id: 'promerica-correo-transfer-enviada', sentido: 'sale', origen: CUENTA, destino: CUENTA,
+    texto: '{*}Transfer365 del Banco Central de Reserva enviada{*}ESTADO DE LA TRANSACCION: PAGADO Numero de transaccion: {referencia} Fecha y hora: {fecha} {*}Cuenta del debito: {*}{origen} {*}Monto de la transaccion: $ {monto} {*}Producto destino: {*}{destino} Titular cuenta destino: {persona}' },
+].map((p) => ({ ...p, banco: 'promerica' }));
+
+export const DE_FABRICA = [...CUSCATLAN, ...NIU, ...BAC, ...PROMERICA, ...PROMERICA_CORREO];

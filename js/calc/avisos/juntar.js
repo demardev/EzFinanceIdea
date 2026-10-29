@@ -1,76 +1,97 @@
 /* Juntar en la bandeja lo que es una sola operación. Función PURA: sin red,
    sin DOM.
 
-   Solo pares claros, de dos fuentes distintas:
+   Solo lo claro, de fuentes distintas:
+   - 'mismo':         el mismo aviso por SMS y por correo: mismo banco,
+                      sentido, monto, día y hora. El correo, que trae más
+                      detalle, va al frente.
    - 'applepay':      el pago con Apple Pay y el SMS de esa compra.
-   - 'transferencia': el envío de un banco y el abono en otro, a tu nombre.
-   Mismo monto y llegados con minutos de diferencia. Dos pagos seguidos de
-   montos distintos nunca se juntan, y dos iguales se juntan cada uno con
-   el aviso más cercano. Lo que separaste a mano se queda separado. */
+   - 'transferencia': el envío de un banco y el abono en otro, a tu nombre
+                      (cada lado puede ser ya un 'mismo').
+   Dos pagos seguidos de montos distintos nunca se juntan, y dos iguales se
+   juntan cada uno con el más cercano. Lo que separaste se queda separado.
+
+   Una entrada juntada lleva `partes` (todos los items: se borran y se
+   aprende de ellos) y `lados` (los dos que arman el borrador). */
 
 import { borradorDeBandeja, nombreDeBanco } from '../bandeja.js';
 import { esPersonaPropia, rutaDeAviso } from './cuentas.js';
 
-const MINUTOS = { applepay: 15, transferencia: 30 };
+const MINUTOS = { applepay: 15, transferencia: 30, mismo: 24 * 60 };
 
 const centavos = (monto) => Math.round(Number(monto) * 100);
 const minutosEntre = (a, b) => Math.abs(Date.parse(a.created_at) - Date.parse(b.created_at)) / 60000;
 const leido = (item) => item.aviso?.reconocido;
+const partesDe = (e) => e.partes ?? [e];
 
 /** La misma clave sin importar el orden: es la que se guarda al separar. */
-export const claveDePar = (a, b) => [a.id, b.id].sort().join('+');
+export const claveDe = (...entradas) => entradas.flatMap(partesDe).map((p) => p.id).sort().join('+');
 
 const esPropia = (item, aprendidas) => item.aviso.contraparte?.tipo === 'persona'
   && esPersonaPropia(item.aviso.contraparte.nombre, aprendidas);
 
-/* [a, b] en el orden en que van en el par, o null si no son la misma operación. */
-function comoPar(a, b, aprendidas) {
-  if (!a.monto || centavos(a.monto) !== centavos(b.monto)) return null;
+function comoMismo(a, b) {
+  if (!leido(a) || !leido(b) || a.origen === b.origen || !a.aviso.hora) return null;
+  const iguales = ['banco', 'sentido', 'fecha', 'hora'].every((k) => a.aviso[k] === b.aviso[k]);
+  if (!iguales) return null;
+  return { junta: 'mismo', lados: a.origen === 'correo' ? [a, b] : [b, a] };
+}
+
+function comoApplePay(a, b) {
   const [ap, otro] = a.origen === 'applepay' ? [a, b] : [b, a];
-  if (ap.origen === 'applepay' && leido(otro) && otro.aviso.sentido === 'sale') {
-    return { junta: 'applepay', partes: [ap, otro] };
-  }
+  if (ap.origen !== 'applepay' || !leido(otro) || otro.aviso.sentido !== 'sale') return null;
+  return { junta: 'applepay', lados: [ap, otro] };
+}
+
+function comoTransferencia(a, b, aprendidas) {
   if (!leido(a) || !leido(b) || a.aviso.banco === b.aviso.banco) return null;
   const [sale, entra] = a.aviso.sentido === 'sale' ? [a, b] : [b, a];
   if (sale.aviso.sentido !== 'sale' || entra.aviso.sentido !== 'entra') return null;
   if (!esPropia(sale, aprendidas) && !esPropia(entra, aprendidas)) return null;
-  return { junta: 'transferencia', partes: [sale, entra] };
+  return { junta: 'transferencia', lados: [sale, entra] };
 }
 
-function candidatos(items, aprendidas, separados) {
+function candidatos(items, reglas, separados) {
   const lista = [];
   items.forEach((a, i) => items.slice(i + 1).forEach((b) => {
-    const par = comoPar(a, b, aprendidas);
+    if (!a.monto || centavos(a.monto) !== centavos(b.monto)) return;
+    const par = reglas.map((regla) => regla(a, b)).find(Boolean);
     const minutos = minutosEntre(a, b);
-    if (par && minutos <= MINUTOS[par.junta] && !separados.has(claveDePar(a, b))) {
+    if (par && minutos <= MINUTOS[par.junta] && !separados.has(claveDe(a, b))) {
       lista.push({ ...par, minutos });
     }
   }));
   return lista.sort((x, y) => x.minutos - y.minutos);
 }
 
-/* El par se ve como su primera parte, con la lista de las dos. */
-function entradaDe({ junta, partes }) {
-  const [principal] = partes;
-  return { ...principal, id: claveDePar(...partes), junta, partes };
+/* Lo juntado se ve como su primer lado, con todas sus partes. */
+function entradaDe({ junta, lados }) {
+  return { ...lados[0], id: claveDe(...lados), junta, lados, partes: lados.flatMap(partesDe) };
+}
+
+/* Una pasada: cada item en a lo más un par, el más cercano primero. */
+function juntarCon(items, reglas, separados) {
+  const usados = new Map();
+  for (const par of candidatos(items, reglas, separados)) {
+    if (par.lados.some((l) => usados.has(l.id))) continue;
+    const entrada = entradaDe(par);
+    par.lados.forEach((l) => usados.set(l.id, entrada));
+  }
+  const vistos = new Set();
+  return items.map((item) => usados.get(item.id) ?? item)
+    .filter((e) => !vistos.has(e.id) && vistos.add(e.id));
 }
 
 /**
  * @param items      los de la bandeja, ya pasados por conAviso()
  * @param aprendidas lo aprendido (para saber si una persona eres tú)
- * @param separados  Set de claveDePar() que separaste
- * @returns los items sueltos y los pares, en el orden en que llegaron
+ * @param separados  Set de claveDe() que separaste
+ * @returns los items sueltos y los juntados, en el orden en que llegaron
  */
 export function juntarPendientes(items, aprendidas, separados = new Set()) {
-  const usados = new Map();
-  for (const par of candidatos(items, aprendidas, separados)) {
-    if (par.partes.some((p) => usados.has(p.id))) continue;
-    const entrada = entradaDe(par);
-    par.partes.forEach((p) => usados.set(p.id, entrada));
-  }
-  const vistos = new Set();
-  return items.map((item) => usados.get(item.id) ?? item)
-    .filter((e) => !vistos.has(e.id) && vistos.add(e.id));
+  const sinRepetir = juntarCon(items, [comoMismo], separados);
+  return juntarCon(sinRepetir, [comoApplePay, (a, b) => comoTransferencia(a, b, aprendidas)],
+                   separados);
 }
 
 /* Apple Pay pone el comercio y la tarjeta de Wallet; el SMS, la fecha y, si
@@ -93,8 +114,8 @@ function deTransferencia([sale, entra], origenes) {
 
 /** Lo que trae puesto el formulario, sea un item suelto o un par. */
 export function borradorDeEntrada(entrada, origenes, categorias = {}) {
-  if (entrada.junta === 'applepay') return deApplePay(entrada.partes, origenes, categorias);
-  if (entrada.junta === 'transferencia') return deTransferencia(entrada.partes, origenes);
+  if (entrada.junta === 'applepay') return deApplePay(entrada.lados, origenes, categorias);
+  if (entrada.junta === 'transferencia') return deTransferencia(entrada.lados, origenes);
   return borradorDeBandeja(entrada, origenes, categorias);
 }
 

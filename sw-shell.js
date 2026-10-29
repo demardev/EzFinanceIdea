@@ -62,6 +62,7 @@ self.SHELL = [
   'js/negocio/agrupar.js',
   'js/negocio/pago-recibo.js',
   'js/pages/ajustes/arqueo.js',
+  'js/pages/ajustes/atajo-correo.js',
   'js/pages/ajustes/atajo-pasos.js',
   'js/pages/ajustes/atajo.js',
   'js/pages/ajustes/categorias-form.js',

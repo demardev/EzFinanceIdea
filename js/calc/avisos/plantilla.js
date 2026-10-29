@@ -17,7 +17,9 @@ const HUECOS = {
   referencia: '(\\d+)',
   origen: 'X*(\\d{4})',       // últimos 4, aunque vengan tapados: XXXXXX9430
   destino: 'X*(\\d{4})',
-  '*': '.*',                  // lo que cambia y no interesa
+  /* Lo que cambia y no interesa. Lo menos posible: en un correo largo, lo
+     que sigue (unos dígitos, un guion) también aparece más adelante. */
+  '*': '.*?',
 };
 const SENTIDOS = ['sale', 'entra', 'entre'];
 const MAX_TEXTO = 600;
