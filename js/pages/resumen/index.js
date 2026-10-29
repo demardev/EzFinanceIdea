@@ -79,11 +79,13 @@ function recargar() {
 function conectarPorCobrar(contenedor, contexto, pendientes) {
   contenedor.querySelector('#btn-por-cobrar')?.addEventListener('click', async () => {
     try {
-      const [cuentas, categorias] = await Promise.all([
+      const [cuentas, categorias, clientes] = await Promise.all([
         contexto.cuentas.listarActivas(), contexto.categorias.listarActivas(),
+        /* Si fallan, todo sale junto como "sin cliente". */
+        contexto.clientes.listar().catch(() => []),
       ]);
       const { abrirPendientes } = await import('../negocio/pendientes.js');
-      abrirPendientes(contexto, pendientes, { cuentas, categorias }, recargar);
+      abrirPendientes(contexto, pendientes, { cuentas, categorias, clientes }, recargar);
     } catch (e) { avisoError(e); }
   });
 }

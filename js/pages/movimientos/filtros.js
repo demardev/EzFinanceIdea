@@ -10,13 +10,14 @@ import { esDelAmbito } from '../../ui/ambito.js';
 import { escapar } from '../../ui/texto.js';
 
 export function filtrosVacios() {
-  return { mes: mesDe(hoyISO()), tipo: '', cuenta: '', categoria: '', texto: '', ambito: '' };
+  return { mes: mesDe(hoyISO()), tipo: '', cuenta: '', categoria: '', cliente: '', texto: '',
+           ambito: '' };
 }
 
 /* El ámbito no se cuenta: no está en este sheet sino en las pastillas de la
    pantalla, donde se ve solo cuál está elegido. */
 export function cuantosActivos(f) {
-  return ['tipo', 'cuenta', 'categoria', 'texto'].filter((k) => f[k]).length;
+  return ['tipo', 'cuenta', 'categoria', 'cliente', 'texto'].filter((k) => f[k]).length;
 }
 
 function tocaCuenta(mov, id) {
@@ -37,6 +38,7 @@ export function aplicar(movimientos, f) {
     (!f.tipo || m.tipo === f.tipo) &&
     (!f.cuenta || tocaCuenta(m, f.cuenta)) &&
     (!f.categoria || m.categoria_id === f.categoria) &&
+    (!f.cliente || m.cliente_id === f.cliente) &&
     coincideTexto(m, f.texto));
 }
 
@@ -72,6 +74,15 @@ function encadenarTipoYCategoria(hoja, categorias) {
   });
 }
 
+/* Solo con el ámbito Negocio: los clientes no existen fuera de él. Van
+   también los archivados, porque sus movimientos viejos siguen ahí. */
+function campoCliente(filtros, clientes = []) {
+  if (filtros.ambito !== 'negocio' || !clientes.length) return '';
+  const opciones = clientes.map((c) => [c.id, c.archivado ? `${c.nombre} (archivado)` : c.nombre]);
+  return campoSelect({ nombre: 'cliente', etiqueta: 'Cliente', valor: filtros.cliente,
+                       opciones: [['', 'Todos'], ...opciones] });
+}
+
 function campos(filtros, datos) {
   const cuentasYTarjetas = [
     ...datos.cuentas.map((c) => [c.id, c.nombre]),
@@ -87,6 +98,7 @@ function campos(filtros, datos) {
                         opciones: [['', 'Todas'], ...cuentasYTarjetas] })}
         ${campoSelect({ nombre: 'categoria', etiqueta: 'Categoría', valor: filtros.categoria,
                         opciones: opcionesCategoria(datos.categorias, filtros.tipo) })}
+        ${campoCliente(filtros, datos.clientes)}
         ${campoTexto({ nombre: 'texto', etiqueta: 'Buscar', valor: filtros.texto, requerido: false,
                        ayuda: 'En la descripción, el comercio y la nota.' })}
         <div class="pila-sm" style="margin-top:16px">

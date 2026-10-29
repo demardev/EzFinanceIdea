@@ -97,6 +97,15 @@ describir('pago de recibo — movimientos generados', (caso) => {
     ]);
   });
 
+  caso('todo movimiento hereda el cliente de su operación', () => {
+    const movs = movimientosDePago({ ...COBRADO, cliente_id: 'rosa' }, CATS);
+    igual(movs.map((m) => m.cliente_id), ['rosa', 'rosa', 'rosa']);
+  });
+
+  caso('sin cliente, los movimientos quedan con cliente en nulo', () => {
+    igual(movimientosDePago(COBRADO, CATS).map((m) => m.cliente_id), [null, null, null]);
+  });
+
   caso('el neto de una operación cobrada es la comisión', () => {
     const movs = movimientosDePago(COBRADO, CATS);
     const neto = movs.reduce((n, m) => n + (m.tipo === 'ingreso' ? m.monto : -m.monto), 0);

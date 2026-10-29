@@ -48,3 +48,12 @@
   border:none; background:var(--neg); color:#fff;
   font-size:12.5px; font-weight:600; cursor:pointer;
 }
+
+/* ------------------------------------------- por cobrar, por cliente --- */
+.cifras-tres{
+  display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px;
+}
+.cifras-tres .monto{ display:block; font-size:16px; font-weight:600; }
+.grupo-cliente + .grupo-cliente{ margin-top:18px; }
+.grupo-cliente .seccion-titulo{ margin:0; }
+.grupo-cliente-detalle{ font-size:12.5px; margin:2px 0 8px; }

@@ -21,6 +21,8 @@ function movimiento(pago, extra) {
     ...SIN_RUTEO,
     ambito: 'negocio',
     pago_id: pago.id,
+    /* Heredado para poder filtrar por cliente en Movimientos. */
+    cliente_id: pago.cliente_id ?? null,
     nota: pago.nota || null,
     ...extra,
   };

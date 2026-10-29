@@ -6,41 +6,13 @@ import { abrirSheet } from '../../ui/sheet.js';
 import { abrirSheetFormulario } from '../../ui/sheet-formulario.js';
 import { campoMonto } from '../../ui/campos.js';
 import { textoMonto } from '../../ui/privacidad.js';
-import { escapar } from '../../ui/texto.js';
-import { formatearFecha, hoyISO, diasEntre } from '../../calc/fechas.js';
 import { redondear } from '../../calc/dinero.js';
-import { totalPorCobrar } from '../../negocio/pago-recibo.js';
-import { cobradoDe, saldoDe, totalDe } from '../../negocio/abonos.js';
+import { saldoDe } from '../../negocio/abonos.js';
+import { porCobrarPorCliente } from '../../negocio/por-cliente.js';
+import { cuerpoPendientes } from './pendientes-vista.js';
 import { abonarPago } from './acciones.js';
 import { categoriasDeNegocio } from './registrar.js';
 import { camposAbono, conectarAbono, abonoDeDatos } from './campos-abono.js';
-
-/* Sin abonos se lee "recibo + comisión"; con alguno, lo que falta de cuánto. */
-function cifra(pago) {
-  if (cobradoDe(pago) > 0) {
-    return `${textoMonto(saldoDe(pago))}
-            <span class="tenue-2">faltan de ${textoMonto(totalDe(pago))}</span>`;
-  }
-  return `${textoMonto(pago.monto_recibo)}
-          <span class="tenue-2">+ ${textoMonto(pago.comision)}</span>`;
-}
-
-function fila(pago) {
-  const dias = diasEntre(pago.fecha_pago, hoyISO());
-  return `
-    <div class="lista-fila">
-      <button type="button" class="fila-cuerpo" data-cobrar="${pago.id}">
-        <span class="crece" style="min-width:0">
-          <span class="titulo truncar" style="display:block">${cifra(pago)}</span>
-          <span class="sub ${dias >= 7 ? 'warn' : ''}">
-            ${pago.descripcion ? `${escapar(pago.descripcion)} · ` : ''}pagado ${formatearFecha(pago.fecha_pago)} · hace ${dias} ${dias === 1 ? 'día' : 'días'}
-            ${pago.nota ? `· ${escapar(pago.nota)}` : ''}
-          </span>
-        </span>
-        <span class="badge">cobrar</span>
-      </button>
-    </div>`;
-}
 
 /** Pide día, cuenta, si fue solo una parte y la comisión final. */
 function abrirCobro(contexto, pago, datos, alCambiar) {
@@ -62,12 +34,12 @@ function abrirCobro(contexto, pago, datos, alCambiar) {
   });
 }
 
+/** @param datos { cuentas, categorias, clientes } — clientes con archivados */
 export function abrirPendientes(contexto, pendientes, datos, alCambiar) {
+  const resumen = porCobrarPorCliente(pendientes, datos.clientes ?? []);
   const { hoja, cerrar } = abrirSheet({
-    titulo: `Por cobrar · ${textoMonto(totalPorCobrar(pendientes))}`,
-    cuerpo: pendientes.length
-      ? `<div class="lista">${pendientes.map(fila).join('')}</div>`
-      : '<p class="tenue">No te deben nada. Todo cobrado.</p>',
+    titulo: `Por cobrar · ${textoMonto(resumen.total)}`,
+    cuerpo: cuerpoPendientes(resumen),
   });
 
   hoja.addEventListener('click', (evento) => {

@@ -23,9 +23,14 @@ export function categoriasDeNegocio(categorias) {
  */
 export async function abrirPagoRecibo(contexto, pago, datos, alCambiar, { alRegistrar } = {}) {
   const categorias = categoriasDeNegocio(datos.categorias);
-  const urlFoto = pago.id ? await urlDeFoto(contexto, pago).catch(() => null) : null;
+  const [urlFoto, clientes] = await Promise.all([
+    pago.id ? urlDeFoto(contexto, pago).catch(() => null) : null,
+    /* Incluye archivados: el formulario decide cuáles ofrecer. Si fallan,
+       el pago se registra igual, sin cliente. */
+    contexto.clientes.listar().catch(() => []),
+  ]);
 
-  abrirFormPago(pago, { cuentas: datos.cuentas, perfil: contexto.perfil }, {
+  abrirFormPago(pago, { cuentas: datos.cuentas, perfil: contexto.perfil, clientes }, {
     urlFoto,
     alGuardar: async (fila, foto) => {
       await (pago.id

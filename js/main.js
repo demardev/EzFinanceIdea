@@ -12,6 +12,7 @@ import { repoCompras } from './repos/compras.js';
 import { repoPlanItems } from './repos/plan-items.js';
 import { repoPerfiles } from './repos/perfiles.js';
 import { repoPagosRecibo } from './repos/pagos-recibo.js';
+import { repoClientes } from './repos/clientes.js';
 import { repoBandeja } from './repos/bandeja.js';
 import { abrirNuevoDesdeFab } from './movimientos/registrar.js';
 import { abrirPagoRecibo } from './pages/negocio/registrar.js';
@@ -38,6 +39,7 @@ const contexto = {
   planItems: repoPlanItems(cliente),
   perfiles: repoPerfiles(cliente),
   pagos: repoPagosRecibo(cliente),
+  clientes: repoClientes(cliente),
   bandeja: repoBandeja(cliente),
   /* Se llenan al entrar; hasta entonces la app se comporta como si no
      hubiera negocio, que es lo correcto para casi todos. */

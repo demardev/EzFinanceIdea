@@ -28,8 +28,18 @@ function seccionCobro(pago, { cuentas, perfil }) {
     </div>`;
 }
 
-function campos(pago, { cuentas, perfil }) {
+/* Se ofrecen los activos; si la operación es de uno ya archivado, también
+   ese, para que editarla no le quite el cliente. Sin clientes no hay campo. */
+function campoCliente(pago, clientes) {
+  const ofrecidos = clientes.filter((c) => !c.archivado || c.id === pago.cliente_id);
+  if (!ofrecidos.length) return '';
+  return campoSelect({ nombre: 'cliente_id', etiqueta: 'Cliente', valor: pago.cliente_id ?? '',
+                       opciones: [['', 'Sin cliente'], ...ofrecidos.map((c) => [c.id, c.nombre])] });
+}
+
+function campos(pago, { cuentas, perfil, clientes = [] }) {
   return `
+    ${campoCliente(pago, clientes)}
     ${campoTexto({ nombre: 'descripcion', etiqueta: 'Descripción',
                    valor: pago.descripcion ?? '',
                    ayuda: 'De quién es el recibo. Es por donde lo vas a buscar después.' })}
@@ -56,6 +66,7 @@ function campos(pago, { cuentas, perfil }) {
 function aFila(d) {
   return {
     descripcion: d.descripcion.trim(),
+    cliente_id: d.cliente_id || null,
     monto_recibo: redondear(d.monto_recibo),
     comision: redondear(d.comision || 0),
     fecha_pago: d.fecha_pago,

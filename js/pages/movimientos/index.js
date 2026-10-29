@@ -38,16 +38,18 @@ export async function montarMovimientos(contenedor, contexto) {
   const { movimientos, cuentas, tarjetas, categorias } = contexto;
   let filtros = { ...filtrosVacios(), ambito: ambitoGuardado() };
   let orden = localStorage.getItem(CLAVE_ORDEN) === 'asc' ? 'asc' : 'desc';
-  let datos = { cuentas: [], tarjetas: [], categorias: [] };
+  let datos = { cuentas: [], tarjetas: [], categorias: [], clientes: [] };
   let delMes = [];
   let programados = [];
   let pagina = 1;
 
   async function cargarCatalogos() {
-    const [c, t, k] = await Promise.all([
+    const [c, t, k, l] = await Promise.all([
       cuentas.listarActivas(), tarjetas.listarActivas(), categorias.listarActivas(),
+      /* Para el filtro por cliente. Sin negocio, o si fallan, no hay filtro. */
+      contexto.perfil?.negocio ? contexto.clientes.listar().catch(() => []) : [],
     ]);
-    datos = { cuentas: c, tarjetas: t, categorias: k };
+    datos = { cuentas: c, tarjetas: t, categorias: k, clientes: l };
   }
 
   function pintar() {
@@ -117,6 +119,8 @@ export async function montarMovimientos(contenedor, contexto) {
       /* La pastilla "Todo" vale "", así que se pregunta por el atributo. */
       if (objetivo.hasAttribute('data-pastilla')) {
         filtros.ambito = objetivo.dataset.pastilla;
+        /* El cliente solo filtra dentro de Negocio: fuera, se suelta. */
+        if (filtros.ambito !== 'negocio') filtros.cliente = '';
         guardarAmbito(filtros.ambito);
         pagina = 1;
         pintar();

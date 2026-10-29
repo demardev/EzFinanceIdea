@@ -9,6 +9,7 @@ import { montarCategorias } from './categorias.js';
 import { montarFijosVariables } from './fijos-variables.js';
 import { montarDatos } from './datos.js';
 import { montarNegocio } from './negocio.js';
+import { montarClientes } from './clientes.js';
 import { montarAtajo } from './atajo.js';
 
 const SECCIONES = {
@@ -22,6 +23,8 @@ const SECCIONES = {
   /* Solo aparece con la bandera del negocio encendida. */
   negocio:    { titulo: 'Negocio', icono: 'banknote', sub: 'Cuentas y comisión por defecto',
                 montar: montarNegocio, soloNegocio: true },
+  clientes:   { titulo: 'Clientes', icono: 'persona', sub: 'De quién son los pagos de recibo',
+                montar: montarClientes, soloNegocio: true },
 };
 
 function filaSeccion(clave, seccion) {
