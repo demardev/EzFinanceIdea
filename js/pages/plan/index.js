@@ -8,6 +8,7 @@ import { construirLineaTiempo, colchonDelPeriodo, hayGastosVariables,
 import { asignar } from '../../calc/plan/asignar.js';
 import { evaluar } from '../../calc/plan/veredicto.js';
 import { saldosPorCuenta } from '../../calc/saldos.js';
+import { ADELANTO } from '../../calc/plan/registrado.js';
 import { hoyISO, mesDe, rangoDelMes, sumarMeses, sumarDias } from '../../calc/fechas.js';
 import { avisoError } from '../../ui/toast.js';
 
@@ -40,11 +41,12 @@ function indiceDeNombres({ cuentas, tarjetas }) {
 
 async function cargarDatos({ planItems, cuentas, tarjetas, movimientos, compras }) {
   const hoy = hoyISO();
-  const [items, cts, tjs, totales, deTarjetas, futuros, cmps] = await Promise.all([
+  const [items, cts, tjs, totales, deTarjetas, futuros, recientes, cmps] = await Promise.all([
     planItems.listarActivos(), cuentas.listarActivas(), tarjetas.listarActivas(),
     movimientos.totalesPorCuenta(hoy),   // el saldo de hoy, ya sumado
     movimientos.listarDeTarjetas(),      // lo que proyecta cada tarjeta
     movimientos.listarFuturos(hoy),      // los pendientes sueltos
+    movimientos.listarEntre(sumarDias(hoy, -ADELANTO), hoy),  // lo que ya llegó
     compras.listar(),
   ]);
   /* Una cuota futura está en las dos listas: si no se deduplica, el plan la
@@ -54,6 +56,8 @@ async function cargarDatos({ planItems, cuentas, tarjetas, movimientos, compras 
     datos: {
       planItems: items, tarjetas: tjs, compras: cmps, cuentas: cts,
       movimientos: [...porId.values()],
+      /* Para no agendar otra vez un sueldo o una renta ya registrados. */
+      registrados: [...recientes, ...futuros],
     },
     saldos: saldosPorCuenta(cts, totales, hoy),
   };

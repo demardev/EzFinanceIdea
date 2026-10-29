@@ -9,21 +9,13 @@
 
 import { diasEntre, sumarDias } from './fechas.js';
 import { ocurrenciasMensuales } from './plan/recurrencia.js';
+import { coincide } from './plan/registrado.js';
+
+export { coincide };
 
 const DERIVA = 10;
 
-const normal = (texto) => String(texto || '').trim().toLowerCase();
-
 export const esFijoActivo = (i) => i.activo && i.clase === 'gasto' && i.variabilidad === 'fijo';
-
-/* No hay liga entre el movimiento y el item del plan, así que se reconoce
-   por el nombre o, si se lo cambiaste, por categoría y monto. */
-export function coincide(item, m) {
-  return m.tipo === 'egreso'
-    && (normal(m.descripcion) === normal(item.nombre)
-        || Boolean(item.categoria_id && m.categoria_id === item.categoria_id
-                   && Number(m.monto) === Number(item.monto)));
-}
 
 function registradoEnTarjeta(item, fecha, movimientos) {
   const desde = sumarDias(fecha, -DERIVA);

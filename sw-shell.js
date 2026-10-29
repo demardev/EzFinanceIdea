@@ -43,6 +43,7 @@ self.SHELL = [
   'js/calc/plan/linea-tiempo.js',
   'js/calc/plan/proyeccion-tarjeta.js',
   'js/calc/plan/recurrencia.js',
+  'js/calc/plan/registrado.js',
   'js/calc/plan/veredicto.js',
   'js/calc/saldos.js',
   'js/calc/vencimientos.js',

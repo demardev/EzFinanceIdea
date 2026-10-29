@@ -45,7 +45,7 @@ export function conectarMovimientos(contenedor, contexto, movimientos, alCambiar
   });
 }
 
-/** Tocar un gasto fijo de "Próximos vencimientos" lo registra. */
+/** Tocar un gasto fijo o un ingreso de "Próximos vencimientos" lo registra. */
 export function conectarVencimientos(contenedor, contexto, vencimientos, alCambiar) {
   contenedor.addEventListener('click', async (evento) => {
     const objetivo = evento.target.closest('[data-vencimiento]');

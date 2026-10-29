@@ -12,14 +12,16 @@ const ICONO_POR_TIPO = {
   efectivo: 'banknote', bancaria: 'banco', ahorro: 'piggy', otro: 'wallet',
 };
 const SIGNO = { ingreso: '+', egreso: '−', transferencia: '' };
-const ICONO_VENCIMIENTO = { pago: 'card', corte: 'reloj', gasto: 'sale' };
-const QUE_ES = { pago: 'pagar', corte: 'corta', gasto: 'se cobra' };
+const ICONO_VENCIMIENTO = { pago: 'card', corte: 'reloj', gasto: 'sale', ingreso: 'entra' };
+const QUE_ES = { pago: 'pagar', corte: 'corta', gasto: 'se cobra', ingreso: 'llega' };
 const ACENTO = { vencido: 'neg', urgente: 'warn', normal: 'tenue' };
 
-function cuandoTexto(dias) {
+/* Un ingreso atrasado no "venció": se atrasó. */
+function cuandoTexto(dias, clase) {
   if (dias < 0) {
     const n = Math.abs(dias);
-    return `venció hace ${n} ${n === 1 ? 'día' : 'días'}`;
+    const verbo = clase === 'ingreso' ? 'se atrasó' : 'venció hace';
+    return `${verbo} ${n} ${n === 1 ? 'día' : 'días'}`;
   }
   return dias === 0 ? 'hoy' : `en ${dias} ${dias === 1 ? 'día' : 'días'}`;
 }
@@ -72,19 +74,19 @@ function filaMovimiento(mov) {
     </div>`;
 }
 
-/* Los gastos fijos se tocan para registrarlos; los avisos de tarjeta no
-   hacen nada, porque su pago se hace desde Tarjetas. */
+/* Los gastos fijos y los ingresos se tocan para registrarlos; los avisos de
+   tarjeta no hacen nada, porque su pago se hace desde Tarjetas. */
 function filaVencimiento(v, indice) {
   const cuerpo = `
         <span class="icono-caja">${icono(ICONO_VENCIMIENTO[v.clase], 18)}</span>
         <span class="crece" style="min-width:0">
           <span class="titulo truncar" style="display:block">${escapar(v.nombre)}</span>
           <span class="sub"><span class="${ACENTO[v.estado]}">
-            ${QUE_ES[v.clase]} ${formatearFecha(v.fecha)} · ${cuandoTexto(v.dias)}
+            ${QUE_ES[v.clase]} ${formatearFecha(v.fecha)} · ${cuandoTexto(v.dias, v.clase)}
           </span></span>
         </span>
-        <span class="monto">${textoMonto(v.monto)}</span>`;
-  const interior = v.clase === 'gasto'
+        <span class="monto ${v.clase === 'ingreso' ? 'pos' : ''}">${textoMonto(v.monto)}</span>`;
+  const interior = v.item
     ? `<button type="button" class="fila-cuerpo" data-vencimiento="${indice}">${cuerpo}</button>`
     : `<span class="fila-cuerpo" style="cursor:default">${cuerpo}</span>`;
   return `<div class="lista-fila">${interior}</div>`;

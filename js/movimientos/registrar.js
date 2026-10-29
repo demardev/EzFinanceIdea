@@ -17,10 +17,20 @@ async function cargarCatalogos({ cuentas, tarjetas, categorias }) {
   return { cuentas: c, tarjetas: t, categorias: k };
 }
 
-/* Un gasto fijo del plan ya trae casi todo el movimiento: se abre el mismo
-   formulario de "nuevo" con eso puesto, y la fecha de hoy, que es cuando lo
-   estás pagando. Lo usan los avisos del Resumen y el detalle de la tarjeta. */
+/* Un gasto fijo o un ingreso del plan ya trae casi todo el movimiento: se
+   abre el mismo formulario de "nuevo" con eso puesto, y la fecha de hoy, que
+   es cuando lo estás pagando o cobrando. Lo usan los avisos del Resumen y el
+   detalle de la tarjeta. Un ingreso variable se propone con su mínimo. */
 export function borradorDeFijo(item) {
+  if (item.clase === 'ingreso') {
+    return {
+      tipo: 'ingreso',
+      monto: Number(item.variabilidad === 'variable' ? item.monto_min : item.monto) || 0,
+      descripcion: item.nombre,
+      categoria_id: item.categoria_id ?? '',
+      cuenta_id: item.cuenta_id ?? '',
+    };
+  }
   return {
     tipo: 'egreso',
     monto: Number(item.monto) || 0,

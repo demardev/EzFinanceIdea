@@ -12,6 +12,7 @@ import { diasEntre } from '../fechas.js';
 import { cargosDeTarjeta } from '../saldo-inicial-tarjeta.js';
 import { ocurrenciasMensuales, montoDe } from './recurrencia.js';
 import { eventosDeTarjeta } from './proyeccion-tarjeta.js';
+import { yaRegistrado } from './registrado.js';
 
 export { ocurrenciasMensuales } from './recurrencia.js';
 export { eventosDeTarjeta } from './proyeccion-tarjeta.js';
@@ -28,24 +29,32 @@ function evento(item, fecha, clase, escenario) {
   };
 }
 
-/** Ingresos (fijos y variables) y gastos fijos pagados desde una cuenta. */
-export function eventosDePlan(planItems, desde, hasta, escenario) {
+/* Lo que ya registraste está en el saldo de hoy (o en un pendiente con
+   fecha): si el plan lo agenda otra vez, el sueldo del 30 que llegó el 28 se
+   cuenta dos veces. */
+function agendar(eventos, item, desde, hasta, clase, { escenario, registrados }) {
+  ocurrenciasMensuales(item.dia_mes, desde, hasta)
+    .filter((f) => !yaRegistrado(item, f, registrados))
+    .forEach((f) => eventos.push(evento(item, f, clase, escenario)));
+}
+
+/**
+ * Ingresos (fijos y variables) y gastos fijos pagados desde una cuenta.
+ * @param registrados movimientos recientes y futuros, para no repetirlos
+ */
+export function eventosDePlan(planItems, desde, hasta, escenario, registrados = []) {
   const activos = planItems.filter((i) => i.activo);
   const eventos = [];
+  const opciones = { escenario, registrados };
 
   /* Un ingreso sin día fijo no se agenda: es incierto, y cuando llega y lo
      registras ya está en el saldo de hoy. Ver ingresosSinFecha(). */
-  activos.filter((i) => i.clase === 'ingreso' && i.dia_mes).forEach((item) => {
-    ocurrenciasMensuales(item.dia_mes, desde, hasta)
-      .forEach((f) => eventos.push(evento(item, f, 'ingreso', escenario)));
-  });
+  activos.filter((i) => i.clase === 'ingreso' && i.dia_mes)
+    .forEach((item) => agendar(eventos, item, desde, hasta, 'ingreso', opciones));
 
   activos
     .filter((i) => i.clase === 'gasto' && i.variabilidad === 'fijo' && !i.tarjeta_id)
-    .forEach((item) => {
-      ocurrenciasMensuales(item.dia_mes, desde, hasta)
-        .forEach((f) => eventos.push(evento(item, f, 'obligacion', escenario)));
-    });
+    .forEach((item) => agendar(eventos, item, desde, hasta, 'obligacion', opciones));
 
   return eventos;
 }
@@ -112,9 +121,10 @@ export function eventosDeMovimientos(movimientos, desde, hasta) {
    pago que vence el día de cobro se paga con lo que ya tienes. */
 const PESO = { obligacion: 0, ingreso: 1 };
 
-export function construirLineaTiempo({ planItems, tarjetas, movimientos, compras },
+export function construirLineaTiempo({ planItems, tarjetas, movimientos, compras,
+                                       registrados = [] },
                                      { hoy, hasta, escenario = 'min', escenarioGastos = 'min' }) {
-  const eventos = eventosDePlan(planItems, hoy, hasta, escenario);
+  const eventos = eventosDePlan(planItems, hoy, hasta, escenario, registrados);
   eventos.push(...eventosDeMovimientos(movimientos, hoy, hasta));
 
   tarjetas.filter((t) => !t.archivada).forEach((tarjeta) => {
