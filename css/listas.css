@@ -70,3 +70,10 @@
    la casilla queda a la altura del select. */
 .fila-cliente-cobro{ align-items:start; }
 .fila-cliente-cobro .interruptor{ padding-top:36px; }
+
+/* El cliente de una operación en Movimientos: discreto, junto a "negocio". */
+.marca-cliente{
+  display:inline-flex; align-items:center; gap:3px; margin-left:4px;
+  font-size:12px; color:var(--fg-3); vertical-align:middle;
+}
+.marca-cliente.sin{ color:color-mix(in srgb, var(--warn) 70%, var(--fg-3)); }

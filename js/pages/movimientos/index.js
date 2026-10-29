@@ -20,10 +20,10 @@ const CLAVE_PROGRAMADOS = 'finanzas.ver-programados';
 /* Fuera de montarMovimientos para que sobreviva a los repintados. */
 let verProgramados = localStorage.getItem(CLAVE_PROGRAMADOS) === '1';
 
-/** { id: nombre } de cuentas, tarjetas y categorías, para pintar las filas. */
-function indiceDeNombres({ cuentas, tarjetas, categorias }) {
+/** { id: nombre } de cuentas, tarjetas, categorías y clientes, para pintar las filas. */
+function indiceDeNombres({ cuentas, tarjetas, categorias, clientes }) {
   const mapa = {};
-  [...cuentas, ...tarjetas, ...categorias].forEach((x) => { mapa[x.id] = x.nombre; });
+  [...cuentas, ...tarjetas, ...categorias, ...clientes].forEach((x) => { mapa[x.id] = x.nombre; });
   return mapa;
 }
 

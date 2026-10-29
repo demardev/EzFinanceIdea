@@ -40,6 +40,15 @@ function fila(mov, nombres, iconos) {
     </div>`;
 }
 
+/* Discreto: con cliente, su nombre en gris; sin él, "sin cliente" en un
+   amarillo apagado, como el select del formulario cuando no tiene. */
+function marcaCliente(clienteId, nombres) {
+  const nombre = clienteId && nombres[clienteId];
+  return nombre
+    ? `<span class="marca-cliente">${icono('persona', 12)}${escapar(nombre)}</span>`
+    : `<span class="marca-cliente sin">${icono('persona', 12)}sin cliente</span>`;
+}
+
 /* Una operación del negocio se muestra como una sola fila: el egreso, el
    cobro y la comisión son un mismo hecho. Se agrupa por operación Y día,
    así que un cobro diferido sale en su propio día, como debe. */
@@ -60,7 +69,8 @@ function filaOperacion(f, nombres) {
             ${recibo ? `<span class="tenue-2">· ${textoMonto(recibo.monto)}</span>` : ''}
           </span>
           <span class="sub">${escapar(cuentas.join(' → '))}
-            <span class="badge badge-sm">negocio</span></span>
+            <span class="badge badge-sm">negocio</span>
+            ${marcaCliente(f.movimientos[0].cliente_id, nombres)}</span>
         </span>
         <span class="monto ${f.neto >= 0 ? 'pos' : 'neg'}">
           ${f.neto >= 0 ? '+' : '−'}${textoMonto(Math.abs(f.neto))}
