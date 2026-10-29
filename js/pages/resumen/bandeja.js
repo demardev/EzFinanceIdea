@@ -7,13 +7,13 @@ import { abrirSheet } from '../../ui/sheet.js';
 import { filaEditable, envolverLista } from '../../ui/lista.js';
 import { conectarDeslizar, cerrarDeslizada } from '../../ui/deslizar.js';
 import { confirmar } from '../../ui/confirmar.js';
-import { unirDestino } from '../../ui/campos.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { aviso, avisoError } from '../../ui/toast.js';
 import { formatearFecha } from '../../calc/fechas.js';
 import { fechaLocalDe, borradorDeBandeja, claveDeComercio, listasParaRegistrar,
          conAviso, nombreDeBanco, descripcionDe } from '../../calc/bandeja.js';
 import { abrirRegistro } from '../../movimientos/registrar.js';
+import { alRegistrarDe } from './bandeja-aprender.js';
 import { TIPOS } from '../../movimientos/tipos.js';
 import { plural } from '../../ui/texto.js';
 import { icono } from '../../iconos/render.js';
@@ -38,25 +38,6 @@ function fila(item) {
     iconoNombre: item.aviso ? 'banco' : 'card',
     deslizable: true,
   });
-}
-
-/* Lo que se hace al registrar: sacarla de la bandeja y recordar lo que
-   elegiste si es nuevo o lo cambiaste — la tarjeta de Wallet y la categoría
-   del comercio. Solo de egresos: es lo que llega de Apple Pay. */
-function alRegistrarDe(contexto, item, { origenes, categorias }) {
-  const { bandeja, userId } = contexto;
-  return async (fila) => {
-    await bandeja.eliminar(item.id);
-    if (fila.tipo !== 'egreso') return;
-    const origen = unirDestino(fila, 'cuenta_id', 'tarjeta_id');
-    if (item.tarjeta && origen && origenes[item.tarjeta] !== origen) {
-      await bandeja.recordarOrigen(userId, item.tarjeta, origen);
-    }
-    const comercio = claveDeComercio(item.comercio);
-    if (comercio && fila.categoria_id && categorias.aprendidas[comercio] !== fila.categoria_id) {
-      await bandeja.recordarCategoria(userId, comercio, fila.categoria_id);
-    }
-  };
 }
 
 /* El historial solo se consulta para los comercios que aún no tienen

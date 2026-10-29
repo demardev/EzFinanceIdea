@@ -4,10 +4,10 @@
 import { aISO } from './fechas.js';
 import { sumar } from './dinero.js';
 import { leerAviso } from './avisos/leer.js';
+import { tipoDeAviso, rutaDeAviso } from './avisos/cuentas.js';
 
 const POR_ORIGEN = { applepay: 'Compra con Apple Pay', sms: 'Aviso del banco', correo: 'Aviso del banco' };
 const BANCOS = { cuscatlan: 'Cuscatlán', niu: 'Niu', bac: 'BAC', promerica: 'Promerica' };
-const TIPO_POR_SENTIDO = { sale: 'egreso', entra: 'ingreso', entre: 'transferencia' };
 
 export const nombreDeBanco = (clave) => BANCOS[clave] ?? clave ?? null;
 
@@ -55,11 +55,13 @@ function categoriaDe(item, { aprendidas = {}, historial = {} }) {
 
 /**
  * Lo que el formulario de movimiento trae puesto al confirmar una compra.
- * @param origenes   { 'nombre en Wallet': 'tarjeta:<id>' | 'cuenta:<id>' }
+ * @param origenes   lo aprendido: { 'nombre en Wallet' o clave de aviso:
+ *                   'tarjeta:<id>' | 'cuenta:<id>' } (ver avisos/cuentas.js)
  * @param categorias { aprendidas, historial }: { claveDeComercio: categoria_id }
  */
 export function borradorDeBandeja(item, origenes, categorias = {}) {
-  const tipo = TIPO_POR_SENTIDO[item.aviso?.sentido] ?? 'egreso';
+  const reconocido = item.aviso?.reconocido;
+  const tipo = reconocido ? tipoDeAviso(item.aviso, origenes) : 'egreso';
   return {
     tipo,
     monto: Number(item.monto) || 0,
@@ -67,6 +69,7 @@ export function borradorDeBandeja(item, origenes, categorias = {}) {
     descripcion: descripcionDe(item),
     categoria_id: tipo === 'egreso' ? categoriaDe(item, categorias) : '',
     origen: (item.tarjeta && origenes[item.tarjeta]) || '',
+    ...(reconocido ? rutaDeAviso(item.aviso, tipo, origenes) : {}),
   };
 }
 

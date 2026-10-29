@@ -16,6 +16,7 @@ import { icono } from '../../iconos/render.js';
 import { fechaLocalDe } from '../../calc/bandeja.js';
 import { formatearFecha } from '../../calc/fechas.js';
 import { pasosDelAtajo, pasosDeAvisos } from './atajo-pasos.js';
+import { esClaveDeAviso, etiquetaDeClave } from '../../calc/avisos/cuentas.js';
 
 function bloqueClave({ fechaClave, claveNueva }) {
   if (claveNueva) {
@@ -43,18 +44,20 @@ function bloqueClave({ fechaClave, claveNueva }) {
     </div>`;
 }
 
-/* El id de la fila es su posición: el nombre viene de Wallet y no se mete
-   crudo en un atributo. */
-function bloqueAprendidas(estado) {
-  const nombres = Object.keys(estado.origenes);
-  if (!nombres.length) return '';
-  const filas = nombres.map((nombre, i) => filaEditable({
-    id: i, nombre, sub: `→ ${estado.nombreDe(estado.origenes[nombre])}`,
-    iconoNombre: 'card', deslizable: true,
-  }));
+/* El id de la fila es su posición en estado.origenes: el nombre viene de
+   Wallet o de un aviso y no se mete crudo en un atributo. */
+function bloqueAprendidas(estado, titulo, deAviso) {
+  const filas = Object.keys(estado.origenes)
+    .map((nombre, i) => ({ nombre, i }))
+    .filter(({ nombre }) => esClaveDeAviso(nombre) === deAviso)
+    .map(({ nombre, i }) => filaEditable({
+      id: i, nombre: estado.etiquetaDe(nombre), sub: estado.destinoDe(nombre),
+      iconoNombre: deAviso ? 'banco' : 'card', deslizable: true,
+    }));
+  if (!filas.length) return '';
   return `
     <div>
-      <p class="seccion-titulo">Tarjetas de Wallet aprendidas</p>
+      <p class="seccion-titulo">${titulo}</p>
       ${envolverLista(filas)}
     </div>`;
 }
@@ -69,7 +72,8 @@ function pintar(contenedor, estado) {
       ${bloqueClave(estado)}
       ${pasosDelAtajo(datos)}
       ${pasosDeAvisos(datos)}
-      ${bloqueAprendidas(estado)}
+      ${bloqueAprendidas(estado, 'Tarjetas de Wallet aprendidas', false)}
+      ${bloqueAprendidas(estado, 'Aprendido de los avisos', true)}
     </div>`;
   conectarDeslizar(contenedor);          // hay que rehacerlo en cada repintado
 }
@@ -103,8 +107,8 @@ async function olvidar({ bandeja }, estado, indice) {
   cerrarDeslizada();
   const nombre = Object.keys(estado.origenes)[indice];
   if (!await confirmar({
-    titulo: `¿Olvidar "${nombre}"?`,
-    mensaje: 'La próxima compra con esa tarjeta te va a preguntar de dónde sale.',
+    titulo: `¿Olvidar "${estado.etiquetaDe(nombre)}"?`,
+    mensaje: 'La próxima vez que llegue te va a preguntar de nuevo.',
     textoOk: 'Olvidar',
   })) return;
   await bandeja.olvidarOrigen(nombre);
@@ -135,7 +139,12 @@ export async function montarAtajo(contenedor, contexto) {
   const porId = new Map([...tjs, ...cts].map((x) => [x.id, x.nombre]));
   const estado = {
     fechaClave, claveNueva: null, origenes,
-    nombreDe: (origen) => porId.get(separarDestino(origen).id) ?? 'ya no existe',
+  };
+  estado.etiquetaDe = (nombre) => (esClaveDeAviso(nombre) ? etiquetaDeClave(nombre) : nombre);
+  estado.destinoDe = (nombre) => {
+    const valor = estado.origenes[nombre];
+    if (valor === 'propia') return 'Eres tú: va como transferencia';
+    return `→ ${porId.get(separarDestino(valor).id) ?? 'ya no existe'}`;
   };
   pintar(contenedor, estado);
   conectar(contenedor, contexto, estado);
