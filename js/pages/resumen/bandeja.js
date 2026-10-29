@@ -15,6 +15,7 @@ import { juntarPendientes, borradorDeEntrada } from '../../calc/avisos/juntar.js
 import { filaDeEntrada, bloqueJuntados, leerSeparados, separar } from './bandeja-filas.js';
 import { abrirRegistro } from '../../movimientos/registrar.js';
 import { alRegistrarDe } from './bandeja-aprender.js';
+import { puedeSerPago, elegirYAbrir } from './bandeja-negocio.js';
 import { TIPOS } from '../../movimientos/tipos.js';
 import { plural } from '../../ui/texto.js';
 import { icono } from '../../iconos/render.js';
@@ -122,8 +123,12 @@ async function alTocar(contexto, objetivo, { entradas, borradores, sugerencias }
     return;
   }
   cerrar();
-  await abrirRegistro(contexto, borrador, alCambiar, undefined,
-                      { alRegistrar: alRegistrarDe(contexto, entrada, sugerencias) });
+  const alRegistrar = alRegistrarDe(contexto, entrada, sugerencias);
+  if (puedeSerPago(contexto, borrador)) {
+    elegirYAbrir(contexto, entrada, borrador, alCambiar, alRegistrar);
+    return;
+  }
+  await abrirRegistro(contexto, borrador, alCambiar, undefined, { alRegistrar });
 }
 
 export async function abrirPorConfirmar(contexto, recibidos, alCambiar) {

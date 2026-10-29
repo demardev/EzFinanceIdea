@@ -90,6 +90,7 @@ self.SHELL = [
   'js/pages/plan/vista.js',
   'js/pages/resumen/acciones.js',
   'js/pages/resumen/bandeja-aprender.js',
+  'js/pages/resumen/bandeja-negocio.js',
   'js/pages/resumen/bandeja-filas.js',
   'js/pages/resumen/bandeja.js',
   'js/pages/resumen/index.js',

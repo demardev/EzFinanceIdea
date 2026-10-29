@@ -75,7 +75,11 @@ export async function eliminarMovimiento({ movimientos }, mov, alCambiar) {
  */
 export function abrirNuevoDesdeFab(contexto, alCambiar, abrirPago) {
   if (!contexto.perfil?.negocio) return abrirRegistro(contexto, {}, alCambiar);
+  return elegirMovimientoOPago(() => abrirRegistro(contexto, {}, alCambiar), abrirPago);
+}
 
+/** La pregunta de un usuario con negocio: ¿movimiento o pago de recibo? */
+export function elegirMovimientoOPago(alMovimiento, alPago) {
   const { hoja, cerrar } = abrirSheet({
     titulo: '¿Qué vas a registrar?',
     cuerpo: `
@@ -92,8 +96,8 @@ export function abrirNuevoDesdeFab(contexto, alCambiar, abrirPago) {
   hoja.querySelectorAll('[data-elegir]').forEach((boton) => {
     boton.addEventListener('click', () => {
       cerrar();
-      if (boton.dataset.elegir === 'recibo') abrirPago();
-      else abrirRegistro(contexto, {}, alCambiar);
+      if (boton.dataset.elegir === 'recibo') alPago();
+      else alMovimiento();
     });
   });
 }

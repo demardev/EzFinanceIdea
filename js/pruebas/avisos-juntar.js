@@ -3,7 +3,7 @@
    seguidos de montos distintos, nunca. */
 
 import { describir, igual } from './marco.js';
-import { juntarPendientes, borradorDeEntrada } from '../calc/avisos/juntar.js';
+import { juntarPendientes, borradorDeEntrada, borradorDePago } from '../calc/avisos/juntar.js';
 import { conAviso } from '../calc/bandeja.js';
 
 const a_las = (min) => new Date(Date.UTC(2026, 9, 28, 17, min)).toISOString();
@@ -87,5 +87,41 @@ describir('juntar: el borrador del par', (caso) => {
 
   caso('uno solo, igual que siempre', () => {
     igual(borradorDeEntrada(ABONO(0), {}).tipo, 'ingreso');
+  });
+});
+
+describir('como pago de recibo', (caso) => {
+  const DEBITO = sms('d', 'Se hizo un Debito en su Cuenta B. CUSCATLAN 9214 por USD23.98 el dia 2026-10-27 16:45. Mas inf. 22122000', 0);
+
+  caso('monto, día y cuenta del aviso; el mensaje en la nota', () => {
+    const b = borradorDeEntrada(DEBITO, { 'aviso:cuenta:9214': 'cuenta:cus' });
+    igual(borradorDePago(DEBITO, b), {
+      monto_recibo: 23.98, fecha_pago: '2026-10-27', cuenta_pago_id: 'cus', nota: DEBITO.texto,
+    });
+  });
+
+  caso('sin cuenta aprendida, se queda la de Ajustes del negocio', () => {
+    const p = borradorDePago(DEBITO, borradorDeEntrada(DEBITO, {}));
+    igual('cuenta_pago_id' in p, false);
+  });
+
+  caso('una tarjeta no es cuenta de pago', () => {
+    const p = borradorDePago(DEBITO, { ...borradorDeEntrada(DEBITO, {}), origen: 'tarjeta:t' });
+    igual('cuenta_pago_id' in p, false);
+  });
+
+  caso('un par lleva el texto del SMS', () => {
+    const [par] = juntarPendientes([applepay('ap', 2.99, 'Apple', 0), compraBac('s', '2.99', 1)], {});
+    igual(borradorDePago(par, borradorDeEntrada(par, {})).nota, par.partes[1].texto);
+  });
+
+  caso('Apple Pay sin SMS: dice de dónde vino', () => {
+    const ap = applepay('ap', 2.99, 'Apple', 0);
+    igual(borradorDePago(ap, borradorDeEntrada(ap, {})).nota, 'Apple Pay · Apple · BAC Visa');
+  });
+
+  caso('un aviso sin monto no pone monto', () => {
+    const raro = sms('r', 'Su pago fue aplicado', 0);
+    igual('monto_recibo' in borradorDePago(raro, borradorDeEntrada(raro, {})), false);
   });
 });

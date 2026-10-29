@@ -97,3 +97,21 @@ export function borradorDeEntrada(entrada, origenes, categorias = {}) {
   if (entrada.junta === 'transferencia') return deTransferencia(entrada.partes, origenes);
   return borradorDeBandeja(entrada, origenes, categorias);
 }
+
+/**
+ * Lo que trae puesto el pago de recibo cuando eliges "negocio" en Por
+ * confirmar: monto, día y cuenta, y el mensaje en la nota para llenar el
+ * resto. Lo que no se sabe no va, para que el formulario ponga lo de Ajustes.
+ */
+export function borradorDePago(entrada, borrador) {
+  const textos = (entrada.partes ?? [entrada]).map((p) => p.texto).filter(Boolean);
+  const nota = textos.length ? textos.join(' / ')
+    : ['Apple Pay', entrada.comercio, entrada.tarjeta].filter(Boolean).join(' · ');
+  const [clase, id] = String(borrador.origen || '').split(':');
+  return {
+    ...(borrador.monto > 0 ? { monto_recibo: borrador.monto } : {}),
+    fecha_pago: borrador.fecha,
+    ...(clase === 'cuenta' && id ? { cuenta_pago_id: id } : {}),
+    nota,
+  };
+}

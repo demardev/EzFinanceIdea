@@ -16,10 +16,12 @@ export function categoriasDeNegocio(categorias) {
 }
 
 /**
- * @param pago      {} para uno nuevo, o el que se edita
+ * @param pago      {} para uno nuevo (o con algo ya puesto), o el que se edita
  * @param alCambiar se llama después de guardar o eliminar
+ * @param alRegistrar opcional: después de crear uno NUEVO y antes de
+ *                  alCambiar. Por confirmar lo usa para sacar el aviso.
  */
-export async function abrirPagoRecibo(contexto, pago, datos, alCambiar) {
+export async function abrirPagoRecibo(contexto, pago, datos, alCambiar, { alRegistrar } = {}) {
   const categorias = categoriasDeNegocio(datos.categorias);
   const urlFoto = pago.id ? await urlDeFoto(contexto, pago).catch(() => null) : null;
 
@@ -29,6 +31,7 @@ export async function abrirPagoRecibo(contexto, pago, datos, alCambiar) {
       await (pago.id
         ? editarPago(contexto, pago, fila, { foto, categorias })
         : crearPago(contexto, fila, { foto, categorias }));
+      if (!pago.id) await alRegistrar?.();
       await alCambiar();
     },
     alEliminar: async () => {
