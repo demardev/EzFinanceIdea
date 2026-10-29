@@ -105,7 +105,8 @@ export function crearClienteDatos(obtenerToken) {
  * archivo que sabe que existe Supabase; Ajustes solo lo enseña.
  */
 export function datosParaAtajo() {
-  return { url: `${REST}/rpc/recibir_en_bandeja`, apikey: ANON_KEY };
+  return { url: `${REST}/rpc/recibir_en_bandeja`, urlAvisos: `${REST}/rpc/recibir_aviso`,
+           apikey: ANON_KEY };
 }
 
 /* ------------------------------------------------------------- archivos --- */

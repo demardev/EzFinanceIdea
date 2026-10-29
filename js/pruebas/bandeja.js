@@ -1,9 +1,10 @@
 /* Pruebas de calc/bandeja.js — escritas antes que la implementación.
-   Lo que llega del atajo de Apple Pay y cómo se vuelve un movimiento. */
+   Lo que llega del atajo (Apple Pay o un aviso del banco) y cómo se vuelve
+   un movimiento. */
 
 import { describir, igual } from './marco.js';
 import { fechaLocalDe, borradorDeBandeja, claveDeComercio,
-         listasParaRegistrar } from '../calc/bandeja.js';
+         listasParaRegistrar, conAviso } from '../calc/bandeja.js';
 
 const COMPRA = { id: 'b1', origen: 'applepay', monto: 15.75, comercio: 'ISHOP PASEO',
                  tarjeta: 'Cuscatlán Visa', created_at: '2026-10-08T21:30:00Z' };
@@ -70,6 +71,57 @@ describir('bandeja de por confirmar', (caso) => {
                             { historial: { '': 'k' } }).categoria_id, '');
   });
 
+});
+
+describir('avisos del banco en la bandeja', (caso) => {
+  const aviso = (texto) => ({ id: 'a1', origen: 'sms', monto: null, comercio: null,
+                              tarjeta: null, texto, created_at: '2026-10-28T23:30:00Z' });
+  const COMPRA_BAC = aviso('Alertas PRF VISA 1969: has realizado una compra por USD 2.99 en el comercio: APPLE.COM BILL  2026/09/04 14:17:29 Inf. https://bit.ly/32mcTdq');
+
+  caso('lo que dice el aviso llena monto y comercio', () => {
+    const i = conAviso(COMPRA_BAC);
+    igual([i.monto, i.comercio, i.aviso.banco], [2.99, 'APPLE.COM BILL', 'bac']);
+  });
+
+  caso('un item de Apple Pay pasa igual', () => {
+    igual(conAviso(COMPRA), COMPRA);
+  });
+
+  caso('la fecha es la del aviso, no la de llegada', () => {
+    igual(borradorDeBandeja(conAviso(COMPRA_BAC), {}).fecha, '2026-09-04');
+  });
+
+  caso('el tipo sale del sentido del aviso', () => {
+    const abono = conAviso(aviso('Ha recibido un abono Transferencia de Fondos a cuenta de ahorro de ANA PRUEBA por $ 300.00 a traves de Transfer365 el 25/08/2026 15:47:07'));
+    const pago = conAviso(aviso('Niu te informa que pagaste tu Tarjeta de Credito Niu con tu Cuenta Niu por USD 136.87 el 26/09/26 a las 09:59:45 con referencia 1004438275'));
+    igual([borradorDeBandeja(abono, {}).tipo, borradorDeBandeja(pago, {}).tipo],
+          ['ingreso', 'transferencia']);
+    igual(borradorDeBandeja(abono, {}).descripcion, 'ANA PRUEBA');
+  });
+
+  caso('fuera de un egreso no se sugiere categoría de comercio', () => {
+    const abono = conAviso(aviso('Ha recibido un abono Transferencia de Fondos a cuenta de ahorro de ANA PRUEBA por $ 300.00 a traves de Transfer365 el 25/08/2026 15:47:07'));
+    igual(borradorDeBandeja(abono, {}, { aprendidas: { 'ana prueba': 'k' } }).categoria_id, '');
+  });
+
+  caso('sin comercio ni persona, dice de qué banco es', () => {
+    const debito = conAviso(aviso('Se hizo un Debito en su Cuenta B. CUSCATLAN 9214 por USD23.98 el dia 2026-08-27 16:45. Mas inf. 22122000'));
+    igual(borradorDeBandeja(debito, {}).descripcion, 'Aviso de Cuscatlán');
+  });
+
+  caso('uno que no se reconoce trae lo que se pudo adivinar', () => {
+    const raro = conAviso(aviso('Pago de servicio por USD 12.50 con su cuenta 1234'));
+    const b = borradorDeBandeja(raro, {});
+    igual([raro.monto, b.tipo, b.monto, b.descripcion], [12.5, 'egreso', 12.5, 'Aviso del banco']);
+    igual(b.fecha, fechaLocalDe(raro.created_at));
+  });
+
+  caso('un aviso nunca se registra sin revisar', () => {
+    const r = listasParaRegistrar([conAviso(COMPRA_BAC)],
+      { origenes: {}, categorias: { aprendidas: { 'apple.com bill': 'k' } } },
+      { origenes: new Set(['']), categorias: new Set(['k']) });
+    igual(r.listas, []);
+  });
 });
 
 describir('registrar todas las de la bandeja', (caso) => {

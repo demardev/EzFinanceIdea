@@ -1,10 +1,34 @@
-/* Lo que llega solo a la bandeja (hoy, compras con Apple Pay) y cómo se
-   vuelve un movimiento. Función PURA: sin red, sin DOM. */
+/* Lo que llega solo a la bandeja —compras con Apple Pay y avisos del banco
+   por SMS— y cómo se vuelve un movimiento. Función PURA: sin red, sin DOM. */
 
 import { aISO } from './fechas.js';
 import { sumar } from './dinero.js';
+import { leerAviso } from './avisos/leer.js';
 
-const POR_ORIGEN = { applepay: 'Compra con Apple Pay', sms: 'Compra (SMS)', correo: 'Compra (correo)' };
+const POR_ORIGEN = { applepay: 'Compra con Apple Pay', sms: 'Aviso del banco', correo: 'Aviso del banco' };
+const BANCOS = { cuscatlan: 'Cuscatlán', niu: 'Niu', bac: 'BAC', promerica: 'Promerica' };
+const TIPO_POR_SENTIDO = { sale: 'egreso', entra: 'ingreso', entre: 'transferencia' };
+
+export const nombreDeBanco = (clave) => BANCOS[clave] ?? clave ?? null;
+
+/**
+ * Un aviso llega a la base como texto crudo: aquí se lee, y el item queda con
+ * monto y comercio como los de Apple Pay, más `aviso` con todo lo leído.
+ * @param propias plantillas que enseñó el usuario
+ */
+export function conAviso(item, propias = []) {
+  if (!item.texto) return item;
+  const aviso = leerAviso(item.texto, propias);
+  return { ...item, aviso, monto: aviso.monto, comercio: aviso.contraparte?.nombre ?? null };
+}
+
+/** Cómo se llama en la lista y en el formulario: el comercio o quien te
+    pagó; si no, de qué banco o de dónde vino. */
+export function descripcionDe(item) {
+  if (item.comercio) return item.comercio;
+  const banco = nombreDeBanco(item.aviso?.banco);
+  return banco ? `Aviso de ${banco}` : (POR_ORIGEN[item.origen] || 'Compra');
+}
 
 /**
  * El día LOCAL de un instante. `created_at` es un instante con zona, no una
@@ -35,19 +59,21 @@ function categoriaDe(item, { aprendidas = {}, historial = {} }) {
  * @param categorias { aprendidas, historial }: { claveDeComercio: categoria_id }
  */
 export function borradorDeBandeja(item, origenes, categorias = {}) {
+  const tipo = TIPO_POR_SENTIDO[item.aviso?.sentido] ?? 'egreso';
   return {
-    tipo: 'egreso',
+    tipo,
     monto: Number(item.monto) || 0,
-    fecha: fechaLocalDe(item.created_at),
-    descripcion: item.comercio || POR_ORIGEN[item.origen] || 'Compra',
-    categoria_id: categoriaDe(item, categorias),
+    fecha: item.aviso?.fecha || fechaLocalDe(item.created_at),
+    descripcion: descripcionDe(item),
+    categoria_id: tipo === 'egreso' ? categoriaDe(item, categorias) : '',
     origen: (item.tarjeta && origenes[item.tarjeta]) || '',
   };
 }
 
 /**
  * Las que se pueden registrar sin abrir el formulario: traen una tarjeta y
- * una categoría que siguen activas. Las demás se quedan para revisarlas.
+ * una categoría que siguen activas. Las demás se quedan para revisarlas, y
+ * los avisos del banco también: todavía no se sabe de qué cuenta son.
  *
  * @param sugerencias { origenes, categorias } como para borradorDeBandeja()
  * @param vigentes    { origenes: Set('tarjeta:<id>'), categorias: Set(id) }
@@ -58,7 +84,7 @@ export function listasParaRegistrar(items, sugerencias, vigentes) {
     .map((item) => ({
       item, borrador: borradorDeBandeja(item, sugerencias.origenes, sugerencias.categorias),
     }))
-    .filter(({ borrador }) => borrador.monto > 0
+    .filter(({ item, borrador }) => !item.texto && borrador.monto > 0
       && vigentes.origenes.has(borrador.origen)
       && vigentes.categorias.has(borrador.categoria_id));
   return {

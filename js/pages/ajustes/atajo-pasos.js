@@ -48,3 +48,33 @@ export function pasosDelAtajo({ url, apikey }) {
       </ol>
     </div>`;
 }
+
+/* Los SMS del banco: una automatización por palabra. "USD" la traen
+   Cuscatlán, Niu y BAC; Promerica escribe "$", pero sus avisos dicen
+   "Transfer365". Si un SMS trae las dos, la base lo guarda una sola vez. */
+export function pasosDeAvisos({ urlAvisos, apikey }) {
+  return `
+    <div class="card pila-sm" style="font-size:13.5px">
+      <p class="seccion-titulo" style="margin:0">Avisos del banco por SMS</p>
+      <p class="tenue" style="font-size:13px">Usa la misma clave de arriba. Se arman
+        dos automatizaciones iguales que solo cambian en la palabra.</p>
+      <ol class="pila-sm" style="padding-left:20px;margin:0;list-style:decimal">
+        <li>En <strong>Atajos</strong>: Automatización → <strong>+</strong> →
+          <strong>Mensaje</strong>.</li>
+        <li>En <strong>El mensaje contiene</strong> escribe <strong>USD</strong>. No
+          elijas remitente: los bancos no tienen número. Marca
+          <strong>Ejecutar inmediatamente</strong> → <strong>Nuevo atajo en blanco</strong>.</li>
+        <li>Agrega <strong>Obtener contenido de URL</strong> con esta URL:${copiable(urlAvisos)}</li>
+        <li>Método <strong>POST</strong>, y en Encabezados <strong>apikey</strong> con
+          este valor:${copiable(apikey)}</li>
+        <li>Cuerpo de solicitud: <strong>JSON</strong>, con dos campos:
+          <ul style="padding-left:16px;margin:6px 0 0">
+            ${campoJson('clave', 'tu clave, la de arriba')}
+            ${campoJson('texto', '<em>Entrada de shortcut</em>; tócala y elige <em>Contenido</em>')}
+          </ul></li>
+        <li>Repite todo con la palabra <strong>Transfer365</strong>, para los de Promerica.</li>
+        <li>Para probar, mándate un mensaje que diga <strong>prueba USD 1.00</strong>:
+          aparece en <strong>Por confirmar</strong> y ahí lo descartas.</li>
+      </ol>
+    </div>`;
+}

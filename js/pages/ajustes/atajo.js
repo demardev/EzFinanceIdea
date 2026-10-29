@@ -1,5 +1,6 @@
-/* Ajustes → Apple Pay: la clave del atajo, los pasos para armarlo y las
-   tarjetas de Wallet que ya se aprendieron.
+/* Ajustes → Apple Pay y avisos: la clave del atajo, los pasos para armar el
+   de Apple Pay y las automatizaciones de SMS, y las tarjetas de Wallet que
+   ya se aprendieron.
 
    La clave se enseña UNA vez, al generarla: la base guarda solo su hash.
    Cambiarla deja inservible la anterior, así que si se filtra, se cambia. */
@@ -14,7 +15,7 @@ import { aviso, avisoError } from '../../ui/toast.js';
 import { icono } from '../../iconos/render.js';
 import { fechaLocalDe } from '../../calc/bandeja.js';
 import { formatearFecha } from '../../calc/fechas.js';
-import { pasosDelAtajo } from './atajo-pasos.js';
+import { pasosDelAtajo, pasosDeAvisos } from './atajo-pasos.js';
 
 function bloqueClave({ fechaClave, claveNueva }) {
   if (claveNueva) {
@@ -59,12 +60,15 @@ function bloqueAprendidas(estado) {
 }
 
 function pintar(contenedor, estado) {
+  const datos = datosParaAtajo();
   contenedor.innerHTML = `
     <div class="pila">
-      <p class="tenue" style="font-size:13px">Cada pago con Apple Pay llega solo a
-        <strong>Por confirmar</strong>, en el Resumen. Ahí lo revisas y lo registras.</p>
+      <p class="tenue" style="font-size:13px">Cada pago con Apple Pay y cada aviso del
+        banco por SMS llegan solos a <strong>Por confirmar</strong>, en el Resumen. Ahí
+        los revisas y los registras.</p>
       ${bloqueClave(estado)}
-      ${pasosDelAtajo(datosParaAtajo())}
+      ${pasosDelAtajo(datos)}
+      ${pasosDeAvisos(datos)}
       ${bloqueAprendidas(estado)}
     </div>`;
   conectarDeslizar(contenedor);          // hay que rehacerlo en cada repintado
