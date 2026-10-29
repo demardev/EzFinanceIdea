@@ -10,19 +10,28 @@ import { abonosDe, agregarAbono, conAbonos, problemaDeAbonos, saldoDe } from '..
 import { opcionesCuenta, mostrarCon, camposAbono, conectarAbono, abonoDeDatos,
          listaAbonos, conectarListaAbonos } from './campos-abono.js';
 
+function ayudaCobro(abonos, conCliente) {
+  if (abonos.length) return 'Lo que te pagaron después.';
+  return conCliente ? 'Si no, queda pendiente.'
+    : 'Si no, queda pendiente de cobro y se registra solo la salida.';
+}
+
 /* Una operación nueva pregunta si ya te pagaron; una con abonos los enseña
-   y deja registrar otro mientras falte algo. */
-function seccionCobro(pago, { cuentas, perfil }) {
+   y deja registrar otro mientras falte algo. El cliente va a la par: las dos
+   cosas se deciden juntas al registrar. */
+function seccionCobro(pago, { cuentas, perfil, clientes = [] }) {
   const abonos = abonosDe(pago);
   const puedeAbonar = !abonos.length || saldoDe(pago) > 0;
-  return `
-    ${listaAbonos(pago, abonos, cuentas)}
+  const cliente = campoCliente(pago, clientes);
+  const interruptor = `
     <div ${puedeAbonar ? '' : 'hidden'}>
       ${campoInterruptor({ nombre: 'cobrado',
                            etiqueta: abonos.length ? 'Registrar otro abono' : 'Ya me pagaron',
-                           ayuda: abonos.length ? 'Lo que te pagaron después.'
-                             : 'Si no, queda pendiente de cobro y se registra solo la salida.' })}
-    </div>
+                           ayuda: ayudaCobro(abonos, Boolean(cliente)) })}
+    </div>`;
+  return `
+    ${listaAbonos(pago, abonos, cuentas)}
+    ${cliente ? `<div class="campo-fila fila-cliente-cobro">${cliente}${interruptor}</div>` : interruptor}
     <div data-solo-cobrado hidden>
       ${camposAbono({ cuentas, cuentaId: perfil.cuenta_cobro_id ?? '' })}
     </div>`;
@@ -37,9 +46,17 @@ function campoCliente(pago, clientes) {
                        opciones: [['', 'Sin cliente'], ...ofrecidos.map((c) => [c.id, c.nombre])] });
 }
 
+/* Sin cliente el select resalta en amarillo, para que no se olvide. */
+function resaltarSinCliente(form) {
+  const select = form.querySelector('[name="cliente_id"]');
+  if (!select) return;
+  const aplicar = () => select.classList.toggle('sin-elegir', !select.value);
+  select.addEventListener('change', aplicar);
+  aplicar();
+}
+
 function campos(pago, { cuentas, perfil, clientes = [] }) {
   return `
-    ${campoCliente(pago, clientes)}
     ${campoTexto({ nombre: 'descripcion', etiqueta: 'Descripción',
                    valor: pago.descripcion ?? '',
                    ayuda: 'De quién es el recibo. Es por donde lo vas a buscar después.' })}
@@ -57,7 +74,7 @@ function campos(pago, { cuentas, perfil, clientes = [] }) {
                       opciones: opcionesCuenta(cuentas) })}
     </div>
 
-    ${seccionCobro(pago, { cuentas, perfil })}
+    ${seccionCobro(pago, { cuentas, perfil, clientes })}
 
     ${campoTexto({ nombre: 'nota', etiqueta: 'Nota', valor: pago.nota ?? '', requerido: false })}
     ${campoFoto({})}`;
@@ -105,6 +122,7 @@ export function abrirFormPago(pago, datos, { alGuardar, alEliminar, urlFoto = nu
     alEliminar: pago.id ? alEliminar : null,
     alPintar: (hoja, form) => {
       mostrarCon(form, 'cobrado', '[data-solo-cobrado]');
+      resaltarSinCliente(form);
       conectarAbono(form);
       abonosQuedan = conectarListaAbonos(form, pago, abonosDe(pago));
       conectarFoto(hoja, { alCambiar: (blob) => { foto = blob; }, urlPrevia: urlFoto });

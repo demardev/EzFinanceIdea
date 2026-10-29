@@ -5,7 +5,7 @@
    que falta de comisión es lo último que te van a pagar. */
 
 import { redondear, sumar } from '../calc/dinero.js';
-import { repartirAbonos } from './abonos.js';
+import { agregarAbono, problemaDeAbonos, repartirAbonos } from './abonos.js';
 import { estaPendiente } from './pago-recibo.js';
 
 /** Lo que falta de una operación: { recibo, comision }. */
@@ -53,4 +53,16 @@ export function porCobrarPorCliente(pagos, clientes) {
     pagos: g.pagos, ...totales(g.faltas),
   }));
   return { grupos: lista.sort(porNombre), ...totales([...grupos.values()].flatMap((g) => g.faltas)) };
+}
+
+/**
+ * "Cobrar todo" a un cliente: cada operación recibe un abono por lo que le
+ * falta, todos el mismo día y en la misma cuenta. O se pueden todas o
+ * ninguna, para no dejar a medias un cobro que fue uno solo.
+ * @returns { pagos: las operaciones saldadas, problema: texto o null }
+ */
+export function saldarTodos(pagos, { fecha, cuenta_id }) {
+  const nuevos = pagos.map((p) => agregarAbono(p, { fecha, cuenta_id: cuenta_id || null, monto: null }));
+  const problema = nuevos.map(problemaDeAbonos).find(Boolean) ?? null;
+  return problema ? { pagos: [], problema } : { pagos: nuevos, problema: null };
 }

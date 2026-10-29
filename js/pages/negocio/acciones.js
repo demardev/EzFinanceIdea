@@ -5,6 +5,7 @@
 
 import { movimientosDePago } from '../../negocio/pago-recibo.js';
 import { agregarAbono, problemaDeAbonos, saldoDe } from '../../negocio/abonos.js';
+import { saldarTodos } from '../../negocio/por-cliente.js';
 import { confirmar } from '../../ui/confirmar.js';
 import { aviso } from '../../ui/toast.js';
 import { textoMonto } from '../../ui/privacidad.js';
@@ -74,6 +75,22 @@ export async function abonarPago(contexto, pago, { abono, comision, categorias }
   aviso(falta > 0 ? `Abono registrado. Faltan ${textoMonto(falta)}.`
                   : `Cobrado. Ganaste ${textoMonto(comision)}.`);
   return actualizado;
+}
+
+/**
+ * Cobrar todo lo que debe un cliente de una vez: un abono por operación, el
+ * mismo día y en la misma cuenta. Se valida todo antes de escribir nada.
+ */
+export async function cobrarTodos(contexto, pagos, { fecha, cuenta_id, categorias }) {
+  const { pagos: saldados, problema } = saldarTodos(pagos, { fecha, cuenta_id });
+  if (problema) throw new Error(problema);
+  for (const nuevo of saldados) {
+    const actualizado = await contexto.pagos.actualizar(nuevo.id, {
+      abonos: nuevo.abonos, fecha_cobro: nuevo.fecha_cobro, cuenta_cobro_id: nuevo.cuenta_cobro_id,
+    });
+    await regenerarMovimientos(contexto, actualizado, categorias);
+  }
+  aviso(saldados.length === 1 ? 'Cobrado.' : `Cobradas ${saldados.length} operaciones.`);
 }
 
 export async function eliminarPago(contexto, pago) {

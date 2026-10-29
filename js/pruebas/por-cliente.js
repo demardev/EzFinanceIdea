@@ -3,7 +3,7 @@
    cuánto de comisiones y el total. */
 
 import { describir, igual } from './marco.js';
-import { porCobrarPorCliente } from '../negocio/por-cliente.js';
+import { porCobrarPorCliente, saldarTodos } from '../negocio/por-cliente.js';
 
 const CLIENTES = [
   { id: 'rosa', nombre: 'Rosa' },
@@ -80,5 +80,39 @@ describir('por cobrar — por cliente', (caso) => {
   caso('los centavos no se descuadran', () => {
     const r = porCobrarPorCliente([pago('a', 'rosa', 0.1, 0.1), pago('b', 'rosa', 0.2, 0.2)], CLIENTES);
     igual([r.recibos, r.comisiones, r.total], [0.3, 0.3, 0.6]);
+  });
+});
+
+describir('por cobrar — cobrar todo a un cliente', (caso) => {
+  const DIA = { fecha: '2026-10-05', cuenta_id: 'banco' };
+
+  caso('cada operación queda saldada con un abono por lo que le falta', () => {
+    const parcial = pago('b', 'rosa', 30, 1, [{ fecha: '2026-10-02', cuenta_id: 'x', monto: 10 }]);
+    const r = saldarTodos([pago('a', 'rosa', 50, 1), parcial], DIA);
+    igual(r.problema, null);
+    igual(r.pagos.map((p) => p.abonos.map((a) => a.monto)), [[51], [10, 21]]);
+    r.pagos.forEach((p) => {
+      igual(p.fecha_cobro, '2026-10-05');
+      igual(p.cuenta_cobro_id, 'banco');
+    });
+  });
+
+  caso('no toca la lista original', () => {
+    const original = pago('a', 'rosa', 50, 1);
+    saldarTodos([original], DIA);
+    igual(original.abonos, []);
+  });
+
+  caso('sin cuenta no se cobra nada', () => {
+    const r = saldarTodos([pago('a', 'rosa', 50, 1)], { fecha: '2026-10-05', cuenta_id: '' });
+    igual(r.problema, 'Elige en qué cuenta te pagaron.');
+    igual(r.pagos, []);
+  });
+
+  caso('si una no se puede, no se cobra ninguna', () => {
+    const tarde = { ...pago('b', 'rosa', 30, 1), fecha_pago: '2026-10-09' };
+    const r = saldarTodos([pago('a', 'rosa', 50, 1), tarde], DIA);
+    igual(r.problema, 'No te pueden haber pagado antes de que pagaras el recibo.');
+    igual(r.pagos, []);
   });
 });

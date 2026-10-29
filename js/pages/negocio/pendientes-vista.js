@@ -1,6 +1,7 @@
-/* Cómo se pinta Por cobrar: los totales arriba y un grupo por cliente, cada
-   uno con lo que debe de recibos, de comisiones y en total. Pinta, no
-   calcula: los números vienen de negocio/por-cliente.js. */
+/* Cómo se pinta Por cobrar: los totales de todos arriba y un bloque por
+   cliente con lo que debe de recibos, de comisiones y en total, sus
+   operaciones y el botón de cobrarle todo. Pinta, no calcula: los números
+   vienen de negocio/por-cliente.js. */
 
 import { textoMonto } from '../../ui/privacidad.js';
 import { escapar } from '../../ui/texto.js';
@@ -39,39 +40,53 @@ function cifraTotal(etiqueta, monto) {
           <span class="monto">${textoMonto(monto)}</span></span>`;
 }
 
-function totales({ recibos, comisiones, total }) {
+function cifras({ recibos, comisiones, total }) {
   return `
-    <div class="card cifras-tres">
+    <div class="cifras-tres">
       ${cifraTotal('Recibos', recibos)}
       ${cifraTotal('Comisiones', comisiones)}
       ${cifraTotal('Total', total)}
     </div>`;
 }
 
-/* Si nada tiene cliente, el encabezado "Sin cliente" no dice nada. */
-function grupo(g, conEncabezado) {
-  const encabezado = `
-    <div class="fila-entre">
-      <span class="seccion-titulo truncar">${g.nombre === null ? 'Sin cliente' : escapar(g.nombre)}</span>
-      <span class="monto">${textoMonto(g.total)}</span>
-    </div>
-    <p class="tenue-2 grupo-cliente-detalle">
-      Recibos ${textoMonto(g.recibos)} · Comisiones ${textoMonto(g.comisiones)}
-    </p>`;
+/* "Cobrar todo" solo con un cliente: los de "sin cliente" son de gente
+   distinta y no te pagan juntos. */
+function botonCobrarTodo(g) {
+  if (g.cliente_id === null) return '';
   return `
-    <div class="grupo-cliente">
-      ${conEncabezado ? encabezado : ''}
+    <button class="btn btn-bloque" type="button" data-cobrar-todos="${g.cliente_id}">
+      Cobrar todo · ${textoMonto(g.total)}
+    </button>`;
+}
+
+function bloqueCliente(g) {
+  const cuantas = g.pagos.length === 1 ? '1 operación' : `${g.pagos.length} operaciones`;
+  return `
+    <section class="card grupo-cliente">
+      <div class="fila-entre">
+        <span class="titulo truncar">${g.nombre === null ? 'Sin cliente' : escapar(g.nombre)}</span>
+        <span class="tenue-2">${cuantas}</span>
+      </div>
+      ${cifras(g)}
       <div class="lista">${g.pagos.map(fila).join('')}</div>
-    </div>`;
+      ${botonCobrarTodo(g)}
+    </section>`;
 }
 
 /** @param resumen lo que devuelve porCobrarPorCliente() */
 export function cuerpoPendientes(resumen) {
   if (!resumen.grupos.length) return '<p class="tenue">No te deben nada. Todo cobrado.</p>';
-  const soloSinCliente = resumen.grupos.length === 1 && resumen.grupos[0].nombre === null;
+  /* Si nada tiene cliente, un bloque "Sin cliente" no dice nada: la lista sola. */
+  if (resumen.grupos.length === 1 && resumen.grupos[0].nombre === null) {
+    return `
+      <div class="pila">
+        <div class="card">${cifras(resumen)}</div>
+        <div class="lista">${resumen.grupos[0].pagos.map(fila).join('')}</div>
+      </div>`;
+  }
   return `
     <div class="pila">
-      ${totales(resumen)}
-      <div>${resumen.grupos.map((g) => grupo(g, !soloSinCliente)).join('')}</div>
+      <div class="card"><p class="cifra-etiqueta">Entre todos</p>${cifras(resumen)}</div>
+      ${resumen.grupos.map(bloqueCliente).join('')}
     </div>`;
 }

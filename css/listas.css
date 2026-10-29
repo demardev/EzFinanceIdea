@@ -54,6 +54,19 @@
   display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px;
 }
 .cifras-tres .monto{ display:block; font-size:16px; font-weight:600; }
-.grupo-cliente + .grupo-cliente{ margin-top:18px; }
-.grupo-cliente .seccion-titulo{ margin:0; }
-.grupo-cliente-detalle{ font-size:12.5px; margin:2px 0 8px; }
+.grupo-cliente{ display:flex; flex-direction:column; gap:12px; }
+.grupo-cliente > .fila-entre .titulo{ font-size:16px; font-weight:620; }
+
+/* Un select que todavía no tiene nada elegido (el cliente del pago de
+   recibo): resalta como la X del sheet, pero en amarillo. */
+.campo select.sin-elegir{
+  color:var(--warn);
+  background:color-mix(in srgb, var(--warn) 14%, transparent);
+  border-color:color-mix(in srgb, var(--warn) 40%, transparent);
+}
+
+/* El cliente y "Ya me pagaron" en una línea. El interruptor no tiene
+   etiqueta encima como el select, así que baja lo que mide la etiqueta y
+   la casilla queda a la altura del select. */
+.fila-cliente-cobro{ align-items:start; }
+.fila-cliente-cobro .interruptor{ padding-top:36px; }
