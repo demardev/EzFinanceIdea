@@ -1,5 +1,6 @@
 /* Hub de Ajustes: decide qué subpantalla montar según el hash.
-   #/ajustes -> el menú · #/ajustes/cuentas · #/ajustes/categorias */
+   #/ajustes -> el menú · #/ajustes/cuentas · #/ajustes/categorias
+   Lo del negocio vive junto en su propio menú: #/ajustes/negocio/clientes */
 
 import { cerrarSesion, emailSesion } from '../../api/sesion.js';
 import { icono } from '../../iconos/render.js';
@@ -21,15 +22,21 @@ const SECCIONES = {
                 montar: montarAtajo },
   datos:      { titulo: 'Datos', icono: 'descarga', sub: 'Exportar e importar respaldo', montar: montarDatos },
   /* Solo aparece con la bandera del negocio encendida. */
-  negocio:    { titulo: 'Negocio', icono: 'banknote', sub: 'Cuentas y comisión por defecto',
-                montar: montarNegocio, soloNegocio: true },
-  clientes:   { titulo: 'Clientes', icono: 'persona', sub: 'De quién son los pagos de recibo',
-                montar: montarClientes, soloNegocio: true },
+  negocio:    { titulo: 'Negocio', icono: 'banknote', sub: 'Cuentas, comisión y clientes',
+                montar: montarMenuNegocio, soloNegocio: true },
 };
 
-function filaSeccion(clave, seccion) {
+/* Los apartados del negocio, dentro de Negocio. */
+const NEGOCIO = {
+  preferencias: { titulo: 'Cuentas y comisión', icono: 'wallet',
+                  sub: 'Lo que trae puesto el pago de recibo', montar: montarNegocio },
+  clientes:     { titulo: 'Clientes', icono: 'persona',
+                  sub: 'De quién son los pagos de recibo', montar: montarClientes },
+};
+
+function filaSeccion(clave, seccion, base = '#/ajustes') {
   return `
-    <a class="lista-fila" href="#/ajustes/${clave}">
+    <a class="lista-fila" href="${base}/${clave}">
       <span class="fila-cuerpo">
         <span class="icono-caja">${icono(seccion.icono, 18)}</span>
         <span class="crece truncar">
@@ -65,9 +72,21 @@ function montarMenu(contenedor, contexto) {
   });
 }
 
+function montarMenuNegocio(contenedor, contexto, pantalla) {
+  const apartado = NEGOCIO[pantalla.detalle];
+  if (apartado) {
+    pantalla.ponerCabecera(apartado.titulo, '#/ajustes/negocio');
+    return apartado.montar(contenedor, contexto);
+  }
+  contenedor.innerHTML = `
+    <div class="lista">
+      ${Object.entries(NEGOCIO).map(([c, s]) => filaSeccion(c, s, '#/ajustes/negocio')).join('')}
+    </div>`;
+}
+
 export function montarAjustes(contenedor, contexto, pantalla) {
   const seccion = SECCIONES[pantalla.sub];
   if (!seccion) return montarMenu(contenedor, contexto);
   pantalla.ponerCabecera(seccion.titulo, '#/ajustes');
-  return seccion.montar(contenedor, contexto);
+  return seccion.montar(contenedor, contexto, pantalla);
 }

@@ -1,4 +1,5 @@
-/* Hash routing con un nivel de subruta (#/ajustes/cuentas). El mapa RUTAS es
+/* Hash routing con hasta dos niveles de subruta (#/ajustes/cuentas,
+   #/ajustes/negocio/clientes). El mapa RUTAS es
    la única fuente de verdad: de ahí salen la tab bar, el título y qué se monta. */
 
 import { montarResumen } from './pages/resumen/index.js';
@@ -22,7 +23,7 @@ const INICIAL = 'resumen';
 function rutaActual() {
   const partes = location.hash.replace(/^#\/?/, '').split('/');
   const ruta = Object.hasOwn(RUTAS, partes[0]) ? partes[0] : INICIAL;
-  return { ruta, sub: partes[1] ?? '' };
+  return { ruta, sub: partes[1] ?? '', detalle: partes[2] ?? '' };
 }
 
 /** Arranca el router y pinta la primera vista. `contexto` lleva los repos. */
@@ -43,7 +44,7 @@ export function iniciarRouter(contexto) {
   }
 
   async function navegar() {
-    const { ruta, sub } = rutaActual();
+    const { ruta, sub, detalle } = rutaActual();
     const destino = RUTAS[ruta];
     ponerCabecera(destino.titulo);
     marcarActiva(nav, ruta);
@@ -53,7 +54,7 @@ export function iniciarRouter(contexto) {
     const lienzo = document.createElement('div');
     vista.replaceChildren(lienzo);
     scrollTo(0, 0);
-    await destino.montar(lienzo, contexto, { ...destino, sub, ponerCabecera });
+    await destino.montar(lienzo, contexto, { ...destino, sub, detalle, ponerCabecera });
   }
 
   addEventListener('hashchange', navegar);
