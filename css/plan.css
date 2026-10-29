@@ -1,4 +1,5 @@
-/* Estilos de la pantalla Plan: veredicto, sobres, alertas y la gráfica SVG. */
+/* Estilos de la pantalla Plan (veredicto, sobres, alertas) y de las gráficas:
+   la de saldo en SVG y la de barras del negocio. */
 
 /* -------------------------------------------------------------- gráfica --- */
 .grafica{ display:block; width:100%; height:auto; overflow:visible; }
@@ -8,6 +9,29 @@
 .g-linea-neg{ fill:none; stroke:var(--neg); stroke-width:1.5; stroke-linejoin:round; }
 .g-cero{ stroke:var(--line); stroke-width:1; stroke-dasharray:3 3; }
 .g-marca{ fill:var(--bg); stroke:var(--warn); stroke-width:2; }
+
+/* ------------------------------------------------- gráfica de barras --- */
+.barras{
+  display:grid; grid-template-columns:repeat(var(--columnas), minmax(0,1fr));
+  gap:8px; height:140px;
+}
+.barra-col{
+  display:flex; flex-direction:column; align-items:stretch; gap:6px;
+  min-width:0; padding:0; border:none; background:none; cursor:pointer;
+}
+.barra-pista{ flex:1; display:flex; align-items:flex-end; }
+.barra{
+  display:block; width:100%; border-radius:6px 6px 2px 2px;
+  background:color-mix(in srgb, var(--fg) 16%, transparent);
+}
+.barra-col.elegida .barra{ background:var(--pos); }
+.barra-etiqueta{ font-size:11.5px; color:var(--fg-3); text-align:center; }
+.barra-col.elegida .barra-etiqueta{ color:var(--fg); font-weight:600; }
+.barra-h{
+  display:block; height:4px; margin-top:6px; border-radius:2px;
+  background:color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.barra-h > span{ display:block; height:100%; border-radius:2px; background:var(--pos); }
 
 /* --------------------------------------------------------- veredicto ----- */
 .veredicto{ padding:18px var(--sep); border-radius:var(--r); border:1px solid var(--line); }

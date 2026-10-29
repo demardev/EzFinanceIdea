@@ -3,7 +3,7 @@
    cuánto de comisiones y el total. */
 
 import { describir, igual } from './marco.js';
-import { porCobrarPorCliente, saldarTodos } from '../negocio/por-cliente.js';
+import { porCobrarPorCliente, saldarTodos, clientesDelMes } from '../negocio/por-cliente.js';
 
 const CLIENTES = [
   { id: 'rosa', nombre: 'Rosa' },
@@ -114,5 +114,56 @@ describir('por cobrar — cobrar todo a un cliente', (caso) => {
     const r = saldarTodos([pago('a', 'rosa', 50, 1), tarde], DIA);
     igual(r.problema, 'No te pueden haber pagado antes de que pagaras el recibo.');
     igual(r.pagos, []);
+  });
+});
+
+describir('negocio — clientes del mes', (caso) => {
+  const conCobro = (p, fecha) => ({ ...p, abonos: [
+    { fecha, cuenta_id: 'x', monto: p.monto_recibo + p.comision }] });
+  const resumenMes = (lista) => lista.map((c) =>
+    `${c.nombre ?? '—'} ganado ${c.ganado} movido ${c.movido} (${c.operaciones})`);
+
+  caso('cada cliente con lo que ganaste y moviste en el mes', () => {
+    const pagos = [
+      conCobro(pago('a', 'rosa', 50, 1), '2026-10-02'),
+      conCobro(pago('b', 'rosa', 30, 1), '2026-10-03'),
+      pago('c', 'ana', 20, 3),                              // pendiente: movido sí, ganado no
+    ];
+    igual(resumenMes(clientesDelMes(pagos, CLIENTES, '2026-10')), [
+      'Rosa ganado 2 movido 80 (2)',
+      'Ana ganado 0 movido 20 (1)',
+    ]);
+  });
+
+  caso('van de quien más te dejó a quien menos', () => {
+    const pagos = [
+      conCobro(pago('a', 'ana', 10, 1), '2026-10-02'),
+      conCobro(pago('b', 'rosa', 10, 3), '2026-10-02'),
+    ];
+    igual(clientesDelMes(pagos, CLIENTES, '2026-10').map((c) => c.cliente_id), ['rosa', 'ana']);
+  });
+
+  caso('con el mismo ganado, primero el que movió más', () => {
+    const pagos = [pago('a', 'ana', 10, 1), pago('b', 'rosa', 90, 1)];
+    igual(clientesDelMes(pagos, CLIENTES, '2026-10').map((c) => c.cliente_id), ['rosa', 'ana']);
+  });
+
+  caso('sin cliente va al final aunque haya dejado más', () => {
+    const pagos = [
+      conCobro(pago('a', null, 10, 9), '2026-10-02'),
+      conCobro(pago('b', 'ana', 10, 1), '2026-10-02'),
+    ];
+    igual(clientesDelMes(pagos, CLIENTES, '2026-10').map((c) => c.cliente_id), ['ana', null]);
+  });
+
+  caso('un cliente sin nada en ese mes no sale', () => {
+    const pagos = [{ ...pago('a', 'rosa', 50, 1), fecha_pago: '2026-09-10' }];
+    igual(clientesDelMes(pagos, CLIENTES, '2026-10'), []);
+  });
+
+  caso('la comisión cuenta en el mes en que te la pagaron', () => {
+    const pagos = [conCobro({ ...pago('a', 'rosa', 50, 1), fecha_pago: '2026-09-30' }, '2026-10-01')];
+    igual(resumenMes(clientesDelMes(pagos, CLIENTES, '2026-10')), ['Rosa ganado 1 movido 0 (0)']);
+    igual(resumenMes(clientesDelMes(pagos, CLIENTES, '2026-09')), ['Rosa ganado 0 movido 50 (1)']);
   });
 });

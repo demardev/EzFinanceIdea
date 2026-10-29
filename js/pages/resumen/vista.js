@@ -102,7 +102,7 @@ function seccion(titulo, filas, vacio, encabezado = '') {
 }
 
 /* Lo que llegó solo (Apple Pay) y espera que lo confirmes. */
-function botonPorConfirmar(n) {
+export function botonPorConfirmar(n) {
   return `
     <button class="btn btn-bloque" id="btn-por-confirmar" type="button">
       ${icono('card', 16)} Por confirmar
@@ -112,7 +112,7 @@ function botonPorConfirmar(n) {
 
 /* Del negocio no se dice "entró/salió": eso mentiría. MOVIDO es lo que pasó
    por tus manos; GANADO son las comisiones que ya cobraste. */
-function panelNegocio(n) {
+export function panelNegocio(n) {
   return `
     <div>
       <p class="seccion-titulo">Negocio este mes</p>

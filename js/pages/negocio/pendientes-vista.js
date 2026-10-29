@@ -25,8 +25,8 @@ function fila(pago) {
       <button type="button" class="fila-cuerpo" data-cobrar="${pago.id}">
         <span class="crece" style="min-width:0">
           <span class="titulo truncar" style="display:block">${cifra(pago)}</span>
-          <span class="sub ${dias >= 7 ? 'warn' : ''}">
-            ${pago.descripcion ? `${escapar(pago.descripcion)} · ` : ''}pagado ${formatearFecha(pago.fecha_pago)} · hace ${dias} ${dias === 1 ? 'día' : 'días'}
+          <span class="sub">
+            ${pago.descripcion ? `${escapar(pago.descripcion)} · ` : ''}<span class="${dias >= 7 ? 'warn' : ''}">pagado ${formatearFecha(pago.fecha_pago)} · hace ${dias} ${dias === 1 ? 'día' : 'días'}</span>
             ${pago.nota ? `· ${escapar(pago.nota)}` : ''}
           </span>
         </span>

@@ -3,7 +3,7 @@
 import { describir, igual, cierto } from './marco.js';
 import { partes, aISO, clampDia, ultimoDiaDelMes, sumarMeses, rangoDelMes,
          mesDe, formatearFecha, etiquetaDia, diasEntre, hoyISO,
-         sumarDias } from '../calc/fechas.js';
+         sumarDias, mesCorto } from '../calc/fechas.js';
 
 describir('fechas', (caso) => {
   caso('parte y rearma una fecha ISO sin tocar zonas horarias', () => {
@@ -73,6 +73,12 @@ describir('fechas', (caso) => {
     igual(etiquetaDia('2026-09-08', '2026-09-08'), 'Hoy');
     igual(etiquetaDia('2026-09-07', '2026-09-08'), 'Ayer');
     igual(etiquetaDia('2026-09-01', '2026-09-08'), '01/sep/2026');
+  });
+
+  caso('nombre corto de un mes, para las etiquetas de una gráfica', () => {
+    igual(mesCorto('2026-01'), 'ene');
+    igual(mesCorto('2026-10'), 'oct');
+    igual(mesCorto('2025-12'), 'dic');
   });
 
   caso('días entre dos fechas, con signo', () => {

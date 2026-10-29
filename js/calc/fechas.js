@@ -84,3 +84,8 @@ export function nombreDelMes(mes) {
   const [anio, m] = mes.split('-').map(Number);
   return `${largos[m - 1]} ${anio}`;
 }
+
+/** Para las etiquetas de una gráfica: '2026-10' -> 'oct' */
+export function mesCorto(mes) {
+  return MESES[Number(mes.split('-')[1]) - 1];
+}

@@ -6,7 +6,7 @@
 
 import { redondear, sumar } from '../calc/dinero.js';
 import { agregarAbono, problemaDeAbonos, repartirAbonos } from './abonos.js';
-import { estaPendiente } from './pago-recibo.js';
+import { estaPendiente, totalesDeNegocio } from './pago-recibo.js';
 
 /** Lo que falta de una operación: { recibo, comision }. */
 function faltaDe(pago) {
@@ -65,4 +65,33 @@ export function saldarTodos(pagos, { fecha, cuenta_id }) {
   const nuevos = pagos.map((p) => agregarAbono(p, { fecha, cuenta_id: cuenta_id || null, monto: null }));
   const problema = nuevos.map(problemaDeAbonos).find(Boolean) ?? null;
   return problema ? { pagos: [], problema } : { pagos: nuevos, problema: null };
+}
+
+/* De más a menos ganado y, empatados, de más a menos movido. "Sin cliente"
+   siempre al final: no es alguien a quien comparar. */
+function porLoQueDejo(a, b) {
+  if (a.cliente_id === null) return 1;
+  if (b.cliente_id === null) return -1;
+  return (b.ganado - a.ganado) || (b.movido - a.movido);
+}
+
+/**
+ * Quién te dejó qué en un mes, con las mismas reglas que "Negocio este mes":
+ * lo movido por el día en que pagaste, lo ganado por el día del cobro.
+ * @returns [{ cliente_id, nombre, ganado, movido, operaciones }]; solo los
+ *          que tuvieron algo ese mes. `cliente_id` null = sin cliente.
+ */
+export function clientesDelMes(pagos, clientes, mes) {
+  const nombres = new Map(clientes.map((c) => [c.id, c.nombre]));
+  const grupos = new Map();
+  pagos.forEach((pago) => {
+    const id = nombres.has(pago.cliente_id) ? pago.cliente_id : null;
+    if (!grupos.has(id)) grupos.set(id, []);
+    grupos.get(id).push(pago);
+  });
+  return [...grupos]
+    .map(([id, suyos]) => ({ cliente_id: id, nombre: id === null ? null : nombres.get(id),
+                             ...totalesDeNegocio(suyos, mes) }))
+    .filter((c) => c.ganado > 0 || c.movido > 0)
+    .sort(porLoQueDejo);
 }

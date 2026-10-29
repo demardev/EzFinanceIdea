@@ -1,10 +1,11 @@
 /* Orquesta el Resumen: carga, calcula y le pasa todo a la vista. */
 
 import { pintarResumen } from './vista.js';
+import { pintarResumenNegocio } from './vista-negocio.js';
 import { saldosPorCuenta, patrimonioLiquido, totalesDelMes } from '../../calc/saldos.js';
 import { deudaTotalDeTarjetas } from '../../calc/deuda-tarjeta.js';
 import { proximosVencimientos } from '../../calc/vencimientos.js';
-import { totalesDeNegocio, totalPorCobrar, estaPendiente } from '../../negocio/pago-recibo.js';
+import { datosDeNegocio } from './datos-negocio.js';
 import { mesDe, hoyISO, sumarDias } from '../../calc/fechas.js';
 import { ambitoGuardado, guardarAmbito, esDelAmbito } from '../../ui/ambito.js';
 import { conectarPastillas } from '../../ui/pastillas.js';
@@ -55,19 +56,6 @@ function estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes, cercanos,
         registrados: cercanos },
       { hoy, dias: 14 }),
     negocio,
-  };
-}
-
-async function datosDeNegocio(contexto, mes) {
-  if (!contexto.perfil?.negocio) return { negocio: null, pendientes: [] };
-  const pagos = await contexto.pagos.listar();
-  const pendientes = pagos.filter(estaPendiente);
-  return {
-    negocio: {
-      ...totalesDeNegocio(pagos, mes),
-      porCobrar: { total: totalPorCobrar(pagos), cuantos: pendientes.length },
-    },
-    pendientes,
   };
 }
 
@@ -129,7 +117,7 @@ async function cargar(contexto, hoy) {
       planItems.listarActivos(),
       contexto.bandeja.pendientes(),        // lo que llegó solo por el atajo
     ]);
-  const { negocio, pendientes } = await datosDeNegocio(contexto, mesDe(hoy));
+  const { negocio, pendientes } = await datosDeNegocio(contexto, mesDe(hoy), hoy);
   const estado = estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes, cercanos,
                                    tjs, cmps, items, negocio });
   return { estado, lista, recientes, pendientes, porConfirmar };
@@ -143,9 +131,11 @@ export async function montarResumen(contenedor, contexto) {
     let ambito = ambitoGuardado();
 
     const pintar = () => {
-      pintarResumen(contenedor, { ...estado, ambito, porConfirmar: porConfirmar.length,
-                                  totales: estado.totalesMes,
-                                  ultimos: ultimosDe(recientes, ambito, hoy) });
+      const datos = { ...estado, ambito, porConfirmar: porConfirmar.length,
+                      totales: estado.totalesMes, ultimos: ultimosDe(recientes, ambito, hoy) };
+      /* Con la pastilla Negocio el Resumen es otro: solo el negocio. */
+      if (ambito === 'negocio' && estado.negocio) pintarResumenNegocio(contenedor, datos);
+      else pintarResumen(contenedor, datos);
       conectarPorCobrar(contenedor, contexto, pendientes);
       conectarDeslizar(contenedor);          // hay que rehacerlo en cada repintado
       animarRodillos(contenedor);
