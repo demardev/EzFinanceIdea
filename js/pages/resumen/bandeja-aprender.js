@@ -15,12 +15,14 @@ function deWallet(item, fila) {
   return origen ? [[item.tarjeta, origen]] : [];
 }
 
+/** @param item un item suelto o un par juntado: se aprende de cada parte. */
 export function alRegistrarDe(contexto, item, { origenes, categorias }) {
   const { bandeja, userId } = contexto;
+  const partes = item.partes ?? [item];
   return async (fila) => {
-    await bandeja.eliminar(item.id);
-    const nuevos = [...deWallet(item, fila), ...aprendizajeDe(item, fila, origenes)]
-      .filter(([nombre, valor]) => origenes[nombre] !== valor);
+    for (const parte of partes) await bandeja.eliminar(parte.id);
+    const pares = partes.flatMap((p) => [...deWallet(p, fila), ...aprendizajeDe(p, fila, origenes)]);
+    const nuevos = [...new Map(pares)].filter(([nombre, valor]) => origenes[nombre] !== valor);
     for (const [nombre, valor] of nuevos) await bandeja.recordarOrigen(userId, nombre, valor);
     const comercio = claveDeComercio(item.comercio);
     if (fila.tipo === 'egreso' && comercio && fila.categoria_id

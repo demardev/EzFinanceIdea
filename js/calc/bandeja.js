@@ -80,12 +80,13 @@ export function borradorDeBandeja(item, origenes, categorias = {}) {
  *
  * @param sugerencias { origenes, categorias } como para borradorDeBandeja()
  * @param vigentes    { origenes: Set('tarjeta:<id>'), categorias: Set(id) }
+ * @param aBorrador   cómo se arma el borrador (para los pares juntados)
  * @returns { listas: [{ item, borrador }], total, faltan }
  */
-export function listasParaRegistrar(items, sugerencias, vigentes) {
+export function listasParaRegistrar(items, sugerencias, vigentes, aBorrador = borradorDeBandeja) {
   const listas = items
     .map((item) => ({
-      item, borrador: borradorDeBandeja(item, sugerencias.origenes, sugerencias.categorias),
+      item, borrador: aBorrador(item, sugerencias.origenes, sugerencias.categorias),
     }))
     .filter(({ item, borrador }) => !item.texto && borrador.monto > 0
       && vigentes.origenes.has(borrador.origen)

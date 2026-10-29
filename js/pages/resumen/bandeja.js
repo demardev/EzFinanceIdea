@@ -1,44 +1,23 @@
 /* "Por confirmar": lo que llegó solo por el atajo — compras con Apple Pay y
-   avisos del banco por SMS. Tocar uno abre el formulario de movimiento ya
-   lleno; deslizarlo lo descarta. Al registrarla sale de la bandeja, y si su tarjeta de Wallet
-   todavía no tenía pareja en la app, se aprende para la próxima. */
+   avisos del banco por SMS. Lo que es una sola operación llega junto
+   (avisos/juntar.js). Tocar uno abre el formulario de movimiento ya lleno;
+   deslizarlo lo descarta. Al registrarlo sale de la bandeja y se aprende lo
+   que elegiste (bandeja-aprender.js). */
 
 import { abrirSheet } from '../../ui/sheet.js';
-import { filaEditable, envolverLista } from '../../ui/lista.js';
+import { envolverLista } from '../../ui/lista.js';
 import { conectarDeslizar, cerrarDeslizada } from '../../ui/deslizar.js';
 import { confirmar } from '../../ui/confirmar.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { aviso, avisoError } from '../../ui/toast.js';
-import { formatearFecha } from '../../calc/fechas.js';
-import { fechaLocalDe, borradorDeBandeja, claveDeComercio, listasParaRegistrar,
-         conAviso, nombreDeBanco, descripcionDe } from '../../calc/bandeja.js';
+import { claveDeComercio, listasParaRegistrar, conAviso } from '../../calc/bandeja.js';
+import { juntarPendientes, borradorDeEntrada } from '../../calc/avisos/juntar.js';
+import { filaDeEntrada, bloqueJuntados, leerSeparados, separar } from './bandeja-filas.js';
 import { abrirRegistro } from '../../movimientos/registrar.js';
 import { alRegistrarDe } from './bandeja-aprender.js';
 import { TIPOS } from '../../movimientos/tipos.js';
 import { plural } from '../../ui/texto.js';
 import { icono } from '../../iconos/render.js';
-
-/* De un aviso que no se reconoció se enseña el principio del texto: es lo
-   único que dice qué fue. */
-function subDe(item, cuando) {
-  if (!item.aviso) return item.tarjeta ? `${item.tarjeta} · ${cuando}` : cuando;
-  if (!item.aviso.reconocido) return `${cuando} · ${item.texto.slice(0, 90)}`;
-  const { banco, origen, destino } = item.aviso;
-  const ultimos = origen?.ultimos ?? destino?.ultimos;
-  return `${nombreDeBanco(banco)}${ultimos ? ` ${ultimos}` : ''} · ${cuando}`;
-}
-
-function fila(item) {
-  const cuando = formatearFecha(item.aviso?.fecha || fechaLocalDe(item.created_at));
-  return filaEditable({
-    id: item.id,
-    nombre: descripcionDe(item),
-    sub: subDe(item, cuando),
-    derecha: item.monto ? textoMonto(item.monto) : 'Sin monto',
-    iconoNombre: item.aviso ? 'banco' : 'card',
-    deslizable: true,
-  });
-}
 
 /* El historial solo se consulta para los comercios que aún no tienen
    categoría confirmada. */
@@ -72,7 +51,7 @@ function botonTodas({ listas, total, faltan }) {
       · ${textoMonto(total)}
     </button>
     ${faltan ? `<p class="tenue-2" style="font-size:12.5px;margin-bottom:10px">
-      ${plural(faltan, 'se queda', 'se quedan')} para revisar: le falta tarjeta o categoría.</p>` : ''}`;
+      ${plural(faltan, 'se queda', 'se quedan')} para revisar una por una.</p>` : ''}`;
 }
 
 /* Una por una, en orden: si una falla, las anteriores ya quedaron y la que
@@ -88,7 +67,7 @@ async function registrarTodas({ movimientos, bandeja }, { listas, total }) {
   try {
     for (const { item, borrador } of listas) {
       await movimientos.crear(TIPOS.egreso.aFila({ ...borrador, nota: '' }));
-      await bandeja.eliminar(item.id);
+      for (const parte of item.partes ?? [item]) await bandeja.eliminar(parte.id);
       hechas += 1;
     }
   } finally {
@@ -97,16 +76,17 @@ async function registrarTodas({ movimientos, bandeja }, { listas, total }) {
   return true;
 }
 
-async function descartar(contexto, item, alCambiar) {
-  const que = item.aviso ? 'Aviso' : 'Compra';
+async function descartar(contexto, item, borrador, alCambiar) {
+  const partes = item.partes ?? [item];
+  const que = partes.length > 1 ? 'estos 2 avisos' : item.aviso ? 'este aviso' : 'esta compra';
   const ok = await confirmar({
-    titulo: `¿Descartar ${item.aviso ? 'este aviso' : 'esta compra'}?`,
-    mensaje: `${item.comercio || que}${item.monto ? ` · ${textoMonto(item.monto)}` : ''}. No se registra nada.`,
+    titulo: `¿Descartar ${que}?`,
+    mensaje: `${borrador.descripcion}${item.monto ? ` · ${textoMonto(item.monto)}` : ''}. No se registra nada.`,
     textoOk: 'Descartar',
   });
   if (!ok) return false;
-  await contexto.bandeja.eliminar(item.id);
-  aviso(item.aviso ? 'Aviso descartado.' : 'Compra descartada.');
+  for (const parte of partes) await contexto.bandeja.eliminar(parte.id);
+  aviso('Descartado.');
   await alCambiar();
   return true;
 }
@@ -121,37 +101,56 @@ function conectarTodas(hoja, cerrar, registrar, alCambiar) {
   });
 }
 
+/* Separar recuerda el par y vuelve a abrir la lista ya sin juntarlo. */
+function conectarSeparar(hoja, cerrar, reabrir) {
+  hoja.addEventListener('click', (evento) => {
+    const boton = evento.target.closest('[data-separar]');
+    if (!boton) return;
+    separar(boton.dataset.separar);
+    cerrar();
+    reabrir().catch(avisoError);
+  });
+}
+
+async function alTocar(contexto, objetivo, { entradas, borradores, sugerencias }, cerrar, alCambiar) {
+  const id = objetivo.dataset.editar || objetivo.dataset.borrar;
+  const entrada = entradas.find((e) => e.id === id);
+  const borrador = borradores.get(id);
+  if (objetivo.dataset.borrar) {
+    cerrarDeslizada();
+    if (await descartar(contexto, entrada, borrador, alCambiar)) cerrar();
+    return;
+  }
+  cerrar();
+  await abrirRegistro(contexto, borrador, alCambiar, undefined,
+                      { alRegistrar: alRegistrarDe(contexto, entrada, sugerencias) });
+}
+
 export async function abrirPorConfirmar(contexto, recibidos, alCambiar) {
   const items = recibidos.map((item) => conAviso(item));
   const [sugerencias, vigentes] = await Promise.all([
     cargarSugerencias(contexto.bandeja, items), cargarVigentes(contexto),
   ]);
-  const completas = listasParaRegistrar(items, sugerencias, vigentes);
+  const { origenes, categorias } = sugerencias;
+  const entradas = juntarPendientes(items, origenes, leerSeparados());
+  const borradores = new Map(entradas.map((e) => [e.id, borradorDeEntrada(e, origenes, categorias)]));
+  const completas = listasParaRegistrar(entradas, sugerencias, vigentes, borradorDeEntrada);
   const { hoja, cerrar } = abrirSheet({
-    titulo: `Por confirmar · ${items.length}`,
+    titulo: `Por confirmar · ${entradas.length}`,
     cuerpo: `
       ${botonTodas(completas)}
       <p class="tenue" style="font-size:13px;margin-bottom:10px">
         Toca una para registrarla. Desliza a la izquierda para descartarla.</p>
-      ${envolverLista(items.map(fila))}`,
+      ${envolverLista(entradas.map((e) => filaDeEntrada(e, borradores.get(e.id))))}
+      ${bloqueJuntados(entradas.filter((e) => e.partes), borradores)}`,
   });
   conectarDeslizar(hoja);
   conectarTodas(hoja, cerrar, () => registrarTodas(contexto, completas), alCambiar);
-
+  conectarSeparar(hoja, cerrar, () => abrirPorConfirmar(contexto, recibidos, alCambiar));
+  const estado = { entradas, borradores, sugerencias };
   hoja.addEventListener('click', async (evento) => {
     const objetivo = evento.target.closest('[data-editar], [data-borrar]');
     if (!objetivo) return;
-    const item = items.find((i) => i.id === (objetivo.dataset.editar || objetivo.dataset.borrar));
-    try {
-      if (objetivo.dataset.borrar) {
-        cerrarDeslizada();
-        if (await descartar(contexto, item, alCambiar)) cerrar();
-        return;
-      }
-      cerrar();
-      const borrador = borradorDeBandeja(item, sugerencias.origenes, sugerencias.categorias);
-      await abrirRegistro(contexto, borrador, alCambiar, undefined,
-                          { alRegistrar: alRegistrarDe(contexto, item, sugerencias) });
-    } catch (e) { avisoError(e); }
+    try { await alTocar(contexto, objetivo, estado, cerrar, alCambiar); } catch (e) { avisoError(e); }
   });
 }
