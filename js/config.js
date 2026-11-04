@@ -8,7 +8,7 @@ export const ANON_KEY     = 'sb_publishable_JOazj0LFAnXykHa9WwQnyg_Sn--OhNI';
 
 /* Llave PÚBLICA de VAPID para las notificaciones push: también viaja en el JS
    a propósito. La privada vive solo en los secretos de Supabase. */
-export const VAPID_PUBLICA = 'PEGA_AQUI_LA_LLAVE_PUBLICA_VAPID';
+export const VAPID_PUBLICA = 'BPcWR-HXk4cdKHu6nKhQZJ6cSiDwMZCaykP4oPgL9vwd1yyTIhrs64mlrDzdVvNA-UFMQj1Bv6dWBijS719FBQ4';
 
 /* Errores de dedo que cuestan media hora si nadie los revisa. */
 export function problemaConfig() {
