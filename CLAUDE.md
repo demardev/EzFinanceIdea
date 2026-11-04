@@ -60,6 +60,9 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
   `test.html` contra el ejemplo del RFC 8291. Se despliega con
   `supabase functions deploy avisar --remote=tifmifpphzufarjtckpt --use-api --no-verify-jwt`
   (la función valida la sesión ella misma, leyendo con el token del usuario).
+  `administrar` (eliminar cuentas) se despliega igual; usa la llave de servicio, así que
+  comprueba primero que quien llama sea admin. Las tablas con `user_id` necesitan
+  `on delete cascade` hacia `auth.users`, o eliminar una cuenta les deja basura.
 - **Cero dependencias y cero scripts externos.** Ni npm, ni CDN, ni fuentes remotas: todo
   se sirve del mismo origen. No es estilo, es seguridad — el token de sesión vive en
   `localStorage`, así que cualquier script de terceros comprometido entregaría la sesión, y

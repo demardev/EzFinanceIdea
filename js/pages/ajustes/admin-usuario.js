@@ -1,5 +1,5 @@
 /* El sheet de un usuario en el panel de admin: darle o quitarle premium,
-   encenderle el negocio y bloquear su cuenta. Cada botón se aplica al
+   encenderle el negocio, bloquear su cuenta o eliminarla para siempre. Cada botón se aplica al
    momento; lo que no se deshace solo pide confirmación antes. */
 
 import { abrirSheet } from '../../ui/sheet.js';
@@ -44,7 +44,9 @@ function cuerpo(u, esYo) {
                            activo: u.negocio,
                            ayuda: 'Apagarlo no borra sus operaciones, solo las oculta.' })}
       ${esYo ? '' : `<button class="btn btn-peligro btn-bloque" type="button" data-bloquear>
-                       ${u.bloqueado ? 'Desbloquear cuenta' : 'Bloquear cuenta'}</button>`}
+                       ${u.bloqueado ? 'Desbloquear cuenta' : 'Bloquear cuenta'}</button>
+                     <button class="btn btn-peligro btn-bloque" type="button" data-eliminar>
+                       Eliminar cuenta</button>`}
       <p class="campo-error" data-error hidden></p>
     </div>`;
 }
@@ -59,6 +61,11 @@ function confirmarSiHaceFalta(accion, u) {
     return confirmar({ titulo: 'Bloquear cuenta', textoOk: 'Bloquear',
       mensaje: `${u.email} ya no podrá entrar y se le cierran las sesiones. `
              + 'El acceso que tenga abierto caduca en máximo una hora.' });
+  }
+  if (accion === 'eliminar') {
+    return confirmar({ titulo: 'Eliminar cuenta', textoOk: 'Eliminar para siempre',
+      mensaje: `Se borra ${u.email} con todo: su correo y contraseña, sus movimientos, `
+             + 'cuentas, tarjetas, plan, negocio y fotos de recibos. No se puede deshacer.' });
   }
   return Promise.resolve(true);
 }
@@ -76,6 +83,9 @@ function operacion(accion, u, admin, valor) {
     return { hacer: () => admin.ponerNegocio(u.user_id, valor),
              texto: valor ? 'Negocio encendido.' : 'Negocio apagado.' };
   }
+  if (accion === 'eliminar') {
+    return { hacer: () => admin.eliminar(u.user_id), texto: 'Cuenta eliminada.' };
+  }
   return { hacer: () => admin.bloquear(u.user_id, !u.bloqueado),
            texto: u.bloqueado ? 'Cuenta desbloqueada.' : 'Cuenta bloqueada.' };
 }
@@ -85,6 +95,7 @@ function accionDe(evento) {
   if (t.closest('[data-plazo]')) return ['plazo', t.closest('[data-plazo]').dataset.plazo];
   if (t.closest('[data-quitar-premium]')) return ['quitar'];
   if (t.closest('[data-bloquear]')) return ['bloquear'];
+  if (t.closest('[data-eliminar]')) return ['eliminar'];
   if (t.name === 'negocio') return ['negocio', t.checked];
   return null;
 }
