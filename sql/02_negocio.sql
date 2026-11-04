@@ -139,16 +139,16 @@ create policy "recibos_propios" on storage.objects for all to authenticated
               and es_negocio());
 
 -- ------------------------------------------- categorías propias del negocio -
--- Se llaman desde la app la primera vez que se detecta la bandera.
-create or replace function sembrar_datos_negocio()
-returns json language plpgsql security invoker as $$
-declare uid uuid := auth.uid(); creadas int := 0;
+-- La siembra recibe el usuario para que la use también el panel de admin al
+-- encenderle el negocio a alguien (sql/07_admin.sql). Es invoker: llamada por
+-- un usuario normal, la política de `categorias` le impide sembrar a otro.
+-- Nombres con esquema porque el panel la llama con search_path vacío.
+create or replace function sembrar_negocio_de(uid uuid)
+returns int language plpgsql security invoker as $$
+declare creadas int := 0;
 begin
-  if uid is null then raise exception 'no autenticado'; end if;
-  if not es_negocio() then raise exception 'este usuario no tiene el negocio activado'; end if;
-
-  insert into categorias (user_id, nombre, tipo, icono, orden)
-  select uid, n.nombre, n.tipo::tipo_mov, n.icono, n.orden
+  insert into public.categorias (user_id, nombre, tipo, icono, orden)
+  select uid, n.nombre, n.tipo::public.tipo_mov, n.icono, n.orden
   from (values
       ('Pago de recibo', 'egreso',  'banknote', 90),
       ('Cobro de recibo','ingreso', 'banknote', 90),
@@ -159,11 +159,19 @@ begin
       ('Ajuste de caja', 'egreso',  'wallet',   92)
   ) as n(nombre, tipo, icono, orden)
   where not exists (
-    select 1 from categorias c
-    where c.user_id = uid and c.nombre = n.nombre and c.tipo = n.tipo::tipo_mov);
+    select 1 from public.categorias c
+    where c.user_id = uid and c.nombre = n.nombre and c.tipo = n.tipo::public.tipo_mov);
 
   get diagnostics creadas = row_count;
-  return json_build_object('categorias_creadas', creadas);
+  return creadas;
+end $$;
+
+create or replace function sembrar_datos_negocio()
+returns json language plpgsql security invoker as $$
+begin
+  if auth.uid() is null then raise exception 'no autenticado'; end if;
+  if not es_negocio() then raise exception 'este usuario no tiene el negocio activado'; end if;
+  return json_build_object('categorias_creadas', sembrar_negocio_de(auth.uid()));
 end $$;
 
 grant execute on function sembrar_datos_negocio() to authenticated;

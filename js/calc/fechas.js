@@ -89,3 +89,11 @@ export function nombreDelMes(mes) {
 export function mesCorto(mes) {
   return MESES[Number(mes.split('-')[1]) - 1];
 }
+
+/** Una marca de tiempo de la base ('2026-11-04T03:10:00+00:00') en el día local.
+    Con hora y zona el constructor sí es seguro; cortar los 10 primeros no. */
+export function isoLocalDe(marca) {
+  if (!marca) return null;
+  const d = new Date(marca);
+  return aISO(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}

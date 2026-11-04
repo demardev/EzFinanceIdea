@@ -14,6 +14,7 @@ import { repoPerfiles } from './repos/perfiles.js';
 import { repoPagosRecibo } from './repos/pagos-recibo.js';
 import { repoClientes } from './repos/clientes.js';
 import { repoBandeja } from './repos/bandeja.js';
+import { repoAdmin } from './repos/admin.js';
 import { abrirNuevoDesdeFab } from './movimientos/registrar.js';
 import { abrirPagoRecibo } from './pages/negocio/registrar.js';
 import { montarLogin } from './pages/login.js';
@@ -41,9 +42,10 @@ const contexto = {
   pagos: repoPagosRecibo(cliente),
   clientes: repoClientes(cliente),
   bandeja: repoBandeja(cliente),
+  admin: repoAdmin(cliente),       // solo responde si perfiles.admin
   /* Se llenan al entrar; hasta entonces la app se comporta como si no
      hubiera negocio, que es lo correcto para casi todos. */
-  perfil: { negocio: false },
+  perfil: { negocio: false, admin: false },
   userId: null,
   alSalir: mostrarLogin,
 };
@@ -59,7 +61,7 @@ async function cargarPerfil() {
   try {
     contexto.perfil = await contexto.perfiles.mio();
   } catch {
-    contexto.perfil = { negocio: false };
+    contexto.perfil = { negocio: false, admin: false };
   }
 }
 

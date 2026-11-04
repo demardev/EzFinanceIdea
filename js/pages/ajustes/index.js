@@ -12,6 +12,7 @@ import { montarDatos } from './datos.js';
 import { montarNegocio } from './negocio.js';
 import { montarClientes } from './clientes.js';
 import { montarAtajo } from './atajo.js';
+import { montarAdmin } from './admin.js';
 
 const SECCIONES = {
   cuentas:    { titulo: 'Cuentas',    icono: 'wallet', sub: 'Crear, editar, reordenar, archivar', montar: montarCuentas },
@@ -21,9 +22,11 @@ const SECCIONES = {
                 sub: 'Compras, SMS y correos del banco que llegan a Por confirmar',
                 montar: montarAtajo },
   datos:      { titulo: 'Datos', icono: 'descarga', sub: 'Exportar e importar respaldo', montar: montarDatos },
-  /* Solo aparece con la bandera del negocio encendida. */
+  /* `solo` nombra la bandera de `perfiles` sin la cual la sección no aparece. */
   negocio:    { titulo: 'Negocio', icono: 'banknote', sub: 'Cuentas, comisión y clientes',
-                montar: montarMenuNegocio, soloNegocio: true },
+                montar: montarMenuNegocio, solo: 'negocio' },
+  admin:      { titulo: 'Administración', icono: 'persona', sub: 'Usuarios, premium y bloqueos',
+                montar: montarAdmin, solo: 'admin' },
 };
 
 /* Los apartados del negocio, dentro de Negocio. */
@@ -54,7 +57,7 @@ function montarMenu(contenedor, contexto) {
     <div class="pila">
       <div class="lista">
         ${Object.entries(SECCIONES)
-            .filter(([, s]) => !s.soloNegocio || contexto.perfil?.negocio)
+            .filter(([, s]) => !s.solo || contexto.perfil?.[s.solo])
             .map(([c, s]) => filaSeccion(c, s)).join('')}
       </div>
       <div class="card">

@@ -3,7 +3,7 @@
 import { describir, igual, cierto } from './marco.js';
 import { partes, aISO, clampDia, ultimoDiaDelMes, sumarMeses, rangoDelMes,
          mesDe, formatearFecha, etiquetaDia, diasEntre, hoyISO,
-         sumarDias, mesCorto } from '../calc/fechas.js';
+         sumarDias, mesCorto, isoLocalDe } from '../calc/fechas.js';
 
 describir('fechas', (caso) => {
   caso('parte y rearma una fecha ISO sin tocar zonas horarias', () => {
@@ -86,5 +86,12 @@ describir('fechas', (caso) => {
     igual(diasEntre('2026-09-10', '2026-09-08'), -2);
     igual(diasEntre('2026-02-28', '2026-03-01'), 1);
     cierto(diasEntre('2026-09-08', '2026-09-08') === 0);
+  });
+
+  caso('una marca de tiempo UTC se lee en el día local', () => {
+    /* Armada en hora local, así la prueba vale igual en cualquier zona horaria. */
+    const marca = new Date(2026, 10, 3, 12, 0).toISOString();
+    igual(isoLocalDe(marca), '2026-11-03');
+    igual(isoLocalDe(null), null);
   });
 });

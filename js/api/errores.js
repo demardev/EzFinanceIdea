@@ -22,6 +22,8 @@ const POR_TEXTO = [
   ['email not confirmed',       'Falta confirmar la cuenta: abre el correo que te mandamos.'],
   ['invalid refresh token',     'Tu sesión expiró. Vuelve a entrar.'],
   ['violates row-level security', 'No tienes permiso sobre ese registro.'],
+  ['solo el administrador',     'Solo el administrador puede hacer esto.'],
+  ['no puedes bloquearte',      'No puedes bloquearte a ti mismo.'],
   ['violates check constraint', 'Esa combinación de datos no está permitida.'],
   ['violates foreign key',      'Hay otro registro que depende de este.'],
   ['duplicate key',             'Ese registro ya existe.'],

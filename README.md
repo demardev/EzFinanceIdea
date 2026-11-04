@@ -107,6 +107,26 @@ Qué agrega este script:
 | `pagos_recibo` | Una operación = hasta 3 movimientos. Con `fecha_cobro` en null está **pendiente de cobro**. |
 | bucket `recibos` | Fotos privadas, máximo 5 MB, una carpeta por usuario. |
 
+### 3 ter. Panel de administración (opcional)
+
+Para ver a todos los usuarios, darles premium con fecha de vencimiento,
+encenderles el negocio y bloquear cuentas. Aparece en **Ajustes → Administración**.
+
+1. Vuelve a correr [`sql/02_negocio.sql`](sql/02_negocio.sql) (trae la siembra que usa el panel).
+2. Pega [`sql/07_admin.sql`](sql/07_admin.sql) en el **SQL Editor** y ejecútalo.
+3. Hazte admin con tu uuid:
+
+   ```sql
+   insert into perfiles (user_id, admin) values ('TU-UUID', true)
+     on conflict (user_id) do update set admin = true;
+   ```
+
+Igual que el negocio, **ser admin no se puede encender desde la app**. Las
+funciones `admin_*` corren con permisos del dueño de la base para poder ver a
+todos, así que cada una revisa primero `perfiles.admin` y rechaza a cualquier otro.
+El bloqueo usa el de Supabase Auth: el usuario no puede entrar ni renovar la
+sesión, pero el acceso que ya tenía abierto dura hasta que caduca (1 hora por defecto).
+
 ### 4. Publicar en Cloudflare Pages
 
 1. Sube el repo a GitHub.

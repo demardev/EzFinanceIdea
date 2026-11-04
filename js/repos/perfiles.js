@@ -1,12 +1,13 @@
-/* Perfil del usuario: la bandera del negocio y sus preferencias.
+/* Perfil del usuario: las banderas (negocio, admin, premium) y las
+   preferencias del negocio.
 
-   `negocio` es de solo lectura desde la app — la base tiene permisos por
-   columna que solo dejan actualizar las preferencias. Se enciende con un
-   update desde el SQL Editor. */
+   Las banderas son de solo lectura desde la app — la base tiene permisos por
+   columna que solo dejan actualizar las preferencias. Se cambian desde el
+   panel de admin (repos/admin.js) o desde el SQL Editor. */
 
 import { crearRepo } from './base.js';
 
-const SIN_NEGOCIO = { negocio: false, cuenta_pago_id: null,
+const SIN_NEGOCIO = { negocio: false, admin: false, premium_hasta: null, cuenta_pago_id: null,
                       cuenta_cobro_id: null, comision_default: 0 };
 
 export function repoPerfiles(cliente) {
