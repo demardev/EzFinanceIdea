@@ -1,5 +1,9 @@
-/* Notificaciones push de ESTE dispositivo: activarlas, mandarse una de
-   prueba y desactivarlas. Cada teléfono o computadora se activa aparte. */
+/* Notificaciones push de ESTE dispositivo: activarlas y desactivarlas. Cada
+   teléfono o computadora se activa aparte.
+
+   Lo que cada quien lee depende de lo que tiene: sin negocio no se nombra el
+   negocio, sin el atajo no se nombra Por confirmar, y la notificación de
+   prueba es solo para admin o negocio (la función `avisar` también lo exige). */
 
 import { icono } from '../../iconos/render.js';
 import { aviso, avisoError } from '../../ui/toast.js';
@@ -14,25 +18,28 @@ const EXPLICACION = {
   'sin-soporte': 'Este navegador no admite notificaciones push.',
 };
 
-/* Lo programan sql/09_avisos_programados.sql y la función `avisar`. */
-const QUE_AVISA = `
-  <div class="card pila-sm">
-    <p class="cifra-etiqueta">Qué te avisa</p>
-    <p><strong>8:00 pm · Cierre del día.</strong> Cuántos movimientos registraste hoy,
-       lo que vence mañana y, si llevas el negocio, los recibos que te deben
-       desde hace una semana o más.</p>
-    <p><strong>Al momento · Por confirmar.</strong> Cuando llega una compra de
-       Apple Pay, un SMS o un correo del banco.</p>
-    <p class="tenue-2" style="font-size:12.5px">Nunca lleva montos: se ve en la
-       pantalla bloqueada.</p>
-  </div>`;
+/* Lo programan sql/09_avisos_programados.sql y la función `avisar`. El de
+   Por confirmar solo existe para quien configuró el atajo: sin su clave no
+   entra nada a la bandeja, así que no hay nada que avisar. */
+function queTeLlega({ negocio, conAtajo }) {
+  const noche = negocio ? 'un resumen de tu día y de lo que te deben del negocio'
+                        : 'un resumen de tu día';
+  const atajo = conAtajo ? ' Y al momento, cuando llega algo a Por confirmar.' : '';
+  return `<p class="tenue" style="font-size:13px">Cada noche a las 8:00 pm, ${noche}.${atajo}</p>`;
+}
 
 function boton(id, texto, iconoNombre, clase = '') {
   return `<button class="btn btn-bloque ${clase}" type="button" id="${id}">
             ${icono(iconoNombre, 18)} ${texto}</button>`;
 }
 
-function pintar(contenedor, estado, activa) {
+function botones(activa, puedeProbar) {
+  if (!activa) return boton('btn-activar', 'Activar en este dispositivo', 'plus', 'btn-primario');
+  return `${puedeProbar ? boton('btn-probar', 'Mandarme una de prueba', 'check', 'btn-primario') : ''}
+          ${boton('btn-apagar', 'Desactivar en este dispositivo', 'x', 'btn-peligro')}`;
+}
+
+function pintar(contenedor, estado, activa, perfil) {
   const explicacion = EXPLICACION[estado];
   contenedor.innerHTML = `
     <div class="pila">
@@ -41,11 +48,8 @@ function pintar(contenedor, estado, activa) {
         <p>${explicacion ? explicacion
              : activa ? 'Los avisos están activados aquí.' : 'Los avisos están apagados aquí.'}</p>
       </div>
-      ${explicacion ? '' : activa
-        ? `${boton('btn-probar', 'Mandarme una de prueba', 'check', 'btn-primario')}
-           ${boton('btn-apagar', 'Desactivar en este dispositivo', 'x', 'btn-peligro')}`
-        : boton('btn-activar', 'Activar en este dispositivo', 'plus', 'btn-primario')}
-      ${QUE_AVISA}
+      ${explicacion ? '' : botones(activa, perfil.puedeProbar)}
+      ${queTeLlega(perfil)}
     </div>`;
 }
 
@@ -69,8 +73,14 @@ function accionesDe(push) {
   };
 }
 
+/** Si falla la consulta, simplemente no se menciona Por confirmar. */
+async function tieneAtajo(bandeja) {
+  try { return Boolean(await bandeja.fechaDeClave()); } catch { return false; }
+}
+
 export async function montarNotificaciones(contenedor, contexto) {
-  const { push } = contexto;
+  const { push, perfil: { negocio = false, admin = false } = {} } = contexto;
+  const perfil = { negocio, puedeProbar: admin || negocio, conAtajo: false };
 
   async function repintar() {
     const estado = estadoSoporte();
@@ -78,7 +88,7 @@ export async function montarNotificaciones(contenedor, contexto) {
     /* Se vuelve a guardar al entrar: si en este teléfono se cambió de cuenta,
        la suscripción pasa a la cuenta de ahora. */
     if (actual) push.guardar(datosDe(actual), nombreDispositivo()).catch(() => {});
-    pintar(contenedor, estado, Boolean(actual));
+    pintar(contenedor, estado, Boolean(actual), perfil);
   }
 
   const acciones = accionesDe(push);
@@ -93,5 +103,6 @@ export async function montarNotificaciones(contenedor, contexto) {
   });
 
   contenedor.innerHTML = '<p class="tenue">Cargando…</p>';
+  perfil.conAtajo = await tieneAtajo(contexto.bandeja);
   await repintar();
 }

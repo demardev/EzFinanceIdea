@@ -5,6 +5,7 @@
 import { cerrarSesion, emailSesion } from '../../api/sesion.js';
 import { icono } from '../../iconos/render.js';
 import { escapar } from '../../ui/texto.js';
+import { confirmar } from '../../ui/confirmar.js';
 import { montarCuentas } from './cuentas.js';
 import { montarCategorias } from './categorias.js';
 import { montarFijosVariables } from './fijos-variables.js';
@@ -73,6 +74,11 @@ function montarMenu(contenedor, contexto) {
     </div>`;
 
   contenedor.querySelector('#btn-salir').addEventListener('click', async () => {
+    const seguro = await confirmar({
+      titulo: 'Cerrar sesión', textoOk: 'Cerrar sesión',
+      mensaje: 'Para volver a entrar vas a necesitar tu email y tu contraseña.',
+    });
+    if (!seguro) return;
     await cerrarSesion();
     alSalir();
   });

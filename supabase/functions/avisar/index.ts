@@ -1,6 +1,6 @@
 /* Edge Function `avisar`: manda las notificaciones push.
 
-   - { accion: 'prueba' }   la pide el usuario desde Ajustes, con su sesión.
+   - { accion: 'prueba' }   la pide desde Ajustes un admin o un usuario con negocio.
                             Lee con SU token: las políticas lo limitan a lo suyo.
    - { accion: 'resumen' }  el cierre del día; lo llama el cron de las 8 pm.
    - { accion: 'bandeja', user_id, origen }  lo llama el disparador al entrar
@@ -49,8 +49,13 @@ async function mandarATodos(lista, mensaje, borrar) {
 async function prueba(token) {
   const conToken = (ruta, metodo = 'GET') => fetch(`${URL_BASE}/rest/v1/${ruta}`, {
     method: metodo, headers: { apikey: ANON, Authorization: `Bearer ${token}` } });
+  /* Solo admin o negocio. Su perfil se lee con su token: no lo puede falsear. */
+  const perfil = await conToken('perfiles?select=admin,negocio&limit=1');
+  if (perfil.status === 401) return responder(401, { error: 'Tu sesión expiró.' });
+  const [banderas] = perfil.ok ? await perfil.json() : [];
+  if (!banderas?.admin && !banderas?.negocio) return responder(403, { error: 'No disponible.' });
+
   const respuesta = await conToken('suscripciones_push?select=id,endpoint,p256dh,auth');
-  if (respuesta.status === 401) return responder(401, { error: 'Tu sesión expiró.' });
   const lista = await respuesta.json();
   if (!lista.length) return responder(404, { error: 'No hay dispositivos con los avisos activados.' });
   const entregadas = await mandarATodos(lista, {
