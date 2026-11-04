@@ -15,6 +15,7 @@ import { repoPagosRecibo } from './repos/pagos-recibo.js';
 import { repoClientes } from './repos/clientes.js';
 import { repoBandeja } from './repos/bandeja.js';
 import { repoAdmin } from './repos/admin.js';
+import { repoPush } from './repos/push.js';
 import { abrirNuevoDesdeFab } from './movimientos/registrar.js';
 import { abrirPagoRecibo } from './pages/negocio/registrar.js';
 import { montarLogin } from './pages/login.js';
@@ -43,6 +44,7 @@ const contexto = {
   clientes: repoClientes(cliente),
   bandeja: repoBandeja(cliente),
   admin: repoAdmin(cliente),       // solo responde si perfiles.admin
+  push: repoPush(cliente),
   /* Se llenan al entrar; hasta entonces la app se comporta como si no
      hubiera negocio, que es lo correcto para casi todos. */
   perfil: { negocio: false, admin: false },

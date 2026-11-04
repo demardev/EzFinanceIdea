@@ -55,6 +55,11 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
 - `js/calc/` son funciones puras sin red ni DOM, y **todo lo que vive ahí va con pruebas** en
   `test.html` (los casos se escriben antes que la implementación).
 - Solo `js/api/client.js` hace `fetch` y sabe que existe Supabase.
+- El código de servidor vive en `supabase/functions/` (Edge Functions, Deno) y tampoco usa
+  dependencias: `_shared/webpush.js` cifra y firma los push con WebCrypto y se prueba en
+  `test.html` contra el ejemplo del RFC 8291. Se despliega con
+  `supabase functions deploy avisar --remote=tifmifpphzufarjtckpt --use-api --no-verify-jwt`
+  (la función valida la sesión ella misma, leyendo con el token del usuario).
 - **Cero dependencias y cero scripts externos.** Ni npm, ni CDN, ni fuentes remotas: todo
   se sirve del mismo origen. No es estilo, es seguridad — el token de sesión vive en
   `localStorage`, así que cualquier script de terceros comprometido entregaría la sesión, y

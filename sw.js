@@ -10,7 +10,7 @@
    Al cambiar el shell hay que subir VERSION: al activarse borra los caches
    viejos. */
 
-const VERSION = 'v59';
+const VERSION = 'v60';
 const CACHE_SHELL = `finanzas-shell-${VERSION}`;
 const CACHE_DATOS = `finanzas-datos-${VERSION}`;
 
@@ -104,4 +104,29 @@ self.addEventListener('fetch', (evento) => {
 /* Al cerrar sesión, la app pide borrar los datos cacheados. */
 self.addEventListener('message', (evento) => {
   if (evento.data === 'borrar-datos') caches.delete(CACHE_DATOS);
+});
+
+/* Push: cada mensaje TIENE que mostrar una notificación. Si llega uno que no
+   la muestra, iOS le retira el permiso a la app. */
+self.addEventListener('push', (evento) => {
+  let mensaje = {};
+  try { mensaje = evento.data?.json() ?? {}; } catch { mensaje = { cuerpo: evento.data?.text() }; }
+  evento.waitUntil(self.registration.showNotification(mensaje.titulo || 'Finanzas', {
+    body: mensaje.cuerpo || '',
+    tag: mensaje.etiqueta,
+    icon: 'icons/icono-192.png',
+    data: { url: mensaje.url || './' },
+  }));
+});
+
+/* Tocar la notificación abre la app en la pantalla que dice el mensaje. */
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close();
+  const destino = new URL(evento.notification.data?.url || './', self.registration.scope).href;
+  evento.waitUntil((async () => {
+    const abiertas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (!abiertas.length) return self.clients.openWindow(destino);
+    await abiertas[0].focus();
+    return abiertas[0].navigate(destino).catch(() => {});
+  })());
 });

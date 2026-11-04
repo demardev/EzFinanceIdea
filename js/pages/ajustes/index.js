@@ -13,6 +13,7 @@ import { montarNegocio } from './negocio.js';
 import { montarClientes } from './clientes.js';
 import { montarAtajo } from './atajo.js';
 import { montarAdmin } from './admin.js';
+import { montarNotificaciones } from './notificaciones.js';
 
 const SECCIONES = {
   cuentas:    { titulo: 'Cuentas',    icono: 'wallet', sub: 'Crear, editar, reordenar, archivar', montar: montarCuentas },
@@ -21,6 +22,8 @@ const SECCIONES = {
   applepay:   { titulo: 'Apple Pay y avisos', icono: 'card',
                 sub: 'Compras, SMS y correos del banco que llegan a Por confirmar',
                 montar: montarAtajo },
+  notificaciones: { titulo: 'Notificaciones', icono: 'alerta',
+                    sub: 'Avisos en este dispositivo', montar: montarNotificaciones },
   datos:      { titulo: 'Datos', icono: 'descarga', sub: 'Exportar e importar respaldo', montar: montarDatos },
   /* `solo` nombra la bandera de `perfiles` sin la cual la sección no aparece. */
   negocio:    { titulo: 'Negocio', icono: 'banknote', sub: 'Cuentas, comisión y clientes',

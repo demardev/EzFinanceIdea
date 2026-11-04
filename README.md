@@ -127,6 +127,22 @@ todos, así que cada una revisa primero `perfiles.admin` y rechaza a cualquier o
 El bloqueo usa el de Supabase Auth: el usuario no puede entrar ni renovar la
 sesión, pero el acceso que ya tenía abierto dura hasta que caduca (1 hora por defecto).
 
+### 3 cuater. Notificaciones push
+
+1. Pega [`sql/08_push.sql`](sql/08_push.sql) en el **SQL Editor** y ejecútalo.
+2. Despliega la función que manda los avisos (pide `supabase login` antes):
+
+   ```bash
+   supabase functions deploy avisar --remote=TU-REF --use-api --no-verify-jwt
+   ```
+
+3. Genera las llaves VAPID **una sola vez**: la privada va a los secretos de
+   Supabase (`VAPID_PUBLICA`, `VAPID_PRIVADA`, `VAPID_SUJETO`) y la pública a
+   `VAPID_PUBLICA` en `js/config.js`. Cambiarlas obliga a reactivar los avisos
+   en cada dispositivo.
+4. En la app: **Ajustes → Notificaciones → Activar en este dispositivo**. En el
+   iPhone solo funciona con la app instalada en la pantalla de inicio (iOS 16.4+).
+
 ### 4. Publicar en Cloudflare Pages
 
 1. Sube el repo a GitHub.

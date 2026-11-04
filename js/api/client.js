@@ -2,7 +2,8 @@
    Si algún día cambio de backend, se toca este archivo y nada más.
    - datos     -> PostgREST  /rest/v1
    - auth      -> GoTrue     /auth/v1
-   - funciones -> RPC        /rest/v1/rpc */
+   - funciones -> RPC        /rest/v1/rpc
+   - edge      -> Functions  /functions/v1 */
 
 import { urlBase, ANON_KEY } from '../config.js';
 import { traducirError, errorApi } from './errores.js';
@@ -10,6 +11,7 @@ import { traducirError, errorApi } from './errores.js';
 const REST = `${urlBase()}/rest/v1`;
 const AUTH = `${urlBase()}/auth/v1`;
 const ALMACEN = `${urlBase()}/storage/v1`;
+const FUNCIONES = `${urlBase()}/functions/v1`;
 
 function cabeceras(token, extra) {
   return {
@@ -20,8 +22,10 @@ function cabeceras(token, extra) {
   };
 }
 
-/** Hace la petición y normaliza la respuesta. Todo lo demás pasa por aquí. */
-async function enviar(url, opciones) {
+/** Hace la petición y normaliza la respuesta. Todo lo demás pasa por aquí.
+    `mensajePropio`: el servicio ya responde { error } en español (las Edge
+    Functions son nuestras), así que se muestra tal cual. */
+async function enviar(url, opciones, { mensajePropio = false } = {}) {
   let respuesta;
   try {
     respuesta = await fetch(url, opciones);
@@ -37,7 +41,8 @@ async function enviar(url, opciones) {
   if (!respuesta.ok) {
     // El detalle crudo queda en consola; en pantalla va el mensaje en español.
     console.error(`[api] ${opciones.method} ${url} → ${respuesta.status}`, cuerpo);
-    throw errorApi(traducirError(respuesta.status, cuerpo), respuesta.status);
+    const propio = mensajePropio && typeof cuerpo?.error === 'string' ? cuerpo.error : null;
+    throw errorApi(propio ?? traducirError(respuesta.status, cuerpo), respuesta.status);
   }
   return cuerpo;
 }
@@ -95,6 +100,12 @@ export function crearClienteDatos(obtenerToken) {
     },
     rpc(funcion, args = {}) {
       return llamar(`/rpc/${funcion}`, 'POST', args);
+    },
+    /** Una Edge Function de supabase/functions/, con la sesión del usuario. */
+    async funcion(nombre, cuerpo = {}) {
+      const opciones = { method: 'POST', headers: cabeceras(await obtenerToken()),
+                         body: JSON.stringify(cuerpo) };
+      return enviar(`${FUNCIONES}/${nombre}`, opciones, { mensajePropio: true });
     },
   };
 }
