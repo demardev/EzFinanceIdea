@@ -14,6 +14,19 @@ const EXPLICACION = {
   'sin-soporte': 'Este navegador no admite notificaciones push.',
 };
 
+/* Lo programan sql/09_avisos_programados.sql y la función `avisar`. */
+const QUE_AVISA = `
+  <div class="card pila-sm">
+    <p class="cifra-etiqueta">Qué te avisa</p>
+    <p><strong>8:00 pm · Cierre del día.</strong> Cuántos movimientos registraste hoy,
+       lo que vence mañana y, si llevas el negocio, los recibos que te deben
+       desde hace una semana o más.</p>
+    <p><strong>Al momento · Por confirmar.</strong> Cuando llega una compra de
+       Apple Pay, un SMS o un correo del banco.</p>
+    <p class="tenue-2" style="font-size:12.5px">Nunca lleva montos: se ve en la
+       pantalla bloqueada.</p>
+  </div>`;
+
 function boton(id, texto, iconoNombre, clase = '') {
   return `<button class="btn btn-bloque ${clase}" type="button" id="${id}">
             ${icono(iconoNombre, 18)} ${texto}</button>`;
@@ -32,6 +45,7 @@ function pintar(contenedor, estado, activa) {
         ? `${boton('btn-probar', 'Mandarme una de prueba', 'check', 'btn-primario')}
            ${boton('btn-apagar', 'Desactivar en este dispositivo', 'x', 'btn-peligro')}`
         : boton('btn-activar', 'Activar en este dispositivo', 'plus', 'btn-primario')}
+      ${QUE_AVISA}
     </div>`;
 }
 

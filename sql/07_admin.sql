@@ -90,6 +90,11 @@ begin
   if p_bloquear then
     delete from auth.sessions       where user_id = p_usuario;
     delete from auth.refresh_tokens where user_id = p_usuario::text;
+    -- Ni avisos push: si lo desbloqueas, los vuelve a activar desde la app.
+    -- (to_regclass: sin sql/08_push.sql esta tabla todavía no existe.)
+    if to_regclass('public.suscripciones_push') is not null then
+      delete from public.suscripciones_push where user_id = p_usuario;
+    end if;
   end if;
 end $$;
 

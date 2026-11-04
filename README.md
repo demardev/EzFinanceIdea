@@ -142,6 +142,15 @@ sesión, pero el acceso que ya tenía abierto dura hasta que caduca (1 hora por 
    en cada dispositivo.
 4. En la app: **Ajustes → Notificaciones → Activar en este dispositivo**. En el
    iPhone solo funciona con la app instalada en la pantalla de inicio (iOS 16.4+).
+5. Para los avisos automáticos corre [`sql/09_avisos_programados.sql`](sql/09_avisos_programados.sql)
+   (cambia el ref de `avisos_url` si es otro proyecto). Programa el **cierre del día a
+   las 8:00 pm** de la Ciudad de México (`pg_cron`, 02:00 UTC) y un disparador que avisa
+   **al momento** cuando entra algo a Por confirmar. La base llama a la función por
+   HTTP (`pg_net`) con un secreto guardado en `config_privada`, una tabla que ningún
+   usuario puede leer.
+
+   Para mandar el cierre del día ahora mismo, sin esperar a las 8:
+   `select pedir_aviso('{"accion": "resumen"}');` en el SQL Editor.
 
 ### 4. Publicar en Cloudflare Pages
 
