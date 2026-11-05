@@ -74,6 +74,14 @@ function filaMovimiento(mov) {
     </div>`;
 }
 
+/* Si su cargo ya está en Por confirmar, no urge: solo falta confirmarlo. */
+function cuandoVencimiento(v) {
+  if (v.porConfirmar) return `<span class="tenue">llegó · por confirmar</span>`;
+  return `<span class="${ACENTO[v.estado]}">
+            ${QUE_ES[v.clase]} ${formatearFecha(v.fecha)} · ${cuandoTexto(v.dias, v.clase)}
+          </span>`;
+}
+
 /* Los gastos fijos y los ingresos se tocan para registrarlos; los avisos de
    tarjeta no hacen nada, porque su pago se hace desde Tarjetas. */
 function filaVencimiento(v, indice) {
@@ -81,9 +89,7 @@ function filaVencimiento(v, indice) {
         <span class="icono-caja">${icono(ICONO_VENCIMIENTO[v.clase], 18)}</span>
         <span class="crece" style="min-width:0">
           <span class="titulo truncar" style="display:block">${escapar(v.nombre)}</span>
-          <span class="sub"><span class="${ACENTO[v.estado]}">
-            ${QUE_ES[v.clase]} ${formatearFecha(v.fecha)} · ${cuandoTexto(v.dias, v.clase)}
-          </span></span>
+          <span class="sub">${cuandoVencimiento(v)}</span>
         </span>
         <span class="monto ${v.clase === 'ingreso' ? 'pos' : ''}">${textoMonto(v.monto)}</span>`;
   const interior = v.item

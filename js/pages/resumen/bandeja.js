@@ -2,7 +2,8 @@
    avisos del banco por SMS. Lo que es una sola operación llega junto
    (avisos/juntar.js). Tocar uno abre el formulario de movimiento ya lleno;
    deslizarlo lo descarta. Al registrarlo sale de la bandeja y se aprende lo
-   que elegiste (bandeja-aprender.js). */
+   que elegiste (bandeja-aprender.js). Si es un gasto fijo del plan llega con
+   su nombre y su categoría (calc/fijos-bandeja.js). */
 
 import { abrirSheet } from '../../ui/sheet.js';
 import { envolverLista } from '../../ui/lista.js';
@@ -11,8 +12,8 @@ import { confirmar } from '../../ui/confirmar.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { aviso, avisoError } from '../../ui/toast.js';
 import { claveDeComercio, listasParaRegistrar, conAviso } from '../../calc/bandeja.js';
-import { juntarPendientes, borradorDeEntrada } from '../../calc/avisos/juntar.js';
-import { filaDeEntrada, bloqueJuntados, leerSeparados, separar } from './bandeja-filas.js';
+import { filaDeEntrada, bloqueJuntados, separar } from './bandeja-filas.js';
+import { prepararEntradas } from './bandeja-datos.js';
 import { abrirRegistro } from '../../movimientos/registrar.js';
 import { alRegistrarDe } from './bandeja-aprender.js';
 import { puedeSerPago, elegirYAbrir } from './bandeja-negocio.js';
@@ -113,46 +114,67 @@ function conectarSeparar(hoja, cerrar, reabrir) {
   });
 }
 
-async function alTocar(contexto, objetivo, { entradas, borradores, sugerencias }, cerrar, alCambiar) {
-  const id = objetivo.dataset.editar || objetivo.dataset.borrar;
+/* Un gasto fijo del plan no puede ser un pago de recibo: no se pregunta. */
+async function registrarEntrada(contexto, id, { entradas, borradores, pares, sugerencias },
+                                alCambiar) {
   const entrada = entradas.find((e) => e.id === id);
   const borrador = borradores.get(id);
-  if (objetivo.dataset.borrar) {
-    cerrarDeslizada();
-    if (await descartar(contexto, entrada, borrador, alCambiar)) cerrar();
-    return;
-  }
-  cerrar();
   const alRegistrar = alRegistrarDe(contexto, entrada, sugerencias);
-  if (puedeSerPago(contexto, borrador)) {
+  if (!pares.has(id) && puedeSerPago(contexto, borrador)) {
     elegirYAbrir(contexto, entrada, borrador, alCambiar, alRegistrar);
     return;
   }
   await abrirRegistro(contexto, borrador, alCambiar, undefined, { alRegistrar });
 }
 
-export async function abrirPorConfirmar(contexto, recibidos, alCambiar) {
+async function alTocar(contexto, objetivo, estado, cerrar, alCambiar) {
+  const id = objetivo.dataset.editar || objetivo.dataset.borrar;
+  if (objetivo.dataset.borrar) {
+    cerrarDeslizada();
+    const entrada = estado.entradas.find((e) => e.id === id);
+    if (await descartar(contexto, entrada, estado.borradores.get(id), alCambiar)) cerrar();
+    return;
+  }
+  cerrar();
+  await registrarEntrada(contexto, id, estado, alCambiar);
+}
+
+/* Todo lo que hace falta para pintar la bandeja o registrar una entrada. */
+async function prepararBandeja(contexto, recibidos, plan) {
   const items = recibidos.map((item) => conAviso(item));
   const [sugerencias, vigentes] = await Promise.all([
     cargarSugerencias(contexto.bandeja, items), cargarVigentes(contexto),
   ]);
-  const { origenes, categorias } = sugerencias;
-  const entradas = juntarPendientes(items, origenes, leerSeparados());
-  const borradores = new Map(entradas.map((e) => [e.id, borradorDeEntrada(e, origenes, categorias)]));
-  const completas = listasParaRegistrar(entradas, sugerencias, vigentes, borradorDeEntrada);
+  const listas = prepararEntradas(recibidos, sugerencias.origenes, sugerencias.categorias, plan);
+  return { ...listas, sugerencias, vigentes };
+}
+
+/** Tocar en Próximos vencimientos un fijo cuyo cargo ya llegó: se registra
+    esa entrada, para que salga de la bandeja y no quede dos veces. */
+export async function registrarDeBandeja(contexto, recibidos, id, alCambiar, plan) {
+  const estado = await prepararBandeja(contexto, recibidos, plan);
+  if (!estado.borradores.has(id)) return;
+  await registrarEntrada(contexto, id, estado, alCambiar);
+}
+
+/** @param plan { planItems, registrados }: para reconocer los gastos fijos. */
+export async function abrirPorConfirmar(contexto, recibidos, alCambiar, plan) {
+  const estado = await prepararBandeja(contexto, recibidos, plan);
+  const { entradas, borradores, pares, sugerencias, vigentes } = estado;
+  const completas = listasParaRegistrar(entradas, sugerencias, vigentes,
+                                        (e) => borradores.get(e.id), pares);
   const { hoja, cerrar } = abrirSheet({
     titulo: `Por confirmar · ${entradas.length}`,
     cuerpo: `
       ${botonTodas(completas)}
       <p class="tenue" style="font-size:13px;margin-bottom:10px">
         Toca una para registrarla. Desliza a la izquierda para descartarla.</p>
-      ${envolverLista(entradas.map((e) => filaDeEntrada(e, borradores.get(e.id))))}
+      ${envolverLista(entradas.map((e) => filaDeEntrada(e, borradores.get(e.id), pares.get(e.id))))}
       ${bloqueJuntados(entradas.filter((e) => e.partes), borradores)}`,
   });
   conectarDeslizar(hoja);
   conectarTodas(hoja, cerrar, () => registrarTodas(contexto, completas), alCambiar);
-  conectarSeparar(hoja, cerrar, () => abrirPorConfirmar(contexto, recibidos, alCambiar));
-  const estado = { entradas, borradores, sugerencias };
+  conectarSeparar(hoja, cerrar, () => abrirPorConfirmar(contexto, recibidos, alCambiar, plan));
   hoja.addEventListener('click', async (evento) => {
     const objetivo = evento.target.closest('[data-editar], [data-borrar]');
     if (!objetivo) return;

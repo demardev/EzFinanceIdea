@@ -43,10 +43,19 @@ function iconoDe(item) {
   return item.aviso && item.junta !== 'applepay' ? 'banco' : 'card';
 }
 
-/** @param borrador el de borradorDeEntrada(): su descripción es el nombre. */
-export function filaDeEntrada(item, borrador) {
+/* Un gasto fijo del plan lo dice: con su nombre arriba, abajo va lo que
+   escribió el banco, para ver que sí es ese. */
+function deFijo(item, par) {
+  if (!par) return '';
+  const que = par.registrado ? 'Ya registrado' : par.seguro ? 'Gasto fijo' : '¿Gasto fijo?';
+  return item.comercio ? `${que} · ${item.comercio}` : que;
+}
+
+/** @param borrador el de borradorDeEntrada(): su descripción es el nombre.
+    @param par      su gasto fijo (calc/fijos-bandeja.js), si es uno. */
+export function filaDeEntrada(item, borrador, par) {
   const cuando = formatearFecha(borrador.fecha || fechaLocalDe(item.created_at));
-  const de = origenDe(item);
+  const de = [deFijo(item, par), origenDe(item)].filter(Boolean).join(' · ');
   const sinLeer = item.aviso && !item.aviso.reconocido;
   return filaEditable({
     id: item.id,

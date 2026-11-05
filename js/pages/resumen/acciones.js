@@ -45,14 +45,20 @@ export function conectarMovimientos(contenedor, contexto, movimientos, alCambiar
   });
 }
 
-/** Tocar un gasto fijo o un ingreso de "Próximos vencimientos" lo registra. */
-export function conectarVencimientos(contenedor, contexto, vencimientos, alCambiar) {
+/**
+ * Tocar un gasto fijo o un ingreso de "Próximos vencimientos" lo registra.
+ * Si su cargo ya llegó a Por confirmar, se registra ese: así sale de la
+ * bandeja y no queda dos veces.
+ * @param alLlegado (id de la entrada) => Promise
+ */
+export function conectarVencimientos(contenedor, contexto, vencimientos, alCambiar, alLlegado) {
   contenedor.addEventListener('click', async (evento) => {
     const objetivo = evento.target.closest('[data-vencimiento]');
     if (!objetivo) return;
-    const { item } = vencimientos[Number(objetivo.dataset.vencimiento)];
+    const { item, porConfirmar } = vencimientos[Number(objetivo.dataset.vencimiento)];
     try {
-      await abrirRegistro(contexto, borradorDeFijo(item), alCambiar);
+      if (porConfirmar) await alLlegado(porConfirmar);
+      else await abrirRegistro(contexto, borradorDeFijo(item), alCambiar);
     } catch (e) { avisoError(e); }
   });
 }

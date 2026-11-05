@@ -76,19 +76,25 @@ export function borradorDeBandeja(item, origenes, categorias = {}) {
 /**
  * Las que se pueden registrar sin abrir el formulario: traen una tarjeta y
  * una categoría que siguen activas. Las demás se quedan para revisarlas, y
- * los avisos del banco también: todavía no se sabe de qué cuenta son.
+ * los avisos del banco también: todavía no se sabe de qué cuenta son. Salvo
+ * el gasto fijo seguro cuyo aviso ya trae la cuenta (fijos-bandeja.js); y
+ * uno que no es seguro o que ya registraste, nunca.
  *
  * @param sugerencias { origenes, categorias } como para borradorDeBandeja()
  * @param vigentes    { origenes: Set('tarjeta:<id>'), categorias: Set(id) }
  * @param aBorrador   cómo se arma el borrador (para los pares juntados)
+ * @param pares       Map id → pareja de emparejarFijos()
  * @returns { listas: [{ item, borrador }], total, faltan }
  */
-export function listasParaRegistrar(items, sugerencias, vigentes, aBorrador = borradorDeBandeja) {
+export function listasParaRegistrar(items, sugerencias, vigentes, aBorrador = borradorDeBandeja,
+                                    pares = new Map()) {
+  const sinRevisar = (item, par) => (par ? par.seguro && !par.registrado && par.origenConocido
+    : !item.texto);
   const listas = items
     .map((item) => ({
       item, borrador: aBorrador(item, sugerencias.origenes, sugerencias.categorias),
     }))
-    .filter(({ item, borrador }) => !item.texto && borrador.monto > 0
+    .filter(({ item, borrador }) => sinRevisar(item, pares.get(item.id)) && borrador.monto > 0
       && vigentes.origenes.has(borrador.origen)
       && vigentes.categorias.has(borrador.categoria_id));
   return {

@@ -13,7 +13,8 @@ import { animarRodillos, hayRodillo } from '../../ui/rodillo.js';
 import { conectarMovimientos, conectarVencimientos } from './acciones.js';
 import { abrirArqueoDe } from '../ajustes/arqueo.js';
 import { conectarDeslizar } from '../../ui/deslizar.js';
-import { abrirPorConfirmar } from './bandeja.js';
+import { abrirPorConfirmar, registrarDeBandeja } from './bandeja.js';
+import { marcarLlegados } from './bandeja-datos.js';
 import { avisoError } from '../../ui/toast.js';
 
 /* El flujo personal excluye el negocio: si no, un mes de recibos inflaría el
@@ -80,10 +81,10 @@ function conectarPorCobrar(contenedor, contexto, pendientes) {
 
 /* Se engancha una vez, como el arqueo: el botón se repinta pero el
    contenedor no. */
-function conectarPorConfirmar(contenedor, contexto, items) {
+function conectarPorConfirmar(contenedor, contexto, items, plan) {
   contenedor.addEventListener('click', async (evento) => {
     if (!evento.target.closest('#btn-por-confirmar')) return;
-    try { await abrirPorConfirmar(contexto, items, recargar); } catch (e) { avisoError(e); }
+    try { await abrirPorConfirmar(contexto, items, recargar, plan); } catch (e) { avisoError(e); }
   });
 }
 
@@ -120,14 +121,17 @@ async function cargar(contexto, hoy) {
   const { negocio, pendientes } = await datosDeNegocio(contexto, mesDe(hoy), hoy);
   const estado = estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes, cercanos,
                                    tjs, cmps, items, negocio });
-  return { estado, lista, recientes, pendientes, porConfirmar };
+  /* Con el plan, la bandeja reconoce los gastos fijos que ya llegaron. */
+  const plan = { planItems: items, registrados: cercanos };
+  estado.vencimientos = await marcarLlegados(contexto, estado.vencimientos, porConfirmar, plan);
+  return { estado, lista, recientes, pendientes, porConfirmar, plan };
 }
 
 export async function montarResumen(contenedor, contexto) {
   contenedor.innerHTML = hayRodillo('patrimonio') ? '' : '<p class="tenue">Cargando…</p>';
   try {
     const hoy = hoyISO();
-    const { estado, lista, recientes, pendientes, porConfirmar } = await cargar(contexto, hoy);
+    const { estado, lista, recientes, pendientes, porConfirmar, plan } = await cargar(contexto, hoy);
     let ambito = ambitoGuardado();
 
     const pintar = () => {
@@ -149,9 +153,10 @@ export async function montarResumen(contenedor, contexto) {
       pintar();
     });
     conectarMovimientos(contenedor, contexto, () => recientes, recargar);
-    conectarVencimientos(contenedor, contexto, estado.vencimientos, recargar);
+    conectarVencimientos(contenedor, contexto, estado.vencimientos, recargar,
+                         (id) => registrarDeBandeja(contexto, porConfirmar, id, recargar, plan));
     conectarArqueo(contenedor, contexto, lista, recargar);
-    conectarPorConfirmar(contenedor, contexto, porConfirmar);
+    conectarPorConfirmar(contenedor, contexto, porConfirmar, plan);
   } catch (e) {
     contenedor.innerHTML = '<p class="campo-error">No se pudo cargar.</p>';
     avisoError(e);
