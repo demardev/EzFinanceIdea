@@ -7,10 +7,12 @@
      internet muestra la última data conocida.
    - Escrituras y auth: siempre red. Nunca se cachean.
 
+   Al cerrar sesión la página misma borra los datos (js/api/dispositivo.js).
+
    Al cambiar el shell hay que subir VERSION: al activarse borra los caches
    viejos. */
 
-const VERSION = 'v66';
+const VERSION = 'v67';
 const CACHE_SHELL = `finanzas-shell-${VERSION}`;
 const CACHE_DATOS = `finanzas-datos-${VERSION}`;
 
@@ -99,11 +101,6 @@ self.addEventListener('fetch', (evento) => {
   if (url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/storage/v1/object/')) {
     evento.respondWith(redOCache(request));
   }
-});
-
-/* Al cerrar sesión, la app pide borrar los datos cacheados. */
-self.addEventListener('message', (evento) => {
-  if (evento.data === 'borrar-datos') caches.delete(CACHE_DATOS);
 });
 
 /* Push: cada mensaje TIENE que mostrar una notificación. Si llega uno que no

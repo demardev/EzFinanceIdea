@@ -5,6 +5,7 @@
 import { peticionAuth } from './client.js';
 import { esFalloDeRed } from './errores.js';
 import { idDeUsuario } from './jwt.js';
+import { limpiarDispositivo } from './dispositivo.js';
 
 const CLAVE = 'finanzas.sesion';
 const MARGEN_SEG = 60;          // refresca un minuto antes de que expire
@@ -117,8 +118,9 @@ export async function registrar(email, password) {
 export async function cerrarSesion() {
   const token = sesion?.access_token;
   borrar();
-  /* Que no quede data del usuario en el cache del dispositivo. */
-  navigator.serviceWorker?.controller?.postMessage('borrar-datos');
+  /* Que no quede nada del usuario en el dispositivo: el siguiente que entre
+     no debe ver sus datos ni heredar sus preferencias. */
+  await limpiarDispositivo();
   if (!token) return;
   try { await peticionAuth('/logout', { token }); } catch { /* da igual: local ya está limpio */ }
 }

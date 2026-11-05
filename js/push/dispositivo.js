@@ -57,6 +57,14 @@ export async function desuscribir() {
   return suscripcion.endpoint;
 }
 
+/** Al cerrar sesión: la suscripción de este teléfono, si la hay, sin esperar
+    a `serviceWorker.ready`, que nunca resuelve si el SW no se registró. */
+export async function suscripcionAlSalir() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  const registro = await navigator.serviceWorker.getRegistration();
+  return registro?.pushManager.getSubscription() ?? null;
+}
+
 /** Para reconocerlo en la lista: "iPhone", "Mac", "Android"… */
 export function nombreDispositivo() {
   const ua = navigator.userAgent;

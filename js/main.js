@@ -4,6 +4,7 @@
 import { crearClienteDatos, crearClienteAlmacen } from './api/client.js';
 import { hayConfig } from './config.js';
 import { tokenVigente, haySesion, enSesionInvalida, idUsuario } from './api/sesion.js';
+import { borrarDatosCacheados } from './api/dispositivo.js';
 import { repoCuentas } from './repos/cuentas.js';
 import { repoCategorias } from './repos/categorias.js';
 import { repoMovimientos } from './repos/movimientos.js';
@@ -49,7 +50,7 @@ const contexto = {
      hubiera negocio, que es lo correcto para casi todos. */
   perfil: { negocio: false, admin: false },
   userId: null,
-  alSalir: mostrarLogin,
+  alSalir: arrancarDeCero,
 };
 
 /* El RPC es idempotente (no duplica si ya hay datos), pero no hace falta
@@ -87,7 +88,21 @@ function mostrarLogin() {
   montarLogin(pantallaLogin, mostrarApp);
 }
 
+/* La app guarda cosas en memoria mientras está abierta (cuentas, categorías,
+   lo que dejaste escrito o abierto). Al cambiar de usuario no se limpian
+   pieza por pieza: se recarga la página y todo arranca vacío. Se va a `./`
+   para que el siguiente no aterrice en la pantalla donde se quedó el otro. */
+function arrancarDeCero() {
+  location.replace('./');
+}
+
+let yaArranco = false;
+
 async function mostrarApp() {
+  /* Entrar otra vez sin recargar (tras una sesión expirada) dejaría la
+     memoria del usuario anterior y un segundo router encima del primero. */
+  if (yaArranco) return arrancarDeCero();
+  yaArranco = true;
   pantallaLogin.hidden = true;
   pantallaLogin.innerHTML = '';
   app.hidden = false;
@@ -131,8 +146,9 @@ function conectarCabecera() {
 }
 
 /* Si el refresh del token falla, se vuelve al login sin dejar la app a medias. */
-enSesionInvalida(() => {
+enSesionInvalida(async () => {
   aviso('Tu sesión expiró.');
+  await borrarDatosCacheados();
   mostrarLogin();
 });
 

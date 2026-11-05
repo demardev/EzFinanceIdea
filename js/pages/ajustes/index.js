@@ -15,6 +15,7 @@ import { montarClientes } from './clientes.js';
 import { montarAtajo } from './atajo.js';
 import { montarAdmin } from './admin.js';
 import { montarNotificaciones } from './notificaciones.js';
+import { suscripcionAlSalir } from '../../push/dispositivo.js';
 
 const SECCIONES = {
   cuentas:    { titulo: 'Cuentas',    icono: 'wallet', sub: 'Crear, editar, reordenar, archivar', montar: montarCuentas },
@@ -79,9 +80,23 @@ function montarMenu(contenedor, contexto) {
       mensaje: 'Para volver a entrar vas a necesitar tu email y tu contraseña.',
     });
     if (!seguro) return;
+    await soltarAvisos(contexto);
     await cerrarSesion();
     alSalir();
   });
+}
+
+/* Los avisos de esta cuenta no deben seguir llegando a este teléfono cuando
+   entre otra. Se da de baja en la base mientras el token aún sirve. Si algo
+   falla se sale igual: la siguiente cuenta que active avisos se queda con el
+   endpoint (guardar_suscripcion_push lo reasigna). */
+async function soltarAvisos(contexto) {
+  try {
+    const suscripcion = await suscripcionAlSalir();
+    if (!suscripcion) return;
+    await contexto.push.quitar(suscripcion.endpoint).catch(() => {});
+    await suscripcion.unsubscribe();
+  } catch { /* sin permiso o sin soporte: no había nada que soltar */ }
 }
 
 function montarMenuNegocio(contenedor, contexto, pantalla) {

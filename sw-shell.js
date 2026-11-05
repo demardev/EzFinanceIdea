@@ -20,6 +20,7 @@ self.SHELL = [
   'css/plan.css',
   'css/tokens.css',
   'js/api/client.js',
+  'js/api/dispositivo.js',
   'js/api/errores.js',
   'js/api/jwt.js',
   'js/api/sesion.js',
