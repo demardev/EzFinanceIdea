@@ -5,7 +5,8 @@
 import { abrirFormMovimiento } from './formulario.js';
 import { confirmar } from '../ui/confirmar.js';
 import { aviso } from '../ui/toast.js';
-import { formatearFecha } from '../calc/fechas.js';
+import { formatearFecha, hoyISO } from '../calc/fechas.js';
+import { TIPOS } from './tipos.js';
 import { abrirSheet } from '../ui/sheet.js';
 import { icono } from '../iconos/render.js';
 import { unirDestino } from '../ui/campos.js';
@@ -40,6 +41,22 @@ export function borradorDeFijo(item) {
   };
 }
 
+/* Duplicar: lo mismo que el movimiento, pero como uno NUEVO y con la fecha de
+   hoy. Se abre en el formulario para cambiar lo que haga falta antes de
+   registrarlo. No se lleva la compra a meses ni el negocio: sale personal y
+   suelto. */
+export function borradorDeCopia(mov) {
+  return {
+    tipo: mov.tipo,
+    monto: Number(mov.monto) || 0,
+    fecha: hoyISO(),
+    descripcion: mov.descripcion,
+    categoria_id: mov.categoria_id ?? '',
+    nota: mov.nota ?? '',
+    ...TIPOS[mov.tipo].aFormulario(mov),
+  };
+}
+
 /**
  * @param contexto  el de la app (repos)
  * @param mov       {} para nuevo, o el movimiento a editar
@@ -60,6 +77,7 @@ export async function abrirRegistro(contexto, mov, alCambiar, catalogos, { alReg
       await alCambiar();
     },
     alEliminar: () => eliminarMovimiento(contexto, mov, alCambiar),
+    alDuplicar: () => abrirRegistro(contexto, borradorDeCopia(mov), alCambiar, datos),
   });
 }
 

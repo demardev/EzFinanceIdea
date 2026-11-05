@@ -32,9 +32,9 @@ function valoresIniciales(mov) {
 /**
  * @param mov       {} para nuevo (o con valores ya puestos), o el movimiento a editar
  * @param datos     { cuentas, tarjetas, categorias } ya cargados
- * @param acciones  { alGuardar(fila), alEliminar() }
+ * @param acciones  { alGuardar(fila), alEliminar(), alDuplicar() opcional }
  */
-export function abrirFormMovimiento(mov, datos, { alGuardar, alEliminar }) {
+export function abrirFormMovimiento(mov, datos, { alGuardar, alEliminar, alDuplicar }) {
   const editando = Boolean(mov?.id);
   let tipoClave = mov?.tipo ?? 'egreso';
   let valores = valoresIniciales(mov);
@@ -56,6 +56,8 @@ export function abrirFormMovimiento(mov, datos, { alGuardar, alEliminar }) {
           ${editando ? 'Guardar' : 'Registrar'}
         </button>
       </form>
+      ${editando && alDuplicar ? `<button class="btn btn-bloque" id="btn-duplicar" type="button"
+          style="margin-top:10px">${icono('copiar', 16)} Duplicar</button>` : ''}
       ${editando ? '<button class="btn btn-peligro btn-bloque" id="btn-borrar" type="button" ' +
                    'style="margin-top:10px">Eliminar movimiento</button>' : ''}`;
     conectar();
@@ -108,6 +110,12 @@ export function abrirFormMovimiento(mov, datos, { alGuardar, alEliminar }) {
     const form = cuerpo.querySelector('#form-mov');
     const enviar = form.querySelector('button[type="submit"]');
     form.addEventListener('submit', (e) => enviarFormulario(e, form, enviar));
+
+    /* Duplicar suelta este sheet y abre uno de "nuevo" con lo mismo puesto. */
+    cuerpo.querySelector('#btn-duplicar')?.addEventListener('click', () => {
+      cerrar();
+      alDuplicar();
+    });
 
     cuerpo.querySelector('#btn-borrar')?.addEventListener('click', async () => {
       try { if (await alEliminar()) cerrar(); }
