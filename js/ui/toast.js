@@ -6,18 +6,23 @@ function contenedor() {
   return document.getElementById('toasts');
 }
 
-function mostrar(mensaje, clase) {
+function mostrar(mensaje, clase, { duracion = DURACION, alTocar = null } = {}) {
   const caja = contenedor();
   if (!caja) return;
   const nodo = document.createElement('div');
   nodo.className = `toast ${clase}`.trim();
   nodo.textContent = mensaje;
+  if (alTocar) {
+    nodo.classList.add('toast-tocable');
+    nodo.addEventListener('click', () => { nodo.remove(); alTocar(); });
+  }
   caja.appendChild(nodo);
-  setTimeout(() => nodo.remove(), DURACION);
+  setTimeout(() => nodo.remove(), duracion);
 }
 
-export function aviso(mensaje) {
-  mostrar(mensaje, '');
+/** `alTocar` lo vuelve un atajo: tocarlo lleva a donde se resuelve. */
+export function aviso(mensaje, opciones) {
+  mostrar(mensaje, '', opciones);
 }
 
 export function avisoError(error) {

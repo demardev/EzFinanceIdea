@@ -24,6 +24,7 @@ import { iniciarRouter } from './router.js';
 import { icono } from './iconos/render.js';
 import { estaOculto, alternarOculto } from './ui/privacidad.js';
 import { aviso, avisoError } from './ui/toast.js';
+import { tomarAvisosSoltados } from './push/dispositivo.js';
 
 const pantallaLogin = document.getElementById('login');
 const app = document.getElementById('app');
@@ -108,7 +109,18 @@ async function mostrarApp() {
   app.hidden = false;
   await sembrarSiHaceFalta();
   await cargarPerfil();
-  iniciarRouter(contexto);
+  await iniciarRouter(contexto);
+  sugerirAvisos();
+}
+
+/* Cerrar sesión apaga los avisos de este teléfono. Al volver a entrar se
+   recuerda una vez, sin insistir; tocar el mensaje lleva a activarlos. */
+function sugerirAvisos() {
+  if (!tomarAvisosSoltados()) return;
+  aviso('Los avisos se apagaron al cerrar sesión. Toca para activarlos.', {
+    duracion: 6000,
+    alTocar: () => { location.hash = '#/ajustes/notificaciones'; },
+  });
 }
 
 /** Vuelve a montar la ruta actual: la forma barata de refrescar tras un cambio. */

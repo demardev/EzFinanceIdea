@@ -65,6 +65,23 @@ export async function suscripcionAlSalir() {
   return registro?.pushManager.getSubscription() ?? null;
 }
 
+/* Si al salir se dieron de baja, al volver a entrar se sugiere activarlos.
+   Se escribe DESPUÉS de limpiar el dispositivo, que borra todo `finanzas.*`. */
+const CLAVE_SOLTADOS = 'finanzas.avisos-soltados';
+
+export function recordarAvisosSoltados() {
+  try { localStorage.setItem(CLAVE_SOLTADOS, '1'); } catch { /* solo no se sugiere */ }
+}
+
+/** Se lee una sola vez: la sugerencia sale en la primera entrada y ya. */
+export function tomarAvisosSoltados() {
+  try {
+    const habia = localStorage.getItem(CLAVE_SOLTADOS) === '1';
+    localStorage.removeItem(CLAVE_SOLTADOS);
+    return habia;
+  } catch { return false; }
+}
+
 /** Para reconocerlo en la lista: "iPhone", "Mac", "Android"… */
 export function nombreDispositivo() {
   const ua = navigator.userAgent;

@@ -50,6 +50,7 @@
   animation:aparecer var(--transicion);
 }
 .toast-error{ background:var(--neg); color:#fff; }
+.toast-tocable{ pointer-events:auto; cursor:pointer; }
 
 /* --------------------------------------------------- rejilla de iconos --- */
 .rejilla-iconos{
