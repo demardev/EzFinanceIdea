@@ -53,6 +53,33 @@ describir('resumen diario — lo de mañana y los cobros', (caso) => {
   });
 });
 
+describir('resumen diario — préstamos', (caso) => {
+  /* Lo que da resumenPrestamos().avisos: { prestamo, estado }. */
+  const aviso = (persona, direccion, fecha, atraso = 0) => ({
+    prestamo: { persona, direccion },
+    estado: { atraso, proximo: { fecha, monto: 50, atrasado: atraso > 0 } },
+  });
+  const linea = (prestamos) => cuerpo({ movimientos: [], prestamos }).split('\n')[1];
+
+  caso('quien te debe y se atrasó, sin decir cuánto', () => {
+    igual(linea([aviso('Luis', 'me_deben', '2026-10-15', 50)]), 'Préstamos: Luis se atrasó.');
+  });
+
+  caso('lo que pagas mañana y tus atrasos', () => {
+    igual(linea([aviso('Mamá', 'debo', '2026-11-04'), aviso('Ana', 'debo', '2026-10-01', 30)]),
+      'Préstamos: mañana le pagas a Mamá, vas atrasado con Ana.');
+  });
+
+  caso('mañana te paga alguien', () => {
+    igual(linea([aviso('Luis', 'me_deben', '2026-11-04')]), 'Préstamos: mañana te paga Luis.');
+  });
+
+  caso('lo que vence en unos días todavía no sale', () => {
+    igual(cuerpo({ movimientos: [], prestamos: [aviso('Mamá', 'debo', '2026-11-08')] }),
+      'Hoy no has registrado movimientos.');
+  });
+});
+
 describir('resumen diario — Por confirmar al llegar', (caso) => {
   caso('dice qué llegó, sin montos', () => {
     igual(mensajeBandeja('applepay').cuerpo, 'Llegó una compra de Apple Pay.');

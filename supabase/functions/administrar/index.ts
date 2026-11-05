@@ -3,8 +3,8 @@
 
    { accion: 'eliminar', user_id }
 
-   1. Comprueba con el token de quien llama que sea admin (perfiles.admin) y
-      que no se esté borrando a sí mismo.
+   1. Comprueba con el token de quien llama que sea admin, con su PIN vigente
+      (admin_vigente()), y que no se esté borrando a sí mismo.
    2. Borra el usuario en Supabase Auth: su correo, su contraseña y sus
       sesiones. Las 14 tablas con user_id tienen `on delete cascade`, así que
       se van con él sus movimientos, cuentas, tarjetas, plan, negocio, todo.
@@ -38,10 +38,11 @@ async function adminQueLlama(token) {
   const usuario = await fetch(`${URL_BASE}/auth/v1/user`, { headers: conToken });
   if (!usuario.ok) return null;
   const { id } = await usuario.json();
-  const perfil = await fetch(`${URL_BASE}/rest/v1/perfiles?select=admin&user_id=eq.${id}`,
-    { headers: conToken });
-  const [fila] = perfil.ok ? await perfil.json() : [];
-  return fila?.admin ? id : null;
+  /* Admin Y con PIN puesto hace menos de 30 minutos (sql/11_planes_prestamos.sql). */
+  const vigente = await fetch(`${URL_BASE}/rest/v1/rpc/admin_vigente`, {
+    method: 'POST', headers: { ...conToken, 'Content-Type': 'application/json' }, body: '{}',
+  });
+  return vigente.ok && (await vigente.json()) === true ? id : null;
 }
 
 /** Todas sus fotos: la carpeta del bucket se llama como su id. */
@@ -66,7 +67,7 @@ async function borrarFotos(userId) {
 
 async function eliminar(token, userId) {
   const admin = await adminQueLlama(token);
-  if (!admin) return responder(403, { error: 'Solo el administrador puede hacer esto.' });
+  if (!admin) return responder(403, { error: 'Solo el administrador, con su PIN vigente, puede hacer esto.' });
   if (!userId) return responder(400, { error: 'Falta el usuario.' });
   if (userId === admin) return responder(400, { error: 'No puedes eliminar tu propia cuenta.' });
 

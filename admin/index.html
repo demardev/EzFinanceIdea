@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Administración — Finanzas</title>
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0c" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../icons/icono-192.png" type="image/png">
+
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/componentes.css">
+<link rel="stylesheet" href="../css/listas.css">
+<link rel="stylesheet" href="../css/overlays.css">
+</head>
+<body>
+
+<!-- Panel de administración: página aparte de la app, con PIN. -->
+<div id="app">
+  <header class="cabecera">
+    <button id="btn-atras" class="icono-btn icono-btn-izq" type="button" aria-label="Volver a la app"></button>
+    <h1 class="crece truncar">Administración</h1>
+    <div class="cabecera-acciones">
+      <button id="btn-salir-admin" class="icono-btn" type="button" aria-label="Cerrar el panel"></button>
+    </div>
+  </header>
+  <main id="vista" class="vista"></main>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script type="module" src="../js/admin/main.js"></script>
+</body>
+</html>

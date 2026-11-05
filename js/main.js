@@ -17,6 +17,8 @@ import { repoClientes } from './repos/clientes.js';
 import { repoBandeja } from './repos/bandeja.js';
 import { repoAdmin } from './repos/admin.js';
 import { repoPush } from './repos/push.js';
+import { repoPrestamos } from './repos/prestamos.js';
+import { repoFunciones } from './repos/funciones.js';
 import { abrirNuevoDesdeFab } from './movimientos/registrar.js';
 import { abrirPagoRecibo } from './pages/negocio/registrar.js';
 import { montarLogin } from './pages/login.js';
@@ -47,9 +49,11 @@ const contexto = {
   bandeja: repoBandeja(cliente),
   admin: repoAdmin(cliente),       // solo responde si perfiles.admin
   push: repoPush(cliente),
+  prestamos: repoPrestamos(cliente),
   /* Se llenan al entrar; hasta entonces la app se comporta como si no
      hubiera negocio, que es lo correcto para casi todos. */
   perfil: { negocio: false, admin: false },
+  funciones: [],                // las del plan: ['prestamos', …]
   userId: null,
   alSalir: arrancarDeCero,
 };
@@ -62,11 +66,12 @@ const CLAVE_SIEMBRA = 'finanzas.sembrado';
    lectura no se rompe nada: se queda apagada. */
 async function cargarPerfil() {
   contexto.userId = idUsuario();
-  try {
-    contexto.perfil = await contexto.perfiles.mio();
-  } catch {
-    contexto.perfil = { negocio: false, admin: false };
-  }
+  const [perfil, funciones] = await Promise.all([
+    contexto.perfiles.mio().catch(() => ({ negocio: false, admin: false })),
+    repoFunciones(cliente).mias(),
+  ]);
+  contexto.perfil = perfil;
+  contexto.funciones = funciones;
 }
 
 async function sembrarSiHaceFalta() {

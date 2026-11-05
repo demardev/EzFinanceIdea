@@ -47,6 +47,19 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
 - Los movimientos generados **nunca se editan uno por uno**: se borran y se
   regeneran desde la operación.
 
+## Planes y funciones
+
+- Una función de pago (hoy `prestamos`) vive en `funciones`, y `plan_funciones` dice en qué
+  plan está. El plan sale de `perfiles.premium_hasta`. **La restricción vive en la base**:
+  la política de la tabla exige `tiene_funcion('clave')`. La app solo lee `mis_funciones()`
+  (`contexto.funciones`) para decidir qué mostrar.
+- La función `avisar` lee con la llave de servicio, que se salta las políticas: ahí hay que
+  preguntar `funcionesDe(userId)` antes de leer algo de una función de pago.
+- El panel de admin es otra página (`admin/`), con PIN. Toda función `admin_*` exige
+  `exigir_admin()`: bandera admin **y** PIN puesto hace menos de 30 minutos.
+- Préstamos: los abonos son movimientos normales con `prestamo_id`, y sí se editan uno
+  por uno (no son generados). La regla del atraso es acumulada (`js/calc/prestamos.js`).
+
 ## Estructura
 
 - Ningún archivo pasa de 200 líneas, ninguna función de 40. Se parte al momento, no al final.
@@ -78,12 +91,21 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
 - Todo en español: texto de la app, comentarios, nombres de variables.
 - Se construye por pasos (sección 9 de `PROMPT.md`) y se para al final de cada uno a mostrar.
 - No agregar funciones que no se pidieron.
+- **Al terminar un cambio, se corre y se publica sin preguntar** (lo pidió el usuario):
+  1. El SQL nuevo se corre en producción con
+     `supabase db query --remote=tifmifpphzufarjtckpt --yes -f sql/NN_nombre.sql`, y se
+     verifica con una consulta `--read-only`. Siempre **antes** de publicar.
+  2. Las Edge Functions que cambiaron se despliegan (comando en Estructura, con `--yes`).
+  3. Commit y push a `main`, que es de donde se publica la PWA.
+  Si algo falla a medias, se para y se avisa: no se publica una app contra una base que
+  no tiene su SQL.
 
 ## PWA
 
 - Al agregar o quitar un archivo del shell (HTML, CSS, JS, iconos) hay que **actualizar la lista
   `SHELL` de `sw-shell.js` y subir `VERSION` en `sw.js`**, si no la app sirve el cache viejo.
   Los dos: el navegador detecta la actualización por el contenido de `sw.js`.
+- El service worker contesta toda navegación con `./`, salvo `…/admin/`, que es otra página.
 - El shell **no pide `index.html`**: el hosting (Cloudflare Pages) lo redirige a `/` con un 308, y
   una respuesta con redirect guardada en el cache hace que Safari se niegue a abrir la app
   ("the response served by the service worker has redirections"). Se pide `./`, que responde 200.

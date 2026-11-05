@@ -13,7 +13,6 @@ import { montarDatos } from './datos.js';
 import { montarNegocio } from './negocio.js';
 import { montarClientes } from './clientes.js';
 import { montarAtajo } from './atajo.js';
-import { montarAdmin } from './admin.js';
 import { montarNotificaciones } from './notificaciones.js';
 import { suscripcionAlSalir, recordarAvisosSoltados } from '../../push/dispositivo.js';
 
@@ -30,8 +29,9 @@ const SECCIONES = {
   /* `solo` nombra la bandera de `perfiles` sin la cual la sección no aparece. */
   negocio:    { titulo: 'Negocio', icono: 'banknote', sub: 'Cuentas, comisión y clientes',
                 montar: montarMenuNegocio, solo: 'negocio' },
-  admin:      { titulo: 'Administración', icono: 'persona', sub: 'Usuarios, premium y bloqueos',
-                montar: montarAdmin, solo: 'admin' },
+  /* `enlace`: no se monta aquí, es otra página (admin/index.html, con PIN). */
+  admin:      { titulo: 'Administración', icono: 'persona', sub: 'Usuarios, planes y funciones · pide PIN',
+                enlace: 'admin/', solo: 'admin' },
 };
 
 /* Los apartados del negocio, dentro de Negocio. */
@@ -44,7 +44,7 @@ const NEGOCIO = {
 
 function filaSeccion(clave, seccion, base = '#/ajustes') {
   return `
-    <a class="lista-fila" href="${base}/${clave}">
+    <a class="lista-fila" href="${seccion.enlace ?? `${base}/${clave}`}">
       <span class="fila-cuerpo">
         <span class="icono-caja">${icono(seccion.icono, 18)}</span>
         <span class="crece truncar">
@@ -116,6 +116,7 @@ function montarMenuNegocio(contenedor, contexto, pantalla) {
 export function montarAjustes(contenedor, contexto, pantalla) {
   const seccion = SECCIONES[pantalla.sub];
   if (!seccion) return montarMenu(contenedor, contexto);
+  if (seccion.enlace) { location.href = seccion.enlace; return; }
   pantalla.ponerCabecera(seccion.titulo, '#/ajustes');
   return seccion.montar(contenedor, contexto, pantalla);
 }

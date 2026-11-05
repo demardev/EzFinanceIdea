@@ -1,0 +1,82 @@
+/* Orquesta la pantalla de Préstamos (#/prestamos): carga, resume y conecta.
+   No pinta (vista.js) ni calcula dinero (calc/prestamos.js).
+
+   Es una función del plan: sin ella la pantalla solo lo dice. La base, de
+   todos modos, no devolvería nada (tiene_funcion('prestamos')). */
+
+import { pintarPrestamos } from './vista.js';
+import { cargarPrestamos, tienePrestamos } from './datos.js';
+import { abrirFormPrestamo } from './form.js';
+import { abrirDetalle, borradorDeAbono } from './detalle.js';
+import { nombreDe } from './textos.js';
+import { abrirRegistro } from '../../movimientos/registrar.js';
+import { confirmar } from '../../ui/confirmar.js';
+import { aviso, avisoError } from '../../ui/toast.js';
+import { hoyISO } from '../../calc/fechas.js';
+
+function sinFuncion(contenedor) {
+  contenedor.innerHTML = `
+    <div class="vacio">
+      <p>Préstamos no viene en tu plan.</p>
+      <p class="tenue-2">Pídele al administrador que te lo active.</p>
+    </div>`;
+}
+
+async function eliminar(contexto, prestamo, alCambiar) {
+  const ok = await confirmar({
+    titulo: '¿Eliminar este préstamo?',
+    mensaje: `${nombreDe(prestamo)}. Sus abonos se quedan como movimientos normales.`,
+  });
+  if (!ok) return false;
+  await contexto.prestamos.eliminar(prestamo.id);
+  aviso('Préstamo eliminado.');
+  await alCambiar();
+  return true;
+}
+
+function editar(contexto, prestamo, alCambiar) {
+  abrirFormPrestamo(prestamo, {
+    alGuardar: async (fila) => {
+      await (prestamo.id ? contexto.prestamos.actualizar(prestamo.id, fila)
+                         : contexto.prestamos.crear(fila));
+      aviso(prestamo.id ? 'Préstamo guardado.' : 'Préstamo creado.');
+      await alCambiar();
+    },
+    alEliminar: () => eliminar(contexto, prestamo, alCambiar),
+  });
+}
+
+/** Tocar una fila: su detalle, y desde ahí abonar o editar. */
+function abrirUno(contexto, datos, id, alCambiar) {
+  const item = [...datos.resumen.activos, ...datos.resumen.terminados]
+    .find((x) => x.prestamo.id === id);
+  if (!item) return;
+  abrirDetalle(item, datos.abonos.filter((a) => a.prestamo_id === id), {
+    alAbonar: () => abrirRegistro(contexto, borradorDeAbono(item), alCambiar, undefined,
+                                  { extra: { prestamo_id: id } }).catch(avisoError),
+    alEditar: () => editar(contexto, item.prestamo, alCambiar),
+  });
+}
+
+export async function montarPrestamos(contenedor, contexto, pantalla) {
+  pantalla.ponerCabecera('Préstamos', '#/resumen');
+  if (!tienePrestamos(contexto)) return sinFuncion(contenedor);
+  contenedor.innerHTML = '<p class="tenue">Cargando…</p>';
+  let datos;
+
+  async function recargar() {
+    datos = await cargarPrestamos(contexto, hoyISO());
+    pintarPrestamos(contenedor, datos.resumen, hoyISO());
+  }
+
+  contenedor.addEventListener('click', (evento) => {
+    if (evento.target.closest('#btn-nuevo-prestamo')) return editar(contexto, {}, recargar);
+    const fila = evento.target.closest('[data-prestamo]');
+    if (fila) abrirUno(contexto, datos, fila.dataset.prestamo, recargar);
+  });
+
+  try { await recargar(); } catch (e) {
+    contenedor.innerHTML = '<p class="campo-error">No se pudo cargar.</p>';
+    avisoError(e);
+  }
+}

@@ -64,14 +64,18 @@ export function borradorDeCopia(mov) {
  * @param catalogos opcional: si quien llama ya los tiene, evita 3 peticiones
  * @param alRegistrar opcional: (fila) => Promise, después de crear uno NUEVO y
  *                  antes de alCambiar. La bandeja lo usa para sacar la compra.
+ * @param extra     opcional: columnas que se le agregan a uno NUEVO y que el
+ *                  formulario no conoce, como el prestamo_id de un abono.
  */
-export async function abrirRegistro(contexto, mov, alCambiar, catalogos, { alRegistrar } = {}) {
+export async function abrirRegistro(contexto, mov, alCambiar, catalogos,
+                                    { alRegistrar, extra = {} } = {}) {
   const { movimientos } = contexto;
   const datos = catalogos ?? await cargarCatalogos(contexto);
 
   abrirFormMovimiento(mov, datos, {
     alGuardar: async (fila) => {
-      await (mov?.id ? movimientos.actualizar(mov.id, fila) : movimientos.crear(fila));
+      await (mov?.id ? movimientos.actualizar(mov.id, fila)
+                     : movimientos.crear({ ...fila, ...extra }));
       if (!mov?.id) await alRegistrar?.(fila);
       aviso(mov?.id ? 'Movimiento guardado.' : 'Movimiento registrado.');
       await alCambiar();

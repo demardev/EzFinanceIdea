@@ -3,7 +3,7 @@
 
    El orden de las tablas importa: primero las que otras referencian. */
 
-const TABLAS = ['cuentas', 'categorias', 'tarjetas', 'compras_cuotas',
+const TABLAS = ['cuentas', 'categorias', 'tarjetas', 'compras_cuotas', 'prestamos',
                 'movimientos', 'plan_items'];
 
 /* user_id se quita a propósito: al importar lo pone la base con auth.uid(),

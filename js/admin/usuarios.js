@@ -1,13 +1,12 @@
-/* Panel de admin: todos los usuarios, filtrados por plan y por estado, con
-   búsqueda por correo. Tocar uno abre lo que se le puede cambiar.
-   Solo aparece en el menú con `perfiles.admin`; quien la proteja es la base. */
+/* Usuarios del panel de admin: filtrados por plan y por estado, con búsqueda
+   por correo, de 5 en 5. Tocar uno abre lo que se le puede cambiar.
+   Quien protege esto es la base: admin y PIN vigente (sql/11). */
 
-import { filaEditable, envolverLista, estadoVacio } from '../../ui/lista.js';
-import { pastillas, conectarPastillas } from '../../ui/pastillas.js';
-import { avisoError } from '../../ui/toast.js';
-import { hoyISO } from '../../calc/fechas.js';
-import { filtrarUsuarios, contarUsuarios, textoPremium } from '../../calc/usuarios.js';
-import { abrirUsuario } from './admin-usuario.js';
+import { filaEditable, envolverLista, estadoVacio } from '../ui/lista.js';
+import { pastillas, conectarPastillas } from '../ui/pastillas.js';
+import { hoyISO } from '../calc/fechas.js';
+import { filtrarUsuarios, contarUsuarios, textoPremium } from '../calc/usuarios.js';
+import { abrirUsuario } from './usuario.js';
 
 function opcionesPlan(n) {
   return [['', `Todos ${n.todos}`], ['normal', `Normal ${n.normal}`],
@@ -24,14 +23,21 @@ function subtitulo(u, hoy) {
     .filter(Boolean).join(' · ');
 }
 
-function filas(lista, hoy) {
+const POR_PAGINA = 5;
+
+function filas(lista, hoy, cuantos) {
   if (!lista.length) {
     return estadoVacio({ iconoNombre: 'persona', titulo: 'Nadie con esos filtros.' });
   }
-  return envolverLista(lista.map((u) => filaEditable({
+  const visibles = lista.slice(0, cuantos);
+  const faltan = lista.length - visibles.length;
+  return envolverLista(visibles.map((u) => filaEditable({
     id: u.user_id, nombre: u.email ?? '(sin correo)', iconoNombre: 'persona',
     sub: subtitulo(u, hoy), derecha: u.bloqueado ? 'Bloqueado' : '',
-  })));
+  }))) + `<p class="tenue-2" style="font-size:12.5px; margin-top:8px">
+      ${visibles.length} de ${lista.length}</p>`
+    + (faltan ? `<button class="btn btn-bloque" type="button" data-mas style="margin-top:8px">
+      Ver ${Math.min(POR_PAGINA, faltan)} más</button>` : '');
 }
 
 function esqueleto(contenedor) {
@@ -52,11 +58,12 @@ function esqueleto(contenedor) {
            buscar: $('[data-buscar]'), lista: $('[data-lista]') };
 }
 
-export async function montarAdmin(contenedor, contexto) {
-  const { admin, userId } = contexto;
+/** @param alFallar (error) => void — el panel decide si hay que pedir el PIN otra vez */
+export async function montarUsuarios(contenedor, { admin, userId, alFallar }) {
   const zonas = esqueleto(contenedor);
   const filtros = { plan: '', estado: '', texto: '' };
   let usuarios = [];
+  let cuantos = POR_PAGINA;
 
   /* El buscador nunca se repinta: si se repintara, el teclado se cerraría
      a cada letra. Solo cambian las pastillas (sus conteos) y la lista. */
@@ -66,23 +73,21 @@ export async function montarAdmin(contenedor, contexto) {
     zonas.plan.innerHTML = pastillas({ opciones: opcionesPlan(n), valor: filtros.plan });
     zonas.estado.innerHTML = pastillas({ opciones: opcionesEstado(n), valor: filtros.estado,
                                          compactas: true });
-    zonas.lista.innerHTML = filas(filtrarUsuarios(usuarios, filtros, hoy), hoy);
+    zonas.lista.innerHTML = filas(filtrarUsuarios(usuarios, filtros, hoy), hoy, cuantos);
   }
 
   async function recargar() {
-    try {
-      usuarios = await admin.usuarios();
-      pintar();
-    } catch (e) {
-      zonas.lista.textContent = e.message;
-      avisoError(e);
-    }
+    try { usuarios = await admin.usuarios(); pintar(); }
+    catch (e) { zonas.lista.textContent = e.message; alFallar(e); }
   }
 
-  conectarPastillas(zonas.plan, (v) => { filtros.plan = v; pintar(); });
-  conectarPastillas(zonas.estado, (v) => { filtros.estado = v; pintar(); });
-  zonas.buscar.addEventListener('input', () => { filtros.texto = zonas.buscar.value; pintar(); });
+  /* Cambiar un filtro vuelve a la primera página. */
+  const filtrar = (campo, valor) => { filtros[campo] = valor; cuantos = POR_PAGINA; pintar(); };
+  conectarPastillas(zonas.plan, (v) => filtrar('plan', v));
+  conectarPastillas(zonas.estado, (v) => filtrar('estado', v));
+  zonas.buscar.addEventListener('input', () => filtrar('texto', zonas.buscar.value));
   zonas.lista.addEventListener('click', (evento) => {
+    if (evento.target.closest('[data-mas]')) { cuantos += POR_PAGINA; pintar(); return; }
     const fila = evento.target.closest('[data-editar]');
     const usuario = fila && usuarios.find((u) => u.user_id === fila.dataset.editar);
     if (usuario) abrirUsuario(usuario, { admin, esYo: usuario.user_id === userId, alCambiar: recargar });

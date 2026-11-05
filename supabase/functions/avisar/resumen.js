@@ -8,11 +8,13 @@ import { repoCompras } from '../../../js/repos/compras.js';
 import { repoPlanItems } from '../../../js/repos/plan-items.js';
 import { repoPagosRecibo } from '../../../js/repos/pagos-recibo.js';
 import { repoBandeja } from '../../../js/repos/bandeja.js';
+import { repoPrestamos } from '../../../js/repos/prestamos.js';
+import { resumenPrestamos } from '../../../js/calc/prestamos.js';
 import { proximosVencimientos } from '../../../js/calc/vencimientos.js';
 import { sumarDias } from '../../../js/calc/fechas.js';
 import { armarResumenDiario } from '../../../js/calc/resumen-diario.js';
 import { pendientesViejos } from '../../../js/negocio/tiempos.js';
-import { clienteDeUsuario } from './servidor.js';
+import { clienteDeUsuario, funcionesDe } from './servidor.js';
 
 /** 'YYYY-MM-DD' en la Ciudad de México: el servidor vive en UTC y a las 8 pm
     de aquí allá ya es mañana. */
@@ -23,6 +25,14 @@ export function hoyEnMexico(ahora = new Date()) {
 async function cobrosViejos(cliente, perfil, hoy) {
   if (!perfil?.negocio) return 0;
   return pendientesViejos(await repoPagosRecibo(cliente).listarPendientes(), hoy).length;
+}
+
+/* Solo si su plan trae préstamos: aquí la base no lo filtra (llave de servicio). */
+async function avisosDePrestamos(cliente, userId, hoy) {
+  if (!(await funcionesDe(userId)).includes('prestamos')) return [];
+  const repo = repoPrestamos(cliente);
+  const [prestamos, abonos] = await Promise.all([repo.listar(), repo.abonos()]);
+  return resumenPrestamos(prestamos, abonos, hoy).avisos;
 }
 
 /** @returns el mensaje listo para enviarPush() */
@@ -48,5 +58,6 @@ export async function resumenDe(userId, hoy) {
   return armarResumenDiario({
     movimientos: cercanos, vencimientos, porConfirmar: bandeja.length,
     cobrosViejos: await cobrosViejos(cliente, perfil, hoy),
+    prestamos: await avisosDePrestamos(cliente, userId, hoy),
   }, hoy);
 }

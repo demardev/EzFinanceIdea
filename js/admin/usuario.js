@@ -2,13 +2,13 @@
    encenderle el negocio, bloquear su cuenta o eliminarla para siempre. Cada botón se aplica al
    momento; lo que no se deshace solo pide confirmación antes. */
 
-import { abrirSheet } from '../../ui/sheet.js';
-import { campoInterruptor } from '../../ui/campos.js';
-import { confirmar } from '../../ui/confirmar.js';
-import { aviso } from '../../ui/toast.js';
-import { escapar } from '../../ui/texto.js';
-import { hoyISO, formatearFecha, isoLocalDe } from '../../calc/fechas.js';
-import { nuevoVencimiento, textoPremium } from '../../calc/usuarios.js';
+import { abrirSheet } from '../ui/sheet.js';
+import { campoInterruptor } from '../ui/campos.js';
+import { confirmar } from '../ui/confirmar.js';
+import { aviso } from '../ui/toast.js';
+import { escapar } from '../ui/texto.js';
+import { hoyISO, formatearFecha, isoLocalDe } from '../calc/fechas.js';
+import { nuevoVencimiento, textoPremium } from '../calc/usuarios.js';
 
 const PLAZOS = [['mes', '+1 mes'], ['anio', '+1 año'], ['siempre', 'Sin fin']];
 

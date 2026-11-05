@@ -7,6 +7,7 @@ import { formatearFecha } from '../../calc/fechas.js';
 import { tipoDe } from '../../movimientos/tipos.js';
 import { pastillasAmbito } from '../../ui/ambito.js';
 import { rodillo } from '../../ui/rodillo.js';
+import { tarjetaPrestamos } from './vista-prestamos.js';
 
 const ICONO_POR_TIPO = {
   efectivo: 'banknote', bancaria: 'banco', ahorro: 'piggy', otro: 'wallet',
@@ -173,6 +174,7 @@ export function pintarResumen(contenedor, e) {
 
       ${e.porConfirmar ? botonPorConfirmar(e.porConfirmar) : ''}
       ${e.negocio ? panelNegocio(e.negocio) : ''}
+      ${e.prestamos ? tarjetaPrestamos(e.prestamos) : ''}
       ${e.vencimientos.length
         ? seccion(tituloVencimientos(e.vencimientos), e.vencimientos.map(filaVencimiento), '')
         : ''}

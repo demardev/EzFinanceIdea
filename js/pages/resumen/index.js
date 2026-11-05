@@ -6,6 +6,7 @@ import { saldosPorCuenta, patrimonioLiquido, totalesDelMes } from '../../calc/sa
 import { deudaTotalDeTarjetas } from '../../calc/deuda-tarjeta.js';
 import { proximosVencimientos } from '../../calc/vencimientos.js';
 import { datosDeNegocio } from './datos-negocio.js';
+import { cargarPrestamos } from '../prestamos/datos.js';
 import { mesDe, hoyISO, sumarDias } from '../../calc/fechas.js';
 import { ambitoGuardado, guardarAmbito, esDelAmbito } from '../../ui/ambito.js';
 import { conectarPastillas } from '../../ui/pastillas.js';
@@ -118,9 +119,14 @@ async function cargar(contexto, hoy) {
       planItems.listarActivos(),
       contexto.bandeja.pendientes(),        // lo que llegó solo por el atajo
     ]);
-  const { negocio, pendientes } = await datosDeNegocio(contexto, mesDe(hoy), hoy);
+  const [{ negocio, pendientes }, prestamos] = await Promise.all([
+    datosDeNegocio(contexto, mesDe(hoy), hoy),
+    /* Si fallan, el Resumen sigue: solo no sale su tarjeta. */
+    cargarPrestamos(contexto, hoy).catch(() => null),
+  ]);
   const estado = estadoDeResumen({ hoy, lista, totales, deTarjetas, delMes, cercanos,
                                    tjs, cmps, items, negocio });
+  estado.prestamos = prestamos?.resumen ?? null;
   /* Con el plan, la bandeja reconoce los gastos fijos que ya llegaron. */
   const plan = { planItems: items, registrados: cercanos };
   estado.vencimientos = await marcarLlegados(contexto, estado.vencimientos, porConfirmar, plan);

@@ -38,6 +38,17 @@ export function clienteDeUsuario(userId) {
   };
 }
 
+/** Las funciones del plan de un usuario (sql/11): ['prestamos', …].
+    Con la llave de servicio las políticas no aplican, así que se pregunta. */
+export async function funcionesDe(userId) {
+  try {
+    const filas = await rest('rpc/funciones_de_usuario', {
+      method: 'POST', body: JSON.stringify({ p_usuario: userId }),
+    });
+    return (filas ?? []).map((f) => (typeof f === 'string' ? f : Object.values(f)[0]));
+  } catch { return []; }   // sin el SQL todavía: ninguna
+}
+
 /** Todas las suscripciones, o las de un usuario. */
 export function suscripciones(userId) {
   const filtro = userId ? { user_id: `eq.${userId}` } : {};

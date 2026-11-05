@@ -4,6 +4,8 @@
 
    Nunca lleva montos: la notificación se ve en la pantalla bloqueada. */
 
+import { diasEntre } from './fechas.js';
+
 const conPlural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
 /* Cómo se lee cada clase de vencimiento en "Mañana: …". */
@@ -27,14 +29,30 @@ function lineaManana(vencimientos) {
   return `Mañana: ${manana.map((v) => (FORMA[v.clase] ?? FORMA.gasto)(v.nombre)).join(', ')}.`;
 }
 
+/* Un préstamo sale si se atrasó o si toca mañana. Sin montos, como todo aquí. */
+function partePrestamo({ prestamo, estado }, hoy) {
+  const { persona, direccion } = prestamo;
+  if (estado.atraso > 0) {
+    return direccion === 'me_deben' ? `${persona} se atrasó` : `vas atrasado con ${persona}`;
+  }
+  if (diasEntre(hoy, estado.proximo.fecha) !== 1) return null;
+  return direccion === 'me_deben' ? `mañana te paga ${persona}` : `mañana le pagas a ${persona}`;
+}
+
+function lineaPrestamos(prestamos, hoy) {
+  const partes = prestamos.map((p) => partePrestamo(p, hoy)).filter(Boolean);
+  return partes.length ? `Préstamos: ${partes.join(', ')}.` : null;
+}
+
 /**
  * @param movimientos los cercanos a hoy (sirven los del Resumen)
  * @param vencimientos lo de proximosVencimientos(); se toma lo de mañana
  * @param porConfirmar cuántos esperan en la bandeja
  * @param cobrosViejos cuántos recibos del negocio te deben desde hace 7+ días
+ * @param prestamos  los avisos de resumenPrestamos() (calc/prestamos.js)
  */
 export function armarResumenDiario({ movimientos, vencimientos = [], porConfirmar = 0,
-                                     cobrosViejos = 0 }, hoy) {
+                                     cobrosViejos = 0, prestamos = [] }, hoy) {
   const lineas = [
     lineaRegistro(movimientos, hoy),
     porConfirmar ? `Tienes ${porConfirmar} por confirmar.` : null,
@@ -42,6 +60,7 @@ export function armarResumenDiario({ movimientos, vencimientos = [], porConfirma
     cobrosViejos
       ? `Te deben ${conPlural(cobrosViejos, 'recibo', 'recibos')} desde hace una semana o más.`
       : null,
+    lineaPrestamos(prestamos, hoy),
   ];
   return { titulo: 'Cierre del día', cuerpo: lineas.filter(Boolean).join('\n'),
            url: './#/resumen', etiqueta: 'resumen-diario' };

@@ -12,7 +12,7 @@
    Al cambiar el shell hay que subir VERSION: al activarse borra los caches
    viejos. */
 
-const VERSION = 'v68';
+const VERSION = 'v69';
 const CACHE_SHELL = `finanzas-shell-${VERSION}`;
 const CACHE_DATOS = `finanzas-datos-${VERSION}`;
 
@@ -86,9 +86,11 @@ self.addEventListener('fetch', (evento) => {
   const mismoOrigen = url.origin === self.location.origin;
 
   if (mismoOrigen) {
-    /* La navegación siempre cae en index.html: el router vive en el hash. */
+    /* La navegación cae en index.html (el router vive en el hash), salvo el
+       panel de admin, que es otra página: admin/index.html. */
     if (request.mode === 'navigate') {
-      evento.respondWith(delCacheYRevalidar(new Request('./'))
+      const pagina = url.pathname.endsWith('/admin/') ? 'admin/' : './';
+      evento.respondWith(delCacheYRevalidar(new Request(pagina))
         .then(sinRedirecciones));
       return;
     }

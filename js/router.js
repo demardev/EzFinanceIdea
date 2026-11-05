@@ -8,6 +8,7 @@ import { montarTarjetas } from './pages/tarjetas/index.js';
 import { montarPlan } from './pages/plan/index.js';
 import { montarPendiente } from './pages/pendiente.js';
 import { montarAjustes } from './pages/ajustes/index.js';
+import { montarPrestamos } from './pages/prestamos/index.js';
 import { pintarTabBar, marcarActiva } from './ui/tabbar.js';
 
 export const RUTAS = {
@@ -16,6 +17,8 @@ export const RUTAS = {
   tarjetas:    { titulo: 'Tarjetas',    icono: 'card',        enTabBar: true, montar: montarTarjetas },
   plan:        { titulo: 'Plan',        icono: 'plan',        enTabBar: true, montar: montarPlan },
   ajustes:     { titulo: 'Ajustes',     icono: 'ajustes',     enTabBar: true, montar: montarAjustes },
+  /* Fuera de la tab bar: se entra desde su tarjeta en el Resumen. */
+  prestamos:   { titulo: 'Préstamos',   icono: 'persona',     enTabBar: false, montar: montarPrestamos },
 };
 
 const INICIAL = 'resumen';
