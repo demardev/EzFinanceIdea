@@ -98,6 +98,18 @@ function filaVencimiento(v, indice) {
   return `<div class="lista-fila">${interior}</div>`;
 }
 
+/* Con gastos fijos a la vista, el título lleva un "?" que explica cómo se
+   cruzan con Por confirmar. Sin ellos no hay nada que explicar. */
+function tituloVencimientos(vencimientos) {
+  const titulo = 'Próximos vencimientos';
+  if (!vencimientos.some((v) => v.clase === 'gasto' && v.item)) return titulo;
+  return `<span class="fila" style="gap:2px">${titulo}
+    <button class="icono-btn icono-ayuda" id="btn-ayuda-fijos" type="button"
+            aria-label="Cómo se confirman los gastos fijos" title="Cómo se confirman">
+      ${icono('ayuda', 15)}
+    </button></span>`;
+}
+
 /** @param encabezado va entre el título y la lista; hoy solo las pastillas. */
 function seccion(titulo, filas, vacio, encabezado = '') {
   return `
@@ -162,7 +174,8 @@ export function pintarResumen(contenedor, e) {
       ${e.porConfirmar ? botonPorConfirmar(e.porConfirmar) : ''}
       ${e.negocio ? panelNegocio(e.negocio) : ''}
       ${e.vencimientos.length
-        ? seccion('Próximos vencimientos', e.vencimientos.map(filaVencimiento), '') : ''}
+        ? seccion(tituloVencimientos(e.vencimientos), e.vencimientos.map(filaVencimiento), '')
+        : ''}
       ${seccion('Cuentas',
                 e.cuentas.map((c) => filaCuenta(c, e.saldos,
                   Boolean(e.negocio) && c.tipo === 'efectivo')),

@@ -10,7 +10,7 @@ import { mesDe, hoyISO, sumarDias } from '../../calc/fechas.js';
 import { ambitoGuardado, guardarAmbito, esDelAmbito } from '../../ui/ambito.js';
 import { conectarPastillas } from '../../ui/pastillas.js';
 import { animarRodillos, hayRodillo } from '../../ui/rodillo.js';
-import { conectarMovimientos, conectarVencimientos } from './acciones.js';
+import { conectarMovimientos, conectarVencimientos, conectarAyudaFijos } from './acciones.js';
 import { abrirArqueoDe } from '../ajustes/arqueo.js';
 import { conectarDeslizar } from '../../ui/deslizar.js';
 import { abrirPorConfirmar, registrarDeBandeja } from './bandeja.js';
@@ -156,6 +156,7 @@ export async function montarResumen(contenedor, contexto) {
     conectarVencimientos(contenedor, contexto, estado.vencimientos, recargar,
                          (id) => registrarDeBandeja(contexto, porConfirmar, id, recargar, plan));
     conectarArqueo(contenedor, contexto, lista, recargar);
+    conectarAyudaFijos(contenedor);
     conectarPorConfirmar(contenedor, contexto, porConfirmar, plan);
   } catch (e) {
     contenedor.innerHTML = '<p class="campo-error">No se pudo cargar.</p>';
