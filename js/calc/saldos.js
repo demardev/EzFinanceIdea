@@ -6,6 +6,7 @@
 
 import { redondear, sumar } from './dinero.js';
 import { hoyISO } from './fechas.js';
+import { esCuotaDeTraslado } from './minicuotas.js';
 
 /**
  * Cuánto mueve este movimiento en esa cuenta. Firmado.
@@ -56,10 +57,12 @@ export function patrimonioLiquido(cuentas, movimientos, hoy = hoyISO()) {
 /**
  * Entró / salió / neto de la lista que se le pase (ya filtrada por mes).
  * Las transferencias no cuentan: mover dinero entre cosas propias no es
- * ni entrada ni salida, y pagar la tarjeta ya se contó al comprar.
+ * ni entrada ni salida, y pagar la tarjeta ya se contó al comprar. Por lo
+ * mismo, las cuotas de minicuotas no son gasto: lo fueron las compras.
  */
 export function totalesDelMes(movimientos) {
   const entro = sumar(...movimientos.filter((m) => m.tipo === 'ingreso').map((m) => m.monto));
-  const salio = sumar(...movimientos.filter((m) => m.tipo === 'egreso').map((m) => m.monto));
+  const salio = sumar(...movimientos.filter((m) => m.tipo === 'egreso' && !esCuotaDeTraslado(m))
+    .map((m) => m.monto));
   return { entro, salio, neto: redondear(entro - salio) };
 }

@@ -152,6 +152,12 @@ sesión, pero el acceso que ya tenía abierto dura hasta que caduca (1 hora por 
    Para mandar el cierre del día ahora mismo, sin esperar a las 8:
    `select pedir_aviso('{"accion": "resumen"}');` en el SQL Editor.
 
+### 3 quinquies. Minicuotas
+
+Pega [`sql/10_minicuotas.sql`](sql/10_minicuotas.sql) en el **SQL Editor** y ejecútalo.
+Después, en **Editar tarjeta**, prende **Permite minicuotas** en las tarjetas que lo
+dejen; la opción aparece en su menú ⋯.
+
 ### 4. Publicar en Cloudflare Pages
 
 1. Sube el repo a GitHub.

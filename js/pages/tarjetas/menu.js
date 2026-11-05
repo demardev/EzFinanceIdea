@@ -10,12 +10,15 @@ const ACCIONES = [
   ['pagar', 'card', 'Pagar'],
   ['conciliar', 'check', 'Conciliar con el banco'],
   ['cuotas', 'repeat', 'Nueva compra a cuotas'],
+  ['minicuotas', 'rotate', 'Pasar compras a minicuotas'],
   ['editar', 'lapiz', 'Editar tarjeta'],
 ];
 
 /** @param alElegir (accion) => void, con la hoja ya cerrada */
 export function abrirMenuTarjeta(tarjeta, alElegir) {
-  const filas = ACCIONES.map(([accion, nombre, texto]) => `
+  /* Minicuotas solo existe en las tarjetas que lo permiten. */
+  const propias = ACCIONES.filter(([accion]) => accion !== 'minicuotas' || tarjeta.minicuotas);
+  const filas = propias.map(([accion, nombre, texto]) => `
     <div class="lista-fila">
       <button type="button" class="fila-cuerpo" data-accion="${accion}">
         <span class="icono-caja">${icono(nombre, 18)}</span>

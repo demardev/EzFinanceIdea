@@ -9,6 +9,7 @@ import { abrirFormTarjeta } from './form.js';
 import { abrirSheetPago } from './pagar.js';
 import { abrirFormCompra } from './cuotas-form.js';
 import { crearCompra, editarCompra, eliminarCompra } from './compras.js';
+import { abrirTraslado, deshacerTraslado } from './minicuotas.js';
 import { abrirConciliacion } from './conciliar.js';
 import { calcularTodo, deLaTarjeta, entradaDe } from './calculos.js';
 import { accionesDeRegistro } from './registro.js';
@@ -113,7 +114,11 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
     });
   }
 
-  function abrirCompra(tarjeta, compra) {
+  async function abrirCompra(tarjeta, compra) {
+    if (compra.tipo === 'minicuotas') {
+      if (await deshacerTraslado(contexto, compra)) await recargar();
+      return;
+    }
     abrirFormCompra(compra, datos, {
       tarjeta,
       alGuardar: async (d) => {
@@ -136,6 +141,7 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
     }
     if (accion === 'editar') return editar(tarjeta);
     if (accion === 'cuotas') return abrirCompra(tarjeta, {});
+    if (accion === 'minicuotas') return abrirTraslado(contexto, tarjeta, datos, recargar);
     const { deuda } = calcularTodo(tarjeta, datos.movimientos, datos.compras);
     return abrirSheetPago(tarjeta, deuda, datos, async (fila) => {
       await movimientos.crear(fila);

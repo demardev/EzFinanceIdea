@@ -76,7 +76,8 @@ export function planRegeneracion(compra, cuotasExistentes, hoy = hoyISO(), tarje
 
 /** Para la lista del detalle: "3/12" y lo que falta por cobrar. */
 export function progresoDeCompra(compra, cuotas, hoy = hoyISO()) {
-  const propias = cuotas.filter((c) => c.compra_id === compra.id);
+  /* La comisión de un traslado (cuota 0) no es una de las N cuotas. */
+  const propias = cuotas.filter((c) => c.compra_id === compra.id && c.cuota_num > 0);
   const cobradas = propias.filter((c) => c.fecha <= hoy);
   const restante = sumar(...propias.filter((c) => c.fecha > hoy).map((c) => c.monto));
 
@@ -103,12 +104,12 @@ export function progresoDeCompra(compra, cuotas, hoy = hoyISO()) {
 export function sinCuotasYaPagadas(movimientos, compras) {
   const pagadas = new Map(compras.map((c) => [c.id, c.cuotas_pagadas ?? 0]));
   return movimientos.filter(
-    (m) => !m.compra_id || m.cuota_num > (pagadas.get(m.compra_id) ?? 0));
+    (m) => !m.compra_id || !(m.cuota_num > 0) || m.cuota_num > (pagadas.get(m.compra_id) ?? 0));
 }
 
 /** ¿Esta cuota es de las que ya venían pagadas? La usa la vista para marcarla. */
 export function esCuotaYaPagada(movimiento, compras) {
-  if (!movimiento.compra_id) return false;
+  if (!movimiento.compra_id || !(movimiento.cuota_num > 0)) return false;
   const compra = compras.find((c) => c.id === movimiento.compra_id);
   return Boolean(compra) && movimiento.cuota_num <= (compra.cuotas_pagadas ?? 0);
 }

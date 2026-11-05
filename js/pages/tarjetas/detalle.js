@@ -11,6 +11,7 @@ import { pastillas } from '../../ui/pastillas.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { formatearFecha, hoyISO, sumarDias } from '../../calc/fechas.js';
 import { esCuotaYaPagada } from '../../calc/cuotas.js';
+import { esCompraTrasladada } from '../../calc/minicuotas.js';
 import { esGastoFijo } from '../../calc/vencimientos.js';
 import { ordenarPorFecha, direccionOpuesta, DIRECCIONES } from '../../movimientos/orden.js';
 import { bloqueCompras } from './detalle-compras.js';
@@ -54,6 +55,7 @@ export function alternarCuotasDe(compraId) {
 function insignia(mov, fijos) {
   const marca = (nombre, texto) =>
     `<span class="badge badge-sm" style="gap:3px">${icono(nombre, 10)}${texto}</span>`;
+  if (mov.traslado_id) return marca('rotate', 'minicuotas');
   if (mov.compra_id) return marca('card', 'a cuotas');
   return esGastoFijo(mov, fijos) ? marca('repeat', 'fijo') : '';
 }
@@ -64,9 +66,11 @@ function fila(mov, { iconos, compras, fijos }) {
      las cuotas que ya venían pagadas al registrar la compra. */
   const futuro = mov.fecha > hoyISO();
   const yaPagada = esCuotaYaPagada(mov, compras);
-  const nota = futuro ? ' · aún no se cobra' : yaPagada ? ' · ya pagada' : '';
+  const trasladada = esCompraTrasladada(mov);
+  const nota = futuro ? ' · aún no se cobra' : yaPagada ? ' · ya pagada'
+    : trasladada ? ' · la cubren sus minicuotas' : '';
   return `
-    <div class="lista-fila" ${futuro || yaPagada ? 'style="opacity:.55"' : ''}>
+    <div class="lista-fila" ${futuro || yaPagada || trasladada ? 'style="opacity:.55"' : ''}>
       <span class="fila-cuerpo" style="cursor:default">
         <span class="icono-caja">${icono(iconos[mov.categoria_id] || (esPago ? 'arrows' : 'card'), 18)}</span>
         <span class="crece truncar">

@@ -5,6 +5,7 @@ import { campoTexto, campoMonto, campoSelect, campoInterruptor } from '../../ui/
 import { redondear } from '../../calc/dinero.js';
 import { hoyISO } from '../../calc/fechas.js';
 import { camposSaldoInicial, conectarEfecto } from './form-saldo.js';
+import { camposMinicuotas, minicuotasDe } from './form-minicuotas.js';
 
 const DIAS = Array.from({ length: 31 }, (_, i) => [String(i + 1), String(i + 1)]);
 /* Cada banco carga las cuotas de los meses sin intereses en un día distinto. */
@@ -28,6 +29,7 @@ function campos(t, cuentas) {
                     valor: t.cuenta_pago_id ?? '',
                     opciones: [['', 'Ninguna'], ...cuentas.map((c) => [c.id, c.nombre])] })}
     ${camposSaldoInicial(t)}
+    ${camposMinicuotas(t)}
     ${t.id ? campoInterruptor({
       nombre: 'archivada', etiqueta: 'Archivada', activo: Boolean(t.archivada),
       ayuda: 'Se oculta sin borrar su historial.',
@@ -45,6 +47,7 @@ function aFila(datos, tarjeta) {
     cargo_cuotas: datos.cargo_cuotas === 'antes_corte' ? 'antes_corte' : 'compra',
     cuenta_pago_id: datos.cuenta_pago_id || null,
     ...saldoInicialDe(datos),
+    ...minicuotasDe(datos),
     ...(tarjeta.id ? { archivada: Boolean(datos.archivada) } : {}),
   };
 }

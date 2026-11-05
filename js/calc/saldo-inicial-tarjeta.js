@@ -7,6 +7,7 @@
    con su fecha, para que caiga en su corte y la cascada de pagos lo vea. */
 
 import { sinCuotasYaPagadas } from './cuotas.js';
+import { esCompraTrasladada } from './minicuotas.js';
 
 /** El cargo que representa el saldo inicial, o null si no hay. */
 export function cargoDeSaldoInicial(tarjeta) {
@@ -30,11 +31,13 @@ export function conSaldoInicial(movimientos, tarjeta) {
 
 /**
  * Lo que pesa en la deuda de UNA tarjeta: sus cargos y pagos, sin las cuotas
- * que ya venían pagadas y con el saldo inicial. Todas las cuentas de deuda
+ * que ya venían pagadas, sin las compras pasadas a minicuotas (ahora las
+ * cubren sus cuotas) y con el saldo inicial. Todas las cuentas de deuda
  * parten de aquí, para que ninguna pantalla se salte una de las dos reglas.
  */
 export function cargosDeTarjeta(tarjeta, movimientos, compras) {
   const suyos = movimientos.filter(
-    (m) => m.tarjeta_id === tarjeta.id || m.tarjeta_destino_id === tarjeta.id);
+    (m) => (m.tarjeta_id === tarjeta.id || m.tarjeta_destino_id === tarjeta.id)
+        && !esCompraTrasladada(m));
   return conSaldoInicial(sinCuotasYaPagadas(suyos, compras), tarjeta);
 }

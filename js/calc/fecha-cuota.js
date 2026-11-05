@@ -13,11 +13,13 @@ import { sumarMeses, sumarDias } from './fechas.js';
 import { corteQueIncluye } from './ciclo-tarjeta.js';
 
 /**
- * @param compra   { fecha_compra }
+ * @param compra   { fecha_compra, fecha_primera_cuota? }
  * @param numero   1..num_cuotas
  * @param tarjeta  { dia_corte, cargo_cuotas } — sin ella, la regla de siempre
  */
 export function fechaDeCuota(compra, numero, tarjeta = null) {
+  /* Minicuotas: el banco dice cuándo cae la primera y las demás van cada mes. */
+  if (compra.fecha_primera_cuota) return sumarMeses(compra.fecha_primera_cuota, numero - 1);
   if (tarjeta?.cargo_cuotas !== 'antes_corte') {
     return sumarMeses(compra.fecha_compra, numero - 1);
   }

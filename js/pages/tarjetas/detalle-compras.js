@@ -36,7 +36,8 @@ function filaCompra(compra, cuotas, abierta) {
           <span class="barra"><span class="barra-relleno" style="width:${avance}%"></span></span>
           <span class="sub">
             ${textoMonto(p.montoCuota)} al mes · faltan ${textoMonto(p.restante)}${
-              compra.cuotas_pagadas ? ` · ${compra.cuotas_pagadas} ya pagadas antes` : ''}
+              compra.cuotas_pagadas ? ` · ${compra.cuotas_pagadas} ya pagadas antes` : ''}${
+              compra.tipo === 'minicuotas' ? ' · minicuotas, toca para deshacer' : ''}
           </span>
         </span>
       </button>
