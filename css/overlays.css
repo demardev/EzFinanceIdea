@@ -68,3 +68,14 @@
   transition:background var(--transicion), color var(--transicion);
 }
 .icono-opcion.elegido{ background:var(--fg); color:var(--bg); border-color:var(--fg); }
+
+/* ------------------------------------------------- formulario por partes --- */
+.form-seccion + .form-seccion{ border-top:1px solid var(--line); padding-top:var(--sep); }
+.form-total{ font-size:13.5px; font-weight:600; font-variant-numeric:tabular-nums; }
+.form-total:empty{ display:none; }
+/* Lo que depende de lo elegido: se esconde, no se repinta. */
+.form-prestamo[data-direccion="debo"] .solo-me_deben,
+.form-prestamo[data-direccion="me_deben"] .solo-debo,
+.form-prestamo[data-forma="libre"] .solo-cuotas,
+.form-prestamo[data-forma="cuotas"] .solo-libre{ display:none; }
+.form-prestamo .pastillas{ grid-template-columns:repeat(2,1fr); }

@@ -5,6 +5,9 @@
    Los abonos son movimientos normales con `prestamo_id`: el dinero sí se mueve
    en tus cuentas. Aquí solo se suma lo abonado contra lo pactado.
 
+   `abonado_antes` es lo que se pagó antes de anotarlo en la app: no es
+   movimiento, pero cuenta como abonado (también para el atraso).
+
    El atraso es ACUMULADO: si un mes te dio de más, eso cuenta para el
    siguiente. Así 70 + 50 + 50 va al corriente aunque el mínimo sea 50. */
 
@@ -42,16 +45,23 @@ function proximoPago(prestamo, abonado, hoy) {
   return { fecha, monto: redondear(esperadoTras(prestamo, k) - abonado), atrasado: fecha < hoy };
 }
 
+/* Lo pagado antes de anotarlo no trae fechas: en pagos, cuántos completos
+   alcanza con el pago pactado. Sin pago pactado no se cuentan. */
+function pagosAntes(prestamo, antes) {
+  return Number(prestamo.pago) > 0 ? Math.floor(redondear(antes / Number(prestamo.pago)) + 1e-9) : 0;
+}
+
 /**
  * @param abonos movimientos del préstamo: [{ monto, fecha }]
  * @returns { abonado, restante, avance (0–100), pagos, terminado, progreso, proximo, atraso }
  */
 export function estadoPrestamo(prestamo, abonos, hoy) {
-  const abonado = sumar(...abonos.map((a) => a.monto));
+  const antes = Number(prestamo.abonado_antes) || 0;
+  const abonado = sumar(antes, ...abonos.map((a) => a.monto));
   const restante = Math.max(0, redondear(Number(prestamo.monto_total) - abonado));
   const terminado = restante === 0;
   const avance = Math.min(100, Math.round((abonado / Number(prestamo.monto_total)) * 100));
-  const pagos = abonos.length;
+  const pagos = abonos.length + pagosAntes(prestamo, antes);
   const progreso = prestamo.num_pagos ? `${Math.min(pagos, prestamo.num_pagos)}/${prestamo.num_pagos}` : '';
   const base = { abonado, restante, avance, pagos, terminado, progreso };
 
@@ -97,11 +107,18 @@ export function totalDe({ monto_total, pago, num_pagos }) {
   return redondear(Number(pago || 0) * Number(num_pagos || 0));
 }
 
+/** Lo que el formulario enseña mientras se llena: el total y lo que falta. */
+export function cuentasDelFormulario(datos) {
+  const total = totalDe(datos);
+  return { total, falta: Math.max(0, redondear(total - Number(datos.abonado_antes || 0))) };
+}
+
 /** @returns el mensaje del problema, o null si se puede guardar */
 export function validarPrestamo(datos) {
   if (!String(datos.persona || '').trim()) return 'Pon con quién es el préstamo.';
   const total = totalDe(datos);
   if (!(total > 0)) return 'Pon el total, o el pago y el número de pagos.';
+  if (Number(datos.abonado_antes) >= total) return 'Lo que ya se pagó tiene que ser menos que el total.';
   if (Number(datos.pago) > 0) {
     if (!datos.primer_pago) return 'Pon la fecha del primer pago.';
     if (Number(datos.pago) > total) return 'El pago no puede ser mayor que el total.';

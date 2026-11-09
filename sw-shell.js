@@ -112,6 +112,7 @@ self.SHELL = [
   'js/pages/plan/vista.js',
   'js/pages/prestamos/datos.js',
   'js/pages/prestamos/detalle.js',
+  'js/pages/prestamos/form-campos.js',
   'js/pages/prestamos/form.js',
   'js/pages/prestamos/index.js',
   'js/pages/prestamos/textos.js',

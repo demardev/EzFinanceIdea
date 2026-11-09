@@ -26,13 +26,20 @@ function cifras({ prestamo, estado }) {
     </div>`;
 }
 
-function listaAbonos(abonos) {
-  if (!abonos.length) return '<p class="tenue-2">Todavía no hay abonos.</p>';
-  return `<div class="lista">${abonos.map((a) => `
+function filaAbono(texto, monto) {
+  return `
     <div class="lista-fila"><span class="fila-cuerpo" style="cursor:default">
-      <span class="crece truncar">${formatearFecha(a.fecha)}</span>
-      <span class="monto">${textoMonto(a.monto)}</span>
-    </span></div>`).join('')}</div>`;
+      <span class="crece truncar">${texto}</span>
+      <span class="monto">${textoMonto(monto)}</span>
+    </span></div>`;
+}
+
+/* Lo pagado antes de anotarlo va al final: es lo más viejo y no tiene fecha. */
+function listaAbonos(abonos, antes) {
+  const filas = abonos.map((a) => filaAbono(formatearFecha(a.fecha), a.monto));
+  if (antes > 0) filas.push(filaAbono('Antes de anotarlo aquí', antes));
+  if (!filas.length) return '<p class="tenue-2">Todavía no hay abonos.</p>';
+  return `<div class="lista">${filas.join('')}</div>`;
 }
 
 function cuerpo(item, abonos) {
@@ -44,7 +51,7 @@ function cuerpo(item, abonos) {
       ${aviso ? `<p class="${estado.atraso > 0 ? 'warn' : 'tenue'}">${escapar(aviso)}</p>` : ''}
       ${estado.terminado ? '' : `<button class="btn btn-primario btn-bloque" type="button"
           data-abonar>${icono('plus', 16)} ${DIRECCIONES[prestamo.direccion].accion}</button>`}
-      <div><p class="seccion-titulo">Abonos</p>${listaAbonos(abonos)}</div>
+      <div><p class="seccion-titulo">Abonos</p>${listaAbonos(abonos, Number(prestamo.abonado_antes) || 0)}</div>
       ${prestamo.nota ? `<p class="tenue">${escapar(prestamo.nota)}</p>` : ''}
       <button class="btn btn-bloque" type="button" data-editar-prestamo>
         ${icono('lapiz', 16)} Editar préstamo</button>

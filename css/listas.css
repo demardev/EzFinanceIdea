@@ -94,7 +94,7 @@
 .desplegable-cuerpo ol{ padding-left:20px; margin:0; list-style:decimal; }
 .desplegable-cuerpo ol > li + li{ margin-top:6px; }
 .desplegable-cuerpo ul{ padding-left:16px; margin:6px 0 0; list-style:disc; }
-.desplegable .nota{
+.nota{
   border-left:3px solid var(--warn); padding:8px 10px;
   background:var(--bg-3); border-radius:8px; font-size:13px;
 }
