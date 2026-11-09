@@ -131,6 +131,7 @@ self.SHELL = [
   'js/pages/resumen/vista-cobro.js',
   'js/pages/resumen/vista-negocio.js',
   'js/pages/resumen/vista-prestamos.js',
+  'js/pages/resumen/vista-vencimientos.js',
   'js/pages/resumen/vista.js',
   'js/pages/tarjetas/calculos.js',
   'js/pages/tarjetas/compras.js',

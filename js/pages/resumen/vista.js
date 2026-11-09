@@ -10,24 +10,13 @@ import { rodillo } from '../../ui/rodillo.js';
 import { tarjetaPrestamos } from './vista-prestamos.js';
 import { filaAccesos } from './vista-accesos.js';
 import { marcaPrestamo } from '../movimientos/vista.js';
+import { plegableVencimientos } from './vista-vencimientos.js';
+import { desplegable, recordarEnNavegador } from '../../ui/desplegable.js';
 
 const ICONO_POR_TIPO = {
   efectivo: 'banknote', bancaria: 'banco', ahorro: 'piggy', otro: 'wallet',
 };
 const SIGNO = { ingreso: '+', egreso: '−', transferencia: '' };
-const ICONO_VENCIMIENTO = { pago: 'card', corte: 'reloj', gasto: 'sale', ingreso: 'entra' };
-const QUE_ES = { pago: 'pagar', corte: 'corta', gasto: 'se cobra', ingreso: 'llega' };
-const ACENTO = { vencido: 'neg', urgente: 'warn', normal: 'tenue' };
-
-/* Un ingreso atrasado no "venció": se atrasó. */
-function cuandoTexto(dias, clase) {
-  if (dias < 0) {
-    const n = Math.abs(dias);
-    const verbo = clase === 'ingreso' ? 'se atrasó' : 'venció hace';
-    return `${verbo} ${n} ${n === 1 ? 'día' : 'días'}`;
-  }
-  return dias === 0 ? 'hoy' : `en ${dias} ${dias === 1 ? 'día' : 'días'}`;
-}
 
 /* Con el negocio encendido, la cuenta de efectivo abre el arqueo: es lo que
    más se repite en el día, y desde aquí son dos toques menos que por Ajustes.
@@ -77,42 +66,6 @@ function filaMovimiento(mov) {
     </div>`;
 }
 
-/* Si su cargo ya está en Por confirmar, no urge: solo falta confirmarlo. */
-function cuandoVencimiento(v) {
-  if (v.porConfirmar) return `<span class="tenue">llegó · por confirmar</span>`;
-  return `<span class="${ACENTO[v.estado]}">
-            ${QUE_ES[v.clase]} ${formatearFecha(v.fecha)} · ${cuandoTexto(v.dias, v.clase)}
-          </span>`;
-}
-
-/* Los gastos fijos y los ingresos se tocan para registrarlos; los avisos de
-   tarjeta no hacen nada, porque su pago se hace desde Tarjetas. */
-function filaVencimiento(v, indice) {
-  const cuerpo = `
-        <span class="icono-caja">${icono(ICONO_VENCIMIENTO[v.clase], 18)}</span>
-        <span class="crece" style="min-width:0">
-          <span class="titulo truncar" style="display:block">${escapar(v.nombre)}</span>
-          <span class="sub">${cuandoVencimiento(v)}</span>
-        </span>
-        <span class="monto ${v.clase === 'ingreso' ? 'pos' : ''}">${textoMonto(v.monto)}</span>`;
-  const interior = v.item
-    ? `<button type="button" class="fila-cuerpo" data-vencimiento="${indice}">${cuerpo}</button>`
-    : `<span class="fila-cuerpo" style="cursor:default">${cuerpo}</span>`;
-  return `<div class="lista-fila">${interior}</div>`;
-}
-
-/* Con gastos fijos a la vista, el título lleva un "?" que explica cómo se
-   cruzan con Por confirmar. Sin ellos no hay nada que explicar. */
-function tituloVencimientos(vencimientos) {
-  const titulo = 'Próximos vencimientos';
-  if (!vencimientos.some((v) => v.clase === 'gasto' && v.item)) return titulo;
-  return `<span class="fila" style="gap:2px">${titulo}
-    <button class="icono-btn icono-ayuda" id="btn-ayuda-fijos" type="button"
-            aria-label="Cómo se confirman los gastos fijos" title="Cómo se confirman">
-      ${icono('ayuda', 15)}
-    </button></span>`;
-}
-
 /** @param encabezado va entre el título y la lista; hoy solo las pastillas. */
 function seccion(titulo, filas, vacio, encabezado = '') {
   return `
@@ -126,19 +79,34 @@ function seccion(titulo, filas, vacio, encabezado = '') {
 
 /* Del negocio no se dice "entró/salió": eso mentiría. MOVIDO es lo que pasó
    por tus manos; GANADO son las comisiones que ya cobraste. */
+function cifrasNegocio(n) {
+  return `
+    <div class="fila-entre">
+      <span><span class="cifra-etiqueta">Movido</span><br>
+        <span class="monto">${textoMonto(n.movido)}</span></span>
+      <span><span class="cifra-etiqueta">Ganado</span><br>
+        <span class="monto pos">${textoMonto(n.ganado)}</span></span>
+      <span><span class="cifra-etiqueta">Operaciones</span><br>
+        <span class="monto">${n.operaciones}</span></span>
+    </div>`;
+}
+
+/** Abierto, como pantalla del negocio (vista-negocio.js). */
 export function panelNegocio(n) {
   return `
     <div>
       <p class="seccion-titulo">Negocio este mes</p>
-      <div class="card fila-entre">
-        <span><span class="cifra-etiqueta">Movido</span><br>
-          <span class="monto">${textoMonto(n.movido)}</span></span>
-        <span><span class="cifra-etiqueta">Ganado</span><br>
-          <span class="monto pos">${textoMonto(n.ganado)}</span></span>
-        <span><span class="cifra-etiqueta">Operaciones</span><br>
-          <span class="monto">${n.operaciones}</span></span>
-      </div>
+      <div class="card">${cifrasNegocio(n)}</div>
     </div>`;
+}
+
+/* En el Resumen va plegado: el encabezado ya dice lo que más importa. */
+function plegableNegocio(n) {
+  return desplegable({
+    id: 'negocio', titulo: 'Negocio este mes', iconoNombre: 'banknote',
+    sub: `Ganado ${textoMonto(n.ganado)} · ${n.operaciones} operaci${n.operaciones === 1 ? 'ón' : 'ones'}`,
+    cuerpo: cifrasNegocio(n),
+  });
 }
 
 export function pintarResumen(contenedor, e) {
@@ -162,11 +130,9 @@ export function pintarResumen(contenedor, e) {
 
       ${filaAccesos({ porConfirmar: e.porConfirmar, porCobrar: e.negocio?.porCobrar,
                       prestamos: e.prestamos })}
-      ${e.negocio ? panelNegocio(e.negocio) : ''}
+      ${e.negocio ? plegableNegocio(e.negocio) : ''}
       ${e.prestamos ? tarjetaPrestamos(e.prestamos) : ''}
-      ${e.vencimientos.length
-        ? seccion(tituloVencimientos(e.vencimientos), e.vencimientos.map(filaVencimiento), '')
-        : ''}
+      ${plegableVencimientos(e.vencimientos)}
       ${seccion('Cuentas',
                 e.cuentas.map((c) => filaCuenta(c, e.saldos,
                   Boolean(e.negocio) && c.tipo === 'efectivo')),
@@ -175,4 +141,5 @@ export function pintarResumen(contenedor, e) {
                 e.ambito ? 'Nada de este ámbito todavía.' : 'Aún no registras nada. Usa el botón +.',
                 e.negocio ? pastillasAmbito(e.ambito) : '')}
     </div>`;
+  recordarEnNavegador(contenedor, 'resumen-abiertos');
 }
