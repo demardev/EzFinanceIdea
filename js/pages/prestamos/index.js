@@ -8,7 +8,7 @@ import { pintarPrestamos } from './vista.js';
 import { cargarPrestamos, tienePrestamos } from './datos.js';
 import { abrirFormPrestamo } from './form.js';
 import { abrirDetalle, borradorDeAbono } from './detalle.js';
-import { abrirLigar } from './ligar.js';
+import { abrirLigar, abrirElegir } from './ligar.js';
 import { nombreDe } from './textos.js';
 import { abrirRegistro } from '../../movimientos/registrar.js';
 import { confirmar } from '../../ui/confirmar.js';
@@ -35,14 +35,31 @@ async function eliminar(contexto, prestamo, alCambiar) {
   return true;
 }
 
+/* Al crear, los movimientos elegidos se ligan en cuanto existe el préstamo.
+   Si eso falla, el préstamo ya existe: no se lanza el error, porque el
+   formulario seguiría abierto y guardar otra vez lo duplicaría. */
+async function crear(contexto, fila, ids) {
+  const creado = await contexto.prestamos.crear(fila);
+  if (!ids.length) return aviso('Préstamo creado.');
+  try {
+    await contexto.prestamos.ligar(ids, creado.id);
+    aviso(`Préstamo creado con ${ids.length} abono${ids.length === 1 ? '' : 's'}.`);
+  } catch {
+    avisoError('El préstamo se creó, pero no se ligaron los movimientos. '
+      + 'Elígelos desde el préstamo.');
+  }
+}
+
 function editar(contexto, prestamo, alCambiar) {
   abrirFormPrestamo(prestamo, {
-    alGuardar: async (fila) => {
-      await (prestamo.id ? contexto.prestamos.actualizar(prestamo.id, fila)
-                         : contexto.prestamos.crear(fila));
-      aviso(prestamo.id ? 'Préstamo guardado.' : 'Préstamo creado.');
+    alGuardar: async (fila, ids) => {
+      if (prestamo.id) {
+        await contexto.prestamos.actualizar(prestamo.id, fila);
+        aviso('Préstamo guardado.');
+      } else await crear(contexto, fila, ids);
       await alCambiar();
     },
+    elegir: (opciones) => abrirElegir(contexto, { ...opciones, verbo: 'Usar' }).catch(avisoError),
     alEliminar: () => eliminar(contexto, prestamo, alCambiar),
   });
 }

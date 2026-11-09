@@ -79,3 +79,4 @@
 .form-prestamo[data-forma="libre"] .solo-cuotas,
 .form-prestamo[data-forma="cuotas"] .solo-libre{ display:none; }
 .form-prestamo .pastillas{ grid-template-columns:repeat(2,1fr); }
+.campo-subtitulo{ font-size:14px; font-weight:600; }

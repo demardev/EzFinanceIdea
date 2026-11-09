@@ -68,18 +68,39 @@ function cuantoYComo(p) {
     <p class="form-total" data-total></p>`);
 }
 
+/* Solo al crear: al editar, los movimientos se ligan desde el detalle. */
+function yaRegistrados() {
+  return `
+    <div class="pila-sm">
+      <p class="campo-subtitulo">Los que ya registraste en la app</p>
+      <p class="tenue-2" style="font-size:12.5px">Si ${segun('ya anotaste esos pagos como gastos',
+        'ya anotaste esos cobros como ingresos')}, elígelos: se ligan al préstamo al crearlo.</p>
+      <button class="btn btn-bloque" type="button" data-elegir-movs>Elegir movimientos</button>
+      <p class="form-total" data-elegidos></p>
+    </div>`;
+}
+
+function noRegistrados(p, conTitulo) {
+  return `
+    <div class="pila-sm">
+      ${conTitulo ? '<p class="campo-subtitulo">Los que no están en la app</p>' : ''}
+      ${campoMonto({ nombre: 'abonado_antes', etiqueta: 'Cuánto, en total', valor: p.abonado_antes ?? 0 })}
+      <p class="nota">Esto no crea ningún movimiento: ese dinero se movió antes y ya está en
+        tus saldos. Solo cuenta para lo que falta. Lo que ${segun('pagues', 'te pague')} de
+        aquí en adelante lo registras con <strong>${segun('Registrar pago', 'Registrar cobro')}</strong>.</p>
+    </div>`;
+}
+
 function yaPagado(p) {
   return seccion('¿Ya hubo pagos?', `
     <label class="interruptor">
       <input type="checkbox" name="hubo_pagos" ${p.abonado_antes > 0 ? 'checked' : ''}>
       <span class="crece">${segun('Ya le pagué algo', 'Ya me pagó algo')}<br>
-        <span class="tenue-2" style="font-size:12.5px">Antes de anotarlo aquí.</span></span>
+        <span class="tenue-2" style="font-size:12.5px">Antes de anotar el préstamo aquí.</span></span>
     </label>
-    <div class="pila-sm" data-ya-pagado ${p.abonado_antes > 0 ? '' : 'hidden'}>
-      ${campoMonto({ nombre: 'abonado_antes', etiqueta: 'Cuánto, en total', valor: p.abonado_antes ?? 0 })}
-      <p class="nota">No se crea ningún movimiento: ese dinero se movió antes y ya está en
-        tus saldos. Solo cuenta para lo que falta. Lo que ${segun('pagues', 'te pague')} de
-        aquí en adelante lo registras con <strong>${segun('Registrar pago', 'Registrar cobro')}</strong>.</p>
+    <div class="pila" data-ya-pagado ${p.abonado_antes > 0 ? '' : 'hidden'}>
+      ${p.creando ? yaRegistrados() : ''}
+      ${noRegistrados(p, p.creando)}
     </div>`, 'Si el préstamo ya venía de antes, pon lo que ya se abonó.');
 }
 

@@ -40,18 +40,41 @@ function aFila(d) {
   };
 }
 
+/* Lo elegido solo cuenta con "ya hubo pagos" encendido. */
+const ligadoDe = (d, eleccion) => (d.hubo_pagos ? eleccion.total : 0);
+
 /* La línea de abajo del total: cuánto es y, si ya hubo pagos, cuánto falta. */
-function pintarTotal(form) {
+function pintarTotal(form, eleccion) {
   const d = limpiar(datosDe(form));
-  const { total, falta } = cuentasDelFormulario(d);
+  const ligado = ligadoDe(d, eleccion);
+  const { total, falta } = cuentasDelFormulario({ ...d, ligado });
   const linea = form.querySelector('[data-total]');
   if (!(total > 0)) { linea.textContent = ''; return; }
-  linea.textContent = Number(d.abonado_antes) > 0
+  linea.textContent = Number(d.abonado_antes) > 0 || ligado > 0
     ? `Total ${textoMonto(total)} · falta ${textoMonto(falta)}`
     : `Total ${textoMonto(total)}`;
 }
 
-function conectar(form) {
+function pintarElegidos(form, eleccion) {
+  const linea = form.querySelector('[data-elegidos]');
+  if (!linea) return;
+  const n = eleccion.ids.length;
+  linea.textContent = n ? `${n} elegido${n === 1 ? '' : 's'} · ${textoMonto(eleccion.total)}` : '';
+  form.querySelector('[data-elegir-movs]').textContent = n ? 'Cambiar los elegidos' : 'Elegir movimientos';
+}
+
+/* Abre la hoja de elegir encima del formulario. Lo de antes queda marcado. */
+function conectarElegir(form, eleccion, elegir, repintar) {
+  form.querySelector('[data-elegir-movs]')?.addEventListener('click', () => {
+    const d = limpiar(datosDe(form));
+    const { falta } = cuentasDelFormulario(d);
+    elegir({ direccion: d.direccion, restante: falta, yaElegidos: eleccion.ids,
+             alElegir: async (ids, total) => { Object.assign(eleccion, { ids, total }); repintar(); } });
+  });
+}
+
+function conectar(form, eleccion, elegir) {
+  const repintar = () => { pintarElegidos(form, eleccion); pintarTotal(form, eleccion); };
   const caja = form.querySelector('.form-prestamo');
   form.querySelectorAll('[data-elegir]').forEach((grupo) => {
     conectarPastillas(grupo, (valor) => {
@@ -60,28 +83,33 @@ function conectar(form) {
       caja.dataset[campo] = valor;
       grupo.querySelectorAll('.pastilla').forEach((b) =>
         b.classList.toggle('activa', b.dataset.pastilla === valor));
-      pintarTotal(form);
+      /* Gastos e ingresos no se mezclan: al cambiar de dirección se suelta. */
+      if (campo === 'direccion') Object.assign(eleccion, { ids: [], total: 0 });
+      repintar();
     });
   });
   form.querySelector('input[name="hubo_pagos"]').addEventListener('change', (e) => {
     form.querySelector('[data-ya-pagado]').hidden = !e.target.checked;
-    pintarTotal(form);
+    repintar();
   });
-  form.addEventListener('input', () => pintarTotal(form));
-  pintarTotal(form);
+  form.addEventListener('input', repintar);
+  conectarElegir(form, eleccion, elegir, repintar);
+  repintar();
 }
 
 /**
  * @param prestamo  {} para uno nuevo, o el que se edita
- * @param acciones  { alGuardar(fila), alEliminar() }
+ * @param acciones  { alGuardar(fila, idsParaLigar), alEliminar(), elegir(opciones) }
+ *                  `elegir` abre la hoja de elegir movimientos (ligar.js)
  */
-export function abrirFormPrestamo(prestamo, { alGuardar, alEliminar }) {
+export function abrirFormPrestamo(prestamo, { alGuardar, alEliminar, elegir }) {
   const p = prestamo ?? {};
   const editando = Boolean(p.id);
+  const eleccion = { ids: [], total: 0 };
   abrirSheetFormulario({
     titulo: editando ? 'Editar préstamo' : 'Nuevo préstamo',
     id: 'form-prestamo',
-    cuerpo: camposPrestamo({ ...p, direccion: p.direccion ?? 'debo',
+    cuerpo: camposPrestamo({ ...p, direccion: p.direccion ?? 'debo', creando: !editando,
                              forma: editando && !(p.pago > 0) ? 'libre' : 'cuotas',
                              abonado_antes: Number(p.abonado_antes) || 0 }),
     textoGuardar: editando ? 'Guardar' : 'Crear préstamo',
@@ -90,9 +118,9 @@ export function abrirFormPrestamo(prestamo, { alGuardar, alEliminar }) {
       const limpio = limpiar(datos);
       const problema = validarPrestamo(limpio);
       if (problema) throw new Error(problema);
-      await alGuardar(aFila(limpio));
+      await alGuardar(aFila(limpio), limpio.hubo_pagos ? eleccion.ids : []);
     },
     alEliminar,
-    alPintar: (hoja, form) => conectar(form),
+    alPintar: (hoja, form) => conectar(form, eleccion, elegir),
   });
 }

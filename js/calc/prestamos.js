@@ -107,10 +107,12 @@ export function totalDe({ monto_total, pago, num_pagos }) {
   return redondear(Number(pago || 0) * Number(num_pagos || 0));
 }
 
-/** Lo que el formulario enseña mientras se llena: el total y lo que falta. */
+/** Lo que el formulario enseña mientras se llena: el total y lo que falta.
+    `ligado`: lo que suman los movimientos elegidos para ligar al crearlo. */
 export function cuentasDelFormulario(datos) {
   const total = totalDe(datos);
-  return { total, falta: Math.max(0, redondear(total - Number(datos.abonado_antes || 0))) };
+  const pagado = sumar(datos.abonado_antes || 0, datos.ligado || 0);
+  return { total, falta: Math.max(0, redondear(total - pagado)) };
 }
 
 /** Al elegir movimientos para ligar: cuánto suman y si pasan de lo que falta. */

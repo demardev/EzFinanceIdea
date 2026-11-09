@@ -56,6 +56,11 @@ describir('préstamos — lo que enseña el formulario', (caso) => {
           { total: 720, falta: 630 });
   });
 
+  caso('también resta los movimientos elegidos para ligar', () => {
+    igual(cuentasDelFormulario({ monto_total: 720, abonado_antes: 90, ligado: 60 }),
+          { total: 720, falta: 570 });
+  });
+
   caso('sin nada escrito, todo en cero', () => {
     igual(cuentasDelFormulario({}), { total: 0, falta: 0 });
   });

@@ -12,11 +12,11 @@ import { DIRECCIONES } from './textos.js';
 
 const MESES_ATRAS = 6;
 
-function filaCandidato(m) {
+function filaCandidato(m, marcado) {
   const texto = m.descripcion || 'Sin descripción';
   return `
     <label class="lista-fila elegible" data-buscar="${escapar(texto.toLowerCase())}">
-      <input type="checkbox" value="${escapar(m.id)}">
+      <input type="checkbox" value="${escapar(m.id)}" ${marcado ? 'checked' : ''}>
       <span class="crece truncar">
         <span class="titulo">${escapar(texto)}</span><br>
         <span class="sub">${formatearFecha(m.fecha)}</span>
@@ -25,8 +25,8 @@ function filaCandidato(m) {
     </label>`;
 }
 
-function cuerpo(prestamo, movimientos) {
-  const { tipo } = DIRECCIONES[prestamo.direccion];
+function cuerpo(direccion, movimientos, yaElegidos) {
+  const { tipo } = DIRECCIONES[direccion];
   const que = tipo === 'egreso' ? 'gastos' : 'ingresos';
   if (!movimientos.length) {
     return `<p class="tenue">No hay ${que} sueltos de los últimos ${MESES_ATRAS} meses.
@@ -35,14 +35,14 @@ function cuerpo(prestamo, movimientos) {
   return `
     <div class="pila-sm">
       <p class="tenue" style="font-size:13px">Marca los ${que} que ya registraste y que
-        fueron ${prestamo.direccion === 'debo' ? 'pagos de' : 'cobros de'} este préstamo.
+        fueron ${direccion === 'debo' ? 'pagos de' : 'cobros de'} este préstamo.
         No se crea nada nuevo: el movimiento se queda donde está y pasa a contar como abono.</p>
       <div class="campo"><input type="search" data-filtro placeholder="Buscar por descripción"
              autocomplete="off" aria-label="Buscar por descripción"></div>
-      <div class="lista">${movimientos.map(filaCandidato).join('')}</div>
+      <div class="lista">${movimientos.map((m) => filaCandidato(m, yaElegidos.includes(m.id))).join('')}</div>
       <p class="tenue-2" data-sin-resultados hidden>Nada coincide.</p>
       <p class="form-total" data-resumen></p>
-      <button class="btn btn-primario btn-bloque" type="button" data-ligar disabled>Ligar</button>
+      <button class="btn btn-primario btn-bloque" type="button" data-ligar>Listo</button>
     </div>`;
 }
 
@@ -58,35 +58,51 @@ function filtrar(hoja, texto) {
 
 const elegidos = (hoja) => [...hoja.querySelectorAll('.elegible input:checked')].map((c) => c.value);
 
-function pintarResumen(hoja, movimientos, restante) {
+function pintarResumen(hoja, movimientos, restante, verbo) {
   const { cuantos, total, sobra } = cuentasDeEleccion(movimientos, elegidos(hoja), restante);
   hoja.querySelector('[data-resumen]').textContent = !cuantos ? ''
     : `${cuantos} elegido${cuantos === 1 ? '' : 's'} · ${textoMonto(total)}`
       + (sobra > 0 ? ` · pasa ${textoMonto(sobra)} de lo que falta` : '');
-  const boton = hoja.querySelector('[data-ligar]');
-  boton.disabled = !cuantos;
-  boton.textContent = cuantos ? `Ligar ${cuantos} al préstamo` : 'Ligar';
+  hoja.querySelector('[data-ligar]').textContent = cuantos ? `${verbo} ${cuantos}` : 'Listo';
+  return total;
 }
 
 /**
- * @param item     { prestamo, estado } de resumenPrestamos()
- * @param alCambiar () => Promise, recarga la pantalla
+ * La hoja de elegir, sin decidir qué se hace con lo elegido.
+ * @param alElegir (ids, total) => Promise. Si lanza, la hoja sigue abierta.
  */
-export async function abrirLigar(contexto, { prestamo, estado }, alCambiar) {
-  const { tipo } = DIRECCIONES[prestamo.direccion];
+export async function abrirElegir(contexto, { direccion, restante, yaElegidos = [], verbo, alElegir }) {
+  const { tipo } = DIRECCIONES[direccion];
   const movimientos = await contexto.prestamos.candidatos(tipo, sumarMeses(hoyISO(), -MESES_ATRAS));
-  const { hoja, cerrar } = abrirSheet({ titulo: 'Elegir movimientos', cuerpo: cuerpo(prestamo, movimientos) });
+  const { hoja, cerrar } = abrirSheet({ titulo: 'Elegir movimientos',
+                                        cuerpo: cuerpo(direccion, movimientos, yaElegidos) });
   if (!movimientos.length) return;
+  const pintar = () => pintarResumen(hoja, movimientos, restante, verbo);
+  let total = pintar();
   hoja.querySelector('[data-filtro]').addEventListener('input', (e) => filtrar(hoja, e.target.value));
-  hoja.addEventListener('change', () => pintarResumen(hoja, movimientos, estado.restante));
+  hoja.addEventListener('change', () => { total = pintar(); });
   hoja.querySelector('[data-ligar]').addEventListener('click', async (e) => {
     e.target.disabled = true;
     try {
-      const ids = elegidos(hoja);
+      await alElegir(elegidos(hoja), total);
+      cerrar();
+    } catch (error) { e.target.disabled = false; avisoError(error); }
+  });
+}
+
+/**
+ * Desde el detalle: lo elegido se liga en el momento.
+ * @param item     { prestamo, estado } de resumenPrestamos()
+ * @param alCambiar () => Promise, recarga la pantalla
+ */
+export function abrirLigar(contexto, { prestamo, estado }, alCambiar) {
+  return abrirElegir(contexto, {
+    direccion: prestamo.direccion, restante: estado.restante, verbo: 'Ligar',
+    alElegir: async (ids) => {
+      if (!ids.length) return;
       await contexto.prestamos.ligar(ids, prestamo.id);
       aviso(ids.length === 1 ? 'Movimiento ligado.' : `${ids.length} movimientos ligados.`);
-      cerrar();
       await alCambiar();
-    } catch (error) { e.target.disabled = false; avisoError(error); }
+    },
   });
 }
