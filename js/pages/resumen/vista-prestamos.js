@@ -1,14 +1,12 @@
-/* Préstamos en el Resumen, plegado como Negocio y Vencimientos: el
-   encabezado dice cuánto debes y cuánto te deben (en amarillo si alguien va
-   atrasado); adentro, lo que urge y el enlace a #/prestamos.
-   Sin préstamos activos no hay desplegable: el acceso va en la fila de
-   accesos (vista-accesos.js). */
+/* Préstamos en el Resumen: un cuadrito de la fila de accesos (cuánto debes
+   o te deben, y cuántos van atrasados) y su panel con lo que urge y el
+   enlace a #/prestamos. Sin préstamos activos no hay panel: el cuadrito
+   lleva directo a la pantalla (vista-accesos.js). */
 
 import { icono } from '../../iconos/render.js';
 import { escapar } from '../../ui/texto.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { hoyISO } from '../../calc/fechas.js';
-import { desplegable } from '../../ui/desplegable.js';
 import { textoAviso } from '../prestamos/textos.js';
 
 const MAX_AVISOS = 3;
@@ -18,13 +16,11 @@ function lineaAviso(item, hoy) {
   return `<p class="${clase}" style="font-size:12.5px">${escapar(textoAviso(item, hoy))}</p>`;
 }
 
-/* Solo lo que hay: sin deudas tuyas no se dice "Debes $0.00". */
-function subtitulo(r) {
-  const partes = [];
-  if (r.debes > 0) partes.push(`Debes ${textoMonto(r.debes)}`);
-  if (r.teDeben > 0) partes.push(`Te deben ${textoMonto(r.teDeben)}`);
-  const atrasado = r.avisos.some((i) => i.estado.atraso > 0);
-  return `<span class="${atrasado ? 'warn' : ''}">${partes.join(' · ')}</span>`;
+/* Lo que más pesa, en corto: lo que debes (en rojo); si no debes nada, lo
+   que te deben (en verde). Con la palabra no cabe en el cuadrito. */
+function sub(r) {
+  return r.debes > 0 ? { sub: textoMonto(r.debes), subAcento: 'neg' }
+                     : { sub: textoMonto(r.teDeben), subAcento: 'pos' };
 }
 
 function cuerpo(r, hoy) {
@@ -40,11 +36,12 @@ function cuerpo(r, hoy) {
       Ver préstamos ${icono('derecha', 15)}</a>`;
 }
 
-/** @param r el resultado de resumenPrestamos() */
-export function tarjetaPrestamos(r) {
-  if (!r.activos.length) return '';      // el acceso va en la fila de arriba
-  return desplegable({
-    id: 'prestamos', titulo: 'Préstamos', iconoNombre: 'persona',
-    sub: subtitulo(r), cuerpo: cuerpo(r, hoyISO()),
-  });
+/** @param r el resultado de resumenPrestamos(). null sin préstamos activos. */
+export function bloquePrestamos(r) {
+  if (!r?.activos.length) return null;
+  const atrasados = r.avisos.filter((i) => i.estado.atraso > 0).length;
+  return {
+    id: 'prestamos', titulo: 'Préstamos', tituloPanel: 'Préstamos', iconoNombre: 'persona',
+    cuantos: atrasados, acento: atrasados ? 'warn' : '', ...sub(r), cuerpo: cuerpo(r, hoyISO()),
+  };
 }

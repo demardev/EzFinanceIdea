@@ -111,8 +111,16 @@ body{
 /* El botón volver vive a la izquierda del título, no a la derecha. */
 .icono-btn-izq{ margin-right:0; margin-left:-10px; }
 
-/* Fila de accesos del Resumen: los que haya se reparten el ancho. */
+/* Fila de accesos del Resumen: hasta tres se reparten el ancho; con más,
+   la fila se desliza de lado y asoma el siguiente para que se note. */
 .accesos{ display:flex; gap:8px; }
+.accesos-desliza{
+  overflow-x:auto; scroll-snap-type:x proximity; scrollbar-width:none;
+  margin:0 calc(-1 * var(--sep)); padding:0 var(--sep); scroll-padding-inline:var(--sep);
+}
+.accesos-desliza::-webkit-scrollbar{ display:none; }
+.accesos-desliza > .btn.acceso{ flex:0 0 calc((100% - 16px) / 3.2); padding:10px 8px; scroll-snap-align:start; }
+.btn.acceso[aria-expanded="true"]{ border-color:var(--fg-2); background:var(--bg-3); }
 /* .btn.acceso: .btn vive en componentes.css, que carga después. */
 .btn.acceso{
   flex:1 1 0; min-width:0;
@@ -121,4 +129,5 @@ body{
 }
 .acceso .badge{ padding:1px 7px; font-size:11.5px; }
 .acceso-titulo{ font-size:13px; letter-spacing:-0.02em; font-weight:550; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-.acceso-sub{ font-size:12.5px; color:var(--fg-2); font-weight:500; }
+.acceso-sub{ font-size:12.5px; color:var(--fg-2); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.acceso-sub.warn{ color:var(--warn); } .acceso-sub.neg{ color:var(--neg); } .acceso-sub.pos{ color:var(--pos); }

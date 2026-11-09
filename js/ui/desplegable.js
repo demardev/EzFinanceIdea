@@ -33,24 +33,3 @@ export function reabrir(contenedor, ids) {
       ?.setAttribute('open', '');
   }
 }
-
-/* Cuáles dejaste abiertos, en ESTE navegador: es una comodidad, no un dato.
-   Si el almacenamiento falla (ventana privada), todo empieza cerrado. */
-function leerAbiertos(clave) {
-  try { return JSON.parse(localStorage.getItem(clave) || '[]'); } catch { return []; }
-}
-
-/**
- * Reabre lo que dejaste abierto y guarda cada cambio. Se puede llamar en
- * cada repintado: el listener se engancha una sola vez por contenedor.
- */
-export function recordarEnNavegador(contenedor, clave) {
-  reabrir(contenedor, leerAbiertos(clave));
-  if (contenedor.dataset.recuerdaAbiertos) return;
-  contenedor.dataset.recuerdaAbiertos = '1';
-  /* `toggle` no burbujea: se escucha en la captura. */
-  contenedor.addEventListener('toggle', (evento) => {
-    if (!evento.target.matches?.('details.desplegable')) return;
-    try { localStorage.setItem(clave, JSON.stringify(recordarAbiertos(contenedor))); } catch { /* sin guardar */ }
-  }, true);
-}

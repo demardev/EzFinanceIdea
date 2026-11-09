@@ -106,8 +106,8 @@
 .elegible .sub{ font-size:12.5px; color:var(--fg-2); }
 .marca-prestamo{ display:inline-flex; vertical-align:-1px; margin-right:5px; color:var(--fg-2); }
 /* Una lista dentro de un desplegable: sin borde doble, de lado a lado. */
-.desplegable-cuerpo > .lista{
+.desplegable-cuerpo > .lista, .panel-acceso > .lista{
   margin:0 calc(-1 * var(--sep)); border-radius:0; border-left:none; border-right:none;
   border-bottom:none; background:none;
 }
-.desplegable-cuerpo > .lista:last-child{ margin-bottom:calc(-1 * var(--sep)); }
+.desplegable-cuerpo > .lista:last-child, .panel-acceso > .lista:last-child{ margin-bottom:calc(-1 * var(--sep)); }

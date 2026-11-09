@@ -7,11 +7,10 @@ import { formatearFecha } from '../../calc/fechas.js';
 import { tipoDe } from '../../movimientos/tipos.js';
 import { pastillasAmbito } from '../../ui/ambito.js';
 import { rodillo } from '../../ui/rodillo.js';
-import { tarjetaPrestamos } from './vista-prestamos.js';
-import { filaAccesos } from './vista-accesos.js';
+import { bloquePrestamos } from './vista-prestamos.js';
+import { filaAccesos, conectarAccesos } from './vista-accesos.js';
 import { marcaPrestamo } from '../movimientos/vista.js';
-import { plegableVencimientos } from './vista-vencimientos.js';
-import { desplegable, recordarEnNavegador } from '../../ui/desplegable.js';
+import { bloqueVencimientos } from './vista-vencimientos.js';
 
 const ICONO_POR_TIPO = {
   efectivo: 'banknote', bancaria: 'banco', ahorro: 'piggy', otro: 'wallet',
@@ -100,13 +99,12 @@ export function panelNegocio(n) {
     </div>`;
 }
 
-/* En el Resumen va plegado: el encabezado ya dice lo que más importa. */
-function plegableNegocio(n) {
-  return desplegable({
-    id: 'negocio', titulo: 'Negocio este mes', iconoNombre: 'banknote',
-    sub: `Ganado ${textoMonto(n.ganado)} · ${n.operaciones} operaci${n.operaciones === 1 ? 'ón' : 'ones'}`,
-    cuerpo: cifrasNegocio(n),
-  });
+/* En la fila de accesos: lo ganado en el cuadrito (en verde), las tres cifras al abrirlo. */
+function bloqueNegocio(n) {
+  return {
+    id: 'negocio', titulo: 'Negocio', tituloPanel: 'Negocio este mes', iconoNombre: 'banknote',
+    sub: textoMonto(n.ganado), acento: 'pos', cuerpo: cifrasNegocio(n),
+  };
 }
 
 export function pintarResumen(contenedor, e) {
@@ -128,11 +126,11 @@ export function pintarResumen(contenedor, e) {
           <span class="monto">${rodillo('neto', e.totales.neto)}</span></span>
       </div>
 
-      ${filaAccesos({ porConfirmar: e.porConfirmar, porCobrar: e.negocio?.porCobrar,
-                      prestamos: e.prestamos })}
-      ${e.negocio ? plegableNegocio(e.negocio) : ''}
-      ${e.prestamos ? tarjetaPrestamos(e.prestamos) : ''}
-      ${plegableVencimientos(e.vencimientos)}
+      ${filaAccesos({
+        porConfirmar: e.porConfirmar, porCobrar: e.negocio?.porCobrar, prestamos: e.prestamos,
+        bloques: [e.negocio && bloqueNegocio(e.negocio), bloquePrestamos(e.prestamos),
+                  bloqueVencimientos(e.vencimientos)],
+      })}
       ${seccion('Cuentas',
                 e.cuentas.map((c) => filaCuenta(c, e.saldos,
                   Boolean(e.negocio) && c.tipo === 'efectivo')),
@@ -141,5 +139,5 @@ export function pintarResumen(contenedor, e) {
                 e.ambito ? 'Nada de este ámbito todavía.' : 'Aún no registras nada. Usa el botón +.',
                 e.negocio ? pastillasAmbito(e.ambito) : '')}
     </div>`;
-  recordarEnNavegador(contenedor, 'resumen-abiertos');
+  conectarAccesos(contenedor);
 }
