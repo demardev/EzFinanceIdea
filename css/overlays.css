@@ -80,3 +80,15 @@
 .form-prestamo[data-forma="cuotas"] .solo-libre{ display:none; }
 .form-prestamo .pastillas{ grid-template-columns:repeat(2,1fr); }
 .campo-subtitulo{ font-size:14px; font-weight:600; }
+
+/* El préstamo elegido en el formulario de movimiento. */
+.vinculo{
+  gap:8px; padding:4px 4px 4px 12px; margin-top:4px;
+  border:1px solid var(--line); border-radius:10px; background:var(--bg-3);
+  color:var(--fg-2);
+}
+.vinculo-nombre{
+  border:none; background:none; color:var(--fg); font:inherit; font-size:13.5px;
+  text-align:left; padding:8px 0; cursor:pointer;
+}
+[data-vinculo-slot] > .btn-sm{ margin-top:4px; }

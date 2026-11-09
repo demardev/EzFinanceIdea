@@ -70,6 +70,7 @@ self.SHELL = [
   'js/movimientos/orden.js',
   'js/movimientos/registrar.js',
   'js/movimientos/tipos.js',
+  'js/movimientos/vinculo-prestamo.js',
   'js/negocio/abonos.js',
   'js/negocio/agrupar.js',
   'js/negocio/pago-recibo.js',

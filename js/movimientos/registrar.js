@@ -10,12 +10,23 @@ import { TIPOS } from './tipos.js';
 import { abrirSheet } from '../ui/sheet.js';
 import { icono } from '../iconos/render.js';
 import { unirDestino } from '../ui/campos.js';
+import { crearVinculo } from './vinculo-prestamo.js';
+import { cargarPrestamos } from '../pages/prestamos/datos.js';
 
 async function cargarCatalogos({ cuentas, tarjetas, categorias }) {
   const [c, t, k] = await Promise.all([
     cuentas.listarActivas(), tarjetas.listarActivas(), categorias.listarActivas(),
   ]);
   return { cuentas: c, tarjetas: t, categorias: k };
+}
+
+/* Los préstamos para el botoncito del formulario. Sin la función en el plan
+   no se pide nada; si falla, el formulario abre igual, sin el botón. */
+async function prestamosParaVincular(contexto) {
+  try {
+    const datos = await cargarPrestamos(contexto, hoyISO());
+    return datos && { activos: datos.resumen.activos, todos: datos.prestamos };
+  } catch { return null; }
 }
 
 /* Un gasto fijo o un ingreso del plan ya trae casi todo el movimiento: se
@@ -70,12 +81,16 @@ export function borradorDeCopia(mov) {
 export async function abrirRegistro(contexto, mov, alCambiar, catalogos,
                                     { alRegistrar, extra = {} } = {}) {
   const { movimientos } = contexto;
-  const datos = catalogos ?? await cargarCatalogos(contexto);
+  const [datos, prestamos] = await Promise.all([
+    catalogos ?? cargarCatalogos(contexto), prestamosParaVincular(contexto),
+  ]);
 
   abrirFormMovimiento(mov, datos, {
+    vinculo: crearVinculo(prestamos, mov?.prestamo_id ?? extra.prestamo_id),
+    /* Lo que eligió en el formulario gana sobre `extra`: pudo quitar el préstamo. */
     alGuardar: async (fila) => {
       await (mov?.id ? movimientos.actualizar(mov.id, fila)
-                     : movimientos.crear({ ...fila, ...extra }));
+                     : movimientos.crear({ ...extra, ...fila }));
       if (!mov?.id) await alRegistrar?.(fila);
       aviso(mov?.id ? 'Movimiento guardado.' : 'Movimiento registrado.');
       await alCambiar();
