@@ -12,6 +12,13 @@ import { pastillasAmbito } from '../../ui/ambito.js';
 
 const SIGNO = { ingreso: '+', egreso: '−', transferencia: '' };
 
+/* Ligado a un préstamo: un enlace chico junto al título. */
+export function marcaPrestamo(mov) {
+  return mov.prestamo_id
+    ? `<span class="marca-prestamo" title="Abono de un préstamo" aria-label="Abono de un préstamo">${icono('enlace', 13)}</span>`
+    : '';
+}
+
 /** "Banco → Ahorros" · "Amex" · "Efectivo" */
 function origenDestino(mov, nombres) {
   const de = nombres[mov.cuenta_id] || nombres[mov.tarjeta_id] || '';
@@ -31,7 +38,7 @@ function fila(mov, nombres, iconos) {
       <button type="button" class="fila-cuerpo" data-editar="${mov.id}">
         <span class="icono-caja">${icono(iconos[mov.categoria_id] || tipo.icono, 18)}</span>
         <span class="crece truncar">
-          <span class="titulo">${escapar(mov.descripcion)}</span><br>
+          <span class="titulo">${marcaPrestamo(mov)}${escapar(mov.descripcion)}</span><br>
           <span class="sub">${escapar(categoria)} · ${escapar(origenDestino(mov, nombres))}</span>
         </span>
         <span class="monto ${tipo.acento}">${SIGNO[mov.tipo]}${textoMonto(mov.monto)}</span>

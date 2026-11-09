@@ -39,7 +39,6 @@ function plantilla(f) {
     ${selectorTipo(f.tipoClave)}
     <form id="form-mov" novalidate>
       ${pintarCampos(TIPOS[f.tipoClave].campos, f.valores, f.datos, f.tipoClave)}
-      <div data-vinculo-slot></div>
       <p class="campo-error" id="error-mov" hidden></p>
       <button class="btn btn-primario btn-bloque" type="submit" style="margin-top:14px">
         ${editando ? 'Guardar' : 'Registrar'}
@@ -57,11 +56,18 @@ function pintar(f) {
   pintarVinculoSolo(f);
 }
 
-/* Solo su hueco: repintar todo borraría lo que ya escribiste. */
+/* Vive en la cabecera, a la par del título, y se repinta solo: repintar
+   el cuerpo borraría lo que ya escribiste. */
 function pintarVinculoSolo(f) {
-  const hueco = f.cuerpo.querySelector('[data-vinculo-slot]');
-  hueco.innerHTML = pintarVinculo(f.vinculo, f.tipoClave);
-  conectarVinculo(hueco, f.vinculo, f.tipoClave, () => pintarVinculoSolo(f));
+  f.hueco.innerHTML = pintarVinculo(f.vinculo, f.tipoClave);
+  conectarVinculo(f.hueco, f.vinculo, f.tipoClave, () => pintarVinculoSolo(f));
+}
+
+function huecoEnCabecera(hoja) {
+  const hueco = document.createElement('div');
+  hueco.dataset.vinculoSlot = '';
+  hoja.querySelector('.sheet-cabeza h2').after(hueco);
+  return hueco;
 }
 
 /* Al cambiar de tipo se conserva lo que sigue teniendo sentido (monto,
@@ -135,7 +141,8 @@ export function abrirFormMovimiento(mov, datos, acciones) {
     cuerpo: '<div id="cuerpo-mov"></div>',
   });
   pintar({
-    cuerpo: hoja.querySelector('#cuerpo-mov'), cerrar, datos, acciones, editando,
+    cuerpo: hoja.querySelector('#cuerpo-mov'), hueco: huecoEnCabecera(hoja),
+    cerrar, datos, acciones, editando,
     tipoClave: mov?.tipo ?? 'egreso', valores: valoresIniciales(mov), vinculo: acciones.vinculo,
   });
 }

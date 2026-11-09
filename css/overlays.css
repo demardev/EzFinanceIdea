@@ -81,14 +81,20 @@
 .form-prestamo .pastillas{ grid-template-columns:repeat(2,1fr); }
 .campo-subtitulo{ font-size:14px; font-weight:600; }
 
-/* El préstamo elegido en el formulario de movimiento. */
-.vinculo{
-  gap:8px; padding:4px 4px 4px 12px; margin-top:4px;
-  border:1px solid var(--line); border-radius:10px; background:var(--bg-3);
-  color:var(--fg-2);
+/* El préstamo en la cabecera del formulario de movimiento, a la par del
+   título: un botón chico, o el elegido con su ✕. */
+.sheet-cabeza h2{ min-width:0; }
+.sheet-cabeza [data-vinculo-slot]{ margin-right:auto; flex:none; max-width:50%; }
+.sheet-cabeza [data-vinculo-slot]:empty{ display:none; }
+.vinculo-btn, .vinculo{
+  display:inline-flex; align-items:center; gap:5px; height:30px; margin-top:-3px;
+  border:1px solid var(--line); border-radius:999px; background:var(--bg-3);
+  color:var(--fg); font:inherit; font-size:13px; font-weight:550;
 }
-.vinculo-nombre{
-  border:none; background:none; color:var(--fg); font:inherit; font-size:13.5px;
-  text-align:left; padding:8px 0; cursor:pointer;
+.vinculo-btn{ padding:0 11px; cursor:pointer; }
+.vinculo{ padding:0 3px 0 10px; max-width:100%; border-color:var(--fg-3); }
+.vinculo-nombre, .vinculo-quitar{
+  display:inline-flex; align-items:center; gap:5px; min-width:0;
+  border:none; background:none; color:inherit; font:inherit; cursor:pointer; padding:0;
 }
-[data-vinculo-slot] > .btn-sm{ margin-top:4px; }
+.vinculo-quitar{ width:24px; height:24px; justify-content:center; color:var(--fg-2); flex:none; }

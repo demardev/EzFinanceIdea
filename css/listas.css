@@ -104,3 +104,4 @@
 .elegible input[type="checkbox"]{ width:20px; height:20px; flex:none; accent-color:var(--fg); }
 .elegible .titulo{ font-size:14.5px; }
 .elegible .sub{ font-size:12.5px; color:var(--fg-2); }
+.marca-prestamo{ display:inline-flex; vertical-align:-1px; margin-right:5px; color:var(--fg-2); }

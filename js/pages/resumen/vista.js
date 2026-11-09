@@ -9,6 +9,7 @@ import { pastillasAmbito } from '../../ui/ambito.js';
 import { rodillo } from '../../ui/rodillo.js';
 import { tarjetaPrestamos } from './vista-prestamos.js';
 import { filaAccesos } from './vista-accesos.js';
+import { marcaPrestamo } from '../movimientos/vista.js';
 
 const ICONO_POR_TIPO = {
   efectivo: 'banknote', bancaria: 'banco', ahorro: 'piggy', otro: 'wallet',
@@ -52,7 +53,7 @@ function filaMovimiento(mov) {
   const cuerpo = `
     <span class="icono-caja">${icono(tipo.icono, 18)}</span>
     <span class="crece truncar">
-      <span class="titulo">${escapar(mov.descripcion)}</span><br>
+      <span class="titulo">${marcaPrestamo(mov)}${escapar(mov.descripcion)}</span><br>
       <span class="sub">${formatearFecha(mov.fecha)}</span>
     </span>
     <span class="monto ${tipo.acento}">${SIGNO[mov.tipo]}${textoMonto(mov.monto)}</span>`;

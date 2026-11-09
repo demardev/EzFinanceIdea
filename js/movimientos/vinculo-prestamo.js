@@ -1,4 +1,5 @@
-/* El botoncito de "Préstamo" del formulario de movimiento: liga el
+/* El botoncito de "Préstamo" en la cabecera del formulario de movimiento,
+   a la par del título: liga el
    movimiento a un préstamo para que cuente como abono. Un gasto solo puede
    ir a lo que debes y un ingreso a lo que te deben; una transferencia, a
    ninguno.
@@ -43,23 +44,24 @@ export function columnaDe(vinculo) {
   return vinculo ? { prestamo_id: vinculo.id } : {};
 }
 
-/** El botón chico, o el préstamo ya elegido con su ✕. */
+/** El botón chico de la cabecera, o el préstamo ya elegido con su ✕. */
 export function pintarVinculo(vinculo, tipoClave) {
   if (!vinculo || !DIRECCION_DE_TIPO[tipoClave]) return '';
   const elegido = vinculo.todos.find((p) => p.id === vinculo.id);
   if (elegido) {
+    const nombre = escapar(nombreDe(elegido));
     return `
-      <div class="vinculo fila">
-        ${icono('persona', 16)}
-        <button type="button" class="vinculo-nombre crece truncar" data-vinculo-elegir>
-          Abono a ${escapar(nombreDe(elegido))}</button>
-        <button type="button" class="icono-btn" data-vinculo-quitar
-                aria-label="Quitar del préstamo">${icono('x', 16)}</button>
-      </div>`;
+      <span class="vinculo">
+        <button type="button" class="vinculo-nombre" data-vinculo-elegir
+                title="Abono a ${nombre}" aria-label="Abono a ${nombre}. Cambiar préstamo">
+          ${icono('persona', 14)}<span class="truncar">${escapar(elegido.persona)}</span></button>
+        <button type="button" class="vinculo-quitar" data-vinculo-quitar
+                aria-label="Quitar del préstamo">${icono('x', 14)}</button>
+      </span>`;
   }
   if (!opcionesDe(vinculo, tipoClave).length) return '';
   return `
-    <button type="button" class="btn btn-sm" data-vinculo-elegir>
+    <button type="button" class="vinculo-btn" data-vinculo-elegir>
       ${icono('persona', 14)} Préstamo</button>`;
 }
 
