@@ -16,11 +16,23 @@
 
 import { borradorDeBandeja, nombreDeBanco } from '../bandeja.js';
 import { esPersonaPropia, rutaDeAviso } from './cuentas.js';
+import { partes } from '../fechas.js';
 
 const MINUTOS = { applepay: 15, transferencia: 30, mismo: 24 * 60 };
 
 const centavos = (monto) => Math.round(Number(monto) * 100);
-const minutosEntre = (a, b) => Math.abs(Date.parse(a.created_at) - Date.parse(b.created_at)) / 60000;
+
+/* Cuándo pasó: la hora de la operación que trae el aviso, en hora local; si
+   no la trae, cuando llegó. Los SMS de BAC llegan hasta hora y media tarde,
+   y comparar llegadas separaba el Apple Pay de su SMS. */
+function momentoDe(item) {
+  const { fecha, hora } = item.aviso ?? {};
+  if (!fecha || !hora) return Date.parse(item.created_at);
+  const { anio, mes, dia } = partes(fecha);
+  const [h, m] = hora.split(':').map(Number);
+  return new Date(anio, mes - 1, dia, h, m).getTime();
+}
+const minutosEntre = (a, b) => Math.abs(momentoDe(a) - momentoDe(b)) / 60000;
 const leido = (item) => item.aviso?.reconocido;
 const partesDe = (e) => e.partes ?? [e];
 

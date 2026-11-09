@@ -6,12 +6,15 @@ import { describir, igual } from './marco.js';
 import { juntarPendientes, borradorDeEntrada, borradorDePago } from '../calc/avisos/juntar.js';
 import { conAviso } from '../calc/bandeja.js';
 
-const a_las = (min) => new Date(Date.UTC(2026, 9, 28, 17, min)).toISOString();
+/* Hora LOCAL, como la de los SMS: así la prueba no depende de la zona. */
+const a_las = (min) => new Date(2026, 9, 28, 11, min).toISOString();
 const sms = (id, texto, min) => conAviso({ id, origen: 'sms', monto: null, comercio: null,
                                            tarjeta: null, texto, created_at: a_las(min) });
 const applepay = (id, monto, comercio, min) => ({ id, origen: 'applepay', monto, comercio,
   tarjeta: 'BAC Visa', texto: null, created_at: a_las(min) });
-const compraBac = (id, monto, min) => sms(id, `Alertas PRF VISA 1969: has realizado una compra por USD ${monto} en el comercio: APPLE.COM BILL  2026/10/28 11:0${min % 10}:00 Inf. https://bit.ly/32mcTdq`, min);
+/* `hora`: la de la compra, escrita en el SMS. `llega`: cuando entró a la bandeja. */
+const compraBacA = (id, monto, hora, llega) => sms(id, `Alertas PRF VISA 1969: has realizado una compra por USD ${monto} en el comercio: APPLE.COM BILL  2026/10/28 ${hora} Inf. https://bit.ly/32mcTdq`, llega);
+const compraBac = (id, monto, min) => compraBacA(id, monto, `11:${String(min).padStart(2, '0')}:00`, min);
 const ENVIO = (min) => sms('envio', 'Su Op. Transfer365 AHORRO XXXXXX9430 a DENNYS OMAR LOPEZ MUNOZ por USD 61.98 ha sido aplicada el dia 28/10/2026 11:12:40 A.M.', min);
 const ABONO = (min) => sms('abono', 'Ha recibido un abono Transferencia de Fondos a cuenta de ahorro de DENNYS OMAR LOPEZ por $ 61.98 a traves de Transfer365 el 28/10/2026 11:12:49', min);
 const PROPIO = { 'persona:dennys omar lopez munoz': 'propia' };
@@ -32,6 +35,24 @@ describir('juntar: Apple Pay y su SMS', (caso) => {
   caso('mismo monto pero horas aparte: dos compras', () => {
     igual(ids(juntarPendientes([applepay('ap', 2.99, 'Apple', 0), compraBac('s', '2.99', 50)], {})),
           ['ap', 's']);
+  });
+
+  caso('el SMS llega hora y media tarde: cuenta la hora de la compra que trae', () => {
+    const r = juntarPendientes([applepay('ap', 6, 'Musik Klub', 0),
+                                compraBacA('s', '6.00', '11:00:40', 87)], {});
+    igual(ids(r), ['ap+s']);
+  });
+
+  caso('llegan juntos pero el SMS dice otra hora: dos compras', () => {
+    igual(ids(juntarPendientes([applepay('ap', 6, 'X', 0), compraBacA('s', '6.00', '11:50:00', 1)], {})),
+          ['ap', 's']);
+  });
+
+  caso('varias iguales con SMS atrasados: cada una con la de su hora', () => {
+    const r = juntarPendientes([applepay('ap1', 6, 'X', 0), applepay('ap2', 6, 'X', 40),
+                                compraBacA('s2', '6.00', '11:40:05', 90),
+                                compraBacA('s1', '6.00', '11:00:10', 100)], {});
+    igual(ids(r), ['ap1+s1', 'ap2+s2']);
   });
 
   caso('dos compras iguales seguidas, cada una con su SMS: dos pares', () => {
