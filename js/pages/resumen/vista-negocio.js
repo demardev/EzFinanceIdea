@@ -7,7 +7,8 @@ import { graficaBarras, conectarBarras, barraHorizontal } from '../../ui/grafica
 import { mesCorto, nombreDelMes, formatearFecha } from '../../calc/fechas.js';
 import { plural, escapar } from '../../ui/texto.js';
 import { icono } from '../../iconos/render.js';
-import { botonPorConfirmar, panelNegocio } from './vista.js';
+import { panelNegocio } from './vista.js';
+import { filaAccesos } from './vista-accesos.js';
 import { seccionCobro } from './vista-cobro.js';
 
 function detalleDelMes(m) {
@@ -93,7 +94,7 @@ export function pintarResumenNegocio(contenedor, e) {
   contenedor.innerHTML = `
     <div class="pila">
       ${pastillasAmbito(e.ambito)}
-      ${e.porConfirmar ? botonPorConfirmar(e.porConfirmar) : ''}
+      ${filaAccesos({ porConfirmar: e.porConfirmar, porCobrar: e.negocio.porCobrar })}
       ${panelNegocio(e.negocio)}
       ${seccionCobro(e.negocio.tiempos, e.negocio.viejos)}
       ${tarjetaPorMes(e.negocio.porMes)}

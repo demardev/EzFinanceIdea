@@ -1,6 +1,7 @@
 /* La tarjeta de Préstamos en el Resumen: cuánto debes, cuánto te deben y lo
    que urge (atrasos y pagos de esta semana). Tocarla lleva a #/prestamos.
-   Sin préstamos activos la tarjeta invita a crear el primero. */
+   Sin préstamos activos no hay tarjeta: el acceso va en la fila de accesos
+   (vista-accesos.js). */
 
 import { icono } from '../../iconos/render.js';
 import { escapar } from '../../ui/texto.js';
@@ -18,10 +19,7 @@ function lineaAviso(item, hoy) {
 /** @param r el resultado de resumenPrestamos() */
 export function tarjetaPrestamos(r) {
   const hoy = hoyISO();
-  if (!r.activos.length) {
-    return `
-      <a class="btn btn-bloque" href="#/prestamos">${icono('persona', 16)} Préstamos</a>`;
-  }
+  if (!r.activos.length) return '';      // el acceso va en la fila de arriba
   return `
     <a class="card" href="#/prestamos" style="display:block; color:inherit; text-decoration:none">
       <div class="fila-entre">

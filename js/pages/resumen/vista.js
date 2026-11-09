@@ -8,6 +8,7 @@ import { tipoDe } from '../../movimientos/tipos.js';
 import { pastillasAmbito } from '../../ui/ambito.js';
 import { rodillo } from '../../ui/rodillo.js';
 import { tarjetaPrestamos } from './vista-prestamos.js';
+import { filaAccesos } from './vista-accesos.js';
 
 const ICONO_POR_TIPO = {
   efectivo: 'banknote', bancaria: 'banco', ahorro: 'piggy', otro: 'wallet',
@@ -122,15 +123,6 @@ function seccion(titulo, filas, vacio, encabezado = '') {
     </div>`;
 }
 
-/* Lo que llegó solo (Apple Pay) y espera que lo confirmes. */
-export function botonPorConfirmar(n) {
-  return `
-    <button class="btn btn-bloque" id="btn-por-confirmar" type="button">
-      ${icono('card', 16)} Por confirmar
-      <span class="badge badge-warn">${n}</span>
-    </button>`;
-}
-
 /* Del negocio no se dice "entró/salió": eso mentiría. MOVIDO es lo que pasó
    por tus manos; GANADO son las comisiones que ya cobraste. */
 export function panelNegocio(n) {
@@ -145,11 +137,6 @@ export function panelNegocio(n) {
         <span><span class="cifra-etiqueta">Operaciones</span><br>
           <span class="monto">${n.operaciones}</span></span>
       </div>
-      ${n.porCobrar.cuantos > 0 ? `
-        <button class="btn btn-bloque" id="btn-por-cobrar" type="button" style="margin-top:8px">
-          ${icono('reloj', 16)} Por cobrar: ${textoMonto(n.porCobrar.total)}
-          <span class="badge badge-warn">${n.porCobrar.cuantos}</span>
-        </button>` : ''}
     </div>`;
 }
 
@@ -172,7 +159,8 @@ export function pintarResumen(contenedor, e) {
           <span class="monto">${rodillo('neto', e.totales.neto)}</span></span>
       </div>
 
-      ${e.porConfirmar ? botonPorConfirmar(e.porConfirmar) : ''}
+      ${filaAccesos({ porConfirmar: e.porConfirmar, porCobrar: e.negocio?.porCobrar,
+                      prestamos: e.prestamos })}
       ${e.negocio ? panelNegocio(e.negocio) : ''}
       ${e.prestamos ? tarjetaPrestamos(e.prestamos) : ''}
       ${e.vencimientos.length

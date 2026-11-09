@@ -124,6 +124,7 @@ self.SHELL = [
   'js/pages/resumen/bandeja.js',
   'js/pages/resumen/datos-negocio.js',
   'js/pages/resumen/index.js',
+  'js/pages/resumen/vista-accesos.js',
   'js/pages/resumen/vista-cobro.js',
   'js/pages/resumen/vista-negocio.js',
   'js/pages/resumen/vista-prestamos.js',
