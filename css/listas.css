@@ -98,3 +98,9 @@
   border-left:3px solid var(--warn); padding:8px 10px;
   background:var(--bg-3); border-radius:8px; font-size:13px;
 }
+
+/* Filas que se marcan (elegir movimientos). `hidden` le gana al flex. */
+.lista-fila[hidden]{ display:none; }
+.elegible input[type="checkbox"]{ width:20px; height:20px; flex:none; accent-color:var(--fg); }
+.elegible .titulo{ font-size:14.5px; }
+.elegible .sub{ font-size:12.5px; color:var(--fg-2); }

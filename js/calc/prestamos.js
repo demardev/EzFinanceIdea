@@ -113,6 +113,13 @@ export function cuentasDelFormulario(datos) {
   return { total, falta: Math.max(0, redondear(total - Number(datos.abonado_antes || 0))) };
 }
 
+/** Al elegir movimientos para ligar: cuánto suman y si pasan de lo que falta. */
+export function cuentasDeEleccion(movimientos, ids, restante) {
+  const elegidos = movimientos.filter((m) => ids.includes(m.id));
+  const total = sumar(...elegidos.map((m) => m.monto));
+  return { cuantos: elegidos.length, total, sobra: Math.max(0, redondear(total - restante)) };
+}
+
 /** @returns el mensaje del problema, o null si se puede guardar */
 export function validarPrestamo(datos) {
   if (!String(datos.persona || '').trim()) return 'Pon con quién es el préstamo.';

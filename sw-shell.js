@@ -115,6 +115,7 @@ self.SHELL = [
   'js/pages/prestamos/form-campos.js',
   'js/pages/prestamos/form.js',
   'js/pages/prestamos/index.js',
+  'js/pages/prestamos/ligar.js',
   'js/pages/prestamos/textos.js',
   'js/pages/prestamos/vista.js',
   'js/pages/resumen/acciones.js',

@@ -3,7 +3,8 @@
    se movió antes — pero cuenta para lo que falta y para los atrasos. */
 
 import { describir, igual } from './marco.js';
-import { estadoPrestamo, validarPrestamo, cuentasDelFormulario } from '../calc/prestamos.js';
+import { estadoPrestamo, validarPrestamo, cuentasDelFormulario, cuentasDeEleccion }
+  from '../calc/prestamos.js';
 
 const HOY = '2026-11-04';
 /* Le debes a tu mamá 24 pagos de $30.00 desde el 10 de agosto, y antes de
@@ -61,5 +62,21 @@ describir('préstamos — lo que enseña el formulario', (caso) => {
 
   caso('lo que falta nunca es negativo', () => {
     igual(cuentasDelFormulario({ monto_total: 100, abonado_antes: 150 }), { total: 100, falta: 0 });
+  });
+});
+
+describir('préstamos — ligar movimientos que ya hiciste', (caso) => {
+  const movs = [{ id: 'a', monto: 30 }, { id: 'b', monto: 45.5 }, { id: 'c', monto: 100 }];
+
+  caso('suma solo los elegidos', () => {
+    igual(cuentasDeEleccion(movs, ['a', 'b'], 200), { cuantos: 2, total: 75.5, sobra: 0 });
+  });
+
+  caso('si pasan de lo que falta, dice por cuánto', () => {
+    igual(cuentasDeEleccion(movs, ['b', 'c'], 120), { cuantos: 2, total: 145.5, sobra: 25.5 });
+  });
+
+  caso('sin elegir nada, todo en cero', () => {
+    igual(cuentasDeEleccion(movs, [], 120), { cuantos: 0, total: 0, sobra: 0 });
   });
 });

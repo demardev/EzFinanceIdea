@@ -26,17 +26,20 @@ function cifras({ prestamo, estado }) {
     </div>`;
 }
 
-function filaAbono(texto, monto) {
+/* `id`: el movimiento, para poder quitarlo del préstamo. Lo de antes no tiene. */
+function filaAbono(texto, monto, id = '') {
   return `
     <div class="lista-fila"><span class="fila-cuerpo" style="cursor:default">
       <span class="crece truncar">${texto}</span>
       <span class="monto">${textoMonto(monto)}</span>
-    </span></div>`;
+    </span>
+    ${id ? `<button class="icono-btn" type="button" data-desligar="${escapar(id)}"
+              aria-label="Quitar del préstamo">${icono('x', 16)}</button>` : ''}</div>`;
 }
 
 /* Lo pagado antes de anotarlo va al final: es lo más viejo y no tiene fecha. */
 function listaAbonos(abonos, antes) {
-  const filas = abonos.map((a) => filaAbono(formatearFecha(a.fecha), a.monto));
+  const filas = abonos.map((a) => filaAbono(formatearFecha(a.fecha), a.monto, a.id));
   if (antes > 0) filas.push(filaAbono('Antes de anotarlo aquí', antes));
   if (!filas.length) return '<p class="tenue-2">Todavía no hay abonos.</p>';
   return `<div class="lista">${filas.join('')}</div>`;
@@ -50,7 +53,9 @@ function cuerpo(item, abonos) {
       ${cifras(item)}
       ${aviso ? `<p class="${estado.atraso > 0 ? 'warn' : 'tenue'}">${escapar(aviso)}</p>` : ''}
       ${estado.terminado ? '' : `<button class="btn btn-primario btn-bloque" type="button"
-          data-abonar>${icono('plus', 16)} ${DIRECCIONES[prestamo.direccion].accion}</button>`}
+          data-abonar>${icono('plus', 16)} ${DIRECCIONES[prestamo.direccion].accion}</button>
+        <button class="btn btn-bloque" type="button" data-ligar-movs>
+          ${icono('check', 16)} Elegir movimientos que ya hiciste</button>`}
       <div><p class="seccion-titulo">Abonos</p>${listaAbonos(abonos, Number(prestamo.abonado_antes) || 0)}</div>
       ${prestamo.nota ? `<p class="tenue">${escapar(prestamo.nota)}</p>` : ''}
       <button class="btn btn-bloque" type="button" data-editar-prestamo>
@@ -61,13 +66,19 @@ function cuerpo(item, abonos) {
 /**
  * @param item     { prestamo, estado } de resumenPrestamos()
  * @param abonos   sus movimientos
- * @param acciones { alAbonar(), alEditar() } — cada una abre su propio sheet
+ * @param acciones { alAbonar(), alLigar(), alEditar() } abren su propio sheet;
+ *                 alDesligar(id) pregunta y devuelve true si lo quitó
  */
-export function abrirDetalle(item, abonos, { alAbonar, alEditar }) {
+export function abrirDetalle(item, abonos, { alAbonar, alLigar, alDesligar, alEditar }) {
   const { hoja, cerrar } = abrirSheet({ titulo: escapar(nombreDe(item.prestamo)),
                                         cuerpo: cuerpo(item, abonos) });
   hoja.querySelector('[data-abonar]')?.addEventListener('click', () => { cerrar(); alAbonar(); });
+  hoja.querySelector('[data-ligar-movs]')?.addEventListener('click', () => { cerrar(); alLigar(); });
   hoja.querySelector('[data-editar-prestamo]').addEventListener('click', () => { cerrar(); alEditar(); });
+  hoja.addEventListener('click', async (evento) => {
+    const boton = evento.target.closest('[data-desligar]');
+    if (boton && await alDesligar(boton.dataset.desligar)) cerrar();
+  });
 }
 
 /** Lo que trae puesto el formulario de movimiento al abonar. */

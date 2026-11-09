@@ -8,6 +8,7 @@ import { pintarPrestamos } from './vista.js';
 import { cargarPrestamos, tienePrestamos } from './datos.js';
 import { abrirFormPrestamo } from './form.js';
 import { abrirDetalle, borradorDeAbono } from './detalle.js';
+import { abrirLigar } from './ligar.js';
 import { nombreDe } from './textos.js';
 import { abrirRegistro } from '../../movimientos/registrar.js';
 import { confirmar } from '../../ui/confirmar.js';
@@ -46,6 +47,21 @@ function editar(contexto, prestamo, alCambiar) {
   });
 }
 
+async function desligar(contexto, movId, alCambiar) {
+  const ok = await confirmar({
+    titulo: '¿Quitar este abono del préstamo?',
+    mensaje: 'El movimiento no se borra: se queda en tus movimientos, solo deja de contar para este préstamo.',
+    textoOk: 'Quitar',
+  });
+  if (!ok) return false;
+  try {
+    await contexto.prestamos.desligar(movId);
+    aviso('Abono quitado del préstamo.');
+    await alCambiar();
+    return true;
+  } catch (e) { avisoError(e); return false; }
+}
+
 /** Tocar una fila: su detalle, y desde ahí abonar o editar. */
 function abrirUno(contexto, datos, id, alCambiar) {
   const item = [...datos.resumen.activos, ...datos.resumen.terminados]
@@ -54,6 +70,8 @@ function abrirUno(contexto, datos, id, alCambiar) {
   abrirDetalle(item, datos.abonos.filter((a) => a.prestamo_id === id), {
     alAbonar: () => abrirRegistro(contexto, borradorDeAbono(item), alCambiar, undefined,
                                   { extra: { prestamo_id: id } }).catch(avisoError),
+    alLigar: () => abrirLigar(contexto, item, alCambiar).catch(avisoError),
+    alDesligar: (movId) => desligar(contexto, movId, alCambiar),
     alEditar: () => editar(contexto, item.prestamo, alCambiar),
   });
 }

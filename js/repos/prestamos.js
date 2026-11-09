@@ -4,6 +4,8 @@
 
 import { crearRepo } from './base.js';
 
+const MAX_CANDIDATOS = 200;
+
 export function repoPrestamos(cliente) {
   const base = crearRepo(cliente, 'prestamos', { orden: 'created_at.asc' });
 
@@ -16,5 +18,26 @@ export function repoPrestamos(cliente) {
     });
   }
 
-  return { ...base, abonos };
+  /** Movimientos ya hechos que se pueden ligar: del tipo que toca, sueltos
+      (sin préstamo) y que no sean del negocio, que esos no se tocan uno a uno. */
+  function candidatos(tipo, desde) {
+    return cliente.seleccionar('movimientos', {
+      select: 'id,monto,fecha,descripcion', tipo: `eq.${tipo}`, fecha: `gte.${desde}`,
+      prestamo_id: 'is.null', pago_id: 'is.null', ambito: 'eq.personal',
+      order: 'fecha.desc,created_at.desc', limit: String(MAX_CANDIDATOS),
+    });
+  }
+
+  /** Liga varios de un viaje. */
+  function ligar(ids, prestamoId) {
+    return cliente.actualizar('movimientos', { id: `in.(${ids.join(',')})` },
+                              { prestamo_id: prestamoId });
+  }
+
+  /** El movimiento se queda: solo deja de contar para el préstamo. */
+  function desligar(id) {
+    return cliente.actualizar('movimientos', { id: `eq.${id}` }, { prestamo_id: null });
+  }
+
+  return { ...base, abonos, candidatos, ligar, desligar };
 }
