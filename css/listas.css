@@ -77,3 +77,24 @@
   font-size:12px; color:var(--fg-3); vertical-align:middle;
 }
 .marca-cliente.sin{ color:color-mix(in srgb, var(--warn) 70%, var(--fg-3)); }
+
+/* ---------------------------------------------------------- desplegable --- */
+.desplegable{ padding:0; font-size:13.5px; }
+.desplegable > summary{
+  list-style:none; cursor:pointer;
+  min-height:var(--toque); padding:12px var(--sep);
+}
+.desplegable > summary::-webkit-details-marker{ display:none; }
+.desplegable-titulo{ display:block; font-weight:600; font-size:15px; }
+.desplegable-sub{ display:block; color:var(--fg-2); font-size:12.5px; margin-top:2px; }
+.desplegable-flecha{ color:var(--fg-3); display:grid; transition:transform var(--transicion); }
+.desplegable[open] .desplegable-flecha{ transform:rotate(180deg); }
+.desplegable-cuerpo{ padding:0 var(--sep) var(--sep); }
+.desplegable-cuerpo h4{ font-size:13.5px; font-weight:600; margin-top:8px; }
+.desplegable-cuerpo ol{ padding-left:20px; margin:0; list-style:decimal; }
+.desplegable-cuerpo ol > li + li{ margin-top:6px; }
+.desplegable-cuerpo ul{ padding-left:16px; margin:6px 0 0; list-style:disc; }
+.desplegable .nota{
+  border-left:3px solid var(--warn); padding:8px 10px;
+  background:var(--bg-3); border-radius:8px; font-size:13px;
+}

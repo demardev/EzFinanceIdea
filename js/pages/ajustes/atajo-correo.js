@@ -72,12 +72,10 @@ export function scriptDeGmail({ urlAvisos, apikey }, clave) {
 export function pasosDeCorreo(datos, claveNueva) {
   const script = scriptDeGmail(datos, claveNueva);
   return `
-    <div class="card pila-sm" style="font-size:13.5px">
-      <p class="seccion-titulo" style="margin:0">Avisos del banco por correo (Gmail)</p>
-      <p class="tenue" style="font-size:13px">Un script en tu cuenta de Google revisa
+      <p class="tenue">Un script en tu cuenta de Google revisa
         Gmail cada 5 minutos. Solo lee los correos de los bancos de la lista y solo
         puede agregar a tu bandeja.</p>
-      <ol class="pila-sm" style="padding-left:20px;margin:0;list-style:decimal">
+      <ol>
         <li>Abre <strong>script.google.com</strong> con tu cuenta de Gmail →
           <strong>Nuevo proyecto</strong>.</li>
         <li>Borra lo que trae y pega este código:
@@ -93,6 +91,5 @@ export function pasosDeCorreo(datos, claveNueva) {
           <strong>revisar</strong>, <strong>Según tiempo</strong>, cada 5 minutos.</li>
         <li>La primera vez manda los correos de los últimos 2 días. Para otro banco,
           agrega su correo en <strong>REMITENTES</strong>.</li>
-      </ol>
-    </div>`;
+      </ol>`;
 }

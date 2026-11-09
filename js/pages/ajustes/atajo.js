@@ -15,7 +15,9 @@ import { aviso, avisoError } from '../../ui/toast.js';
 import { icono } from '../../iconos/render.js';
 import { fechaLocalDe } from '../../calc/bandeja.js';
 import { formatearFecha } from '../../calc/fechas.js';
-import { pasosDelAtajo, pasosDeAvisos } from './atajo-pasos.js';
+import { pasosDelAtajo } from './atajo-pasos.js';
+import { pasosDeAvisos } from './atajo-sms.js';
+import { desplegable, recordarAbiertos, reabrir } from '../../ui/desplegable.js';
 import { pasosDeCorreo } from './atajo-correo.js';
 import { esClaveDeAviso, etiquetaDeClave } from '../../calc/avisos/cuentas.js';
 
@@ -63,20 +65,32 @@ function bloqueAprendidas(estado, titulo, deAviso) {
     </div>`;
 }
 
-function pintar(contenedor, estado) {
+/* Cada tipo de aviso es un desplegable cerrado: abierto todo era un muro. */
+function bloquesDeAvisos(estado) {
   const datos = datosParaAtajo();
+  return [
+    desplegable({ id: 'applepay', titulo: 'Pagos con Apple Pay', iconoNombre: 'wallet',
+      sub: 'Un atajo del iPhone por cada compra', cuerpo: pasosDelAtajo(datos) }),
+    desplegable({ id: 'sms', titulo: 'Avisos del banco por SMS', iconoNombre: 'banco',
+      sub: 'Automatización de mensajes en el iPhone', cuerpo: pasosDeAvisos(datos) }),
+    desplegable({ id: 'correo', titulo: 'Avisos del banco por correo', iconoNombre: 'banco',
+      sub: 'Un script en tu cuenta de Gmail', cuerpo: pasosDeCorreo(datos, estado.claveNueva) }),
+  ].join('');
+}
+
+function pintar(contenedor, estado) {
+  const abiertos = recordarAbiertos(contenedor);
   contenedor.innerHTML = `
     <div class="pila">
       <p class="tenue" style="font-size:13px">Cada pago con Apple Pay y cada aviso del
         banco por SMS o correo llegan solos a <strong>Por confirmar</strong>, en el
         Resumen. Ahí los revisas y los registras.</p>
       ${bloqueClave(estado)}
-      ${pasosDelAtajo(datos)}
-      ${pasosDeAvisos(datos)}
-      ${pasosDeCorreo(datos, estado.claveNueva)}
+      <div class="pila-sm">${bloquesDeAvisos(estado)}</div>
       ${bloqueAprendidas(estado, 'Tarjetas de Wallet aprendidas', false)}
       ${bloqueAprendidas(estado, 'Aprendido de los avisos', true)}
     </div>`;
+  reabrir(contenedor, abiertos);
   conectarDeslizar(contenedor);          // hay que rehacerlo en cada repintado
 }
 
