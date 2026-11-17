@@ -70,6 +70,13 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
 - El SDK de Anthropic solo se usa en `supabase/functions/`, fijado a una versión exacta.
   La app del navegador sigue sin dependencias. Se despliega igual que `avisar`; necesita
   el secreto `ANTHROPIC_API_KEY`.
+- **La clave vence el 24/nov/2027 a las 3:00 p.m. (GMT-6).** Es `ezfinance-assistant`, del
+  espacio de trabajo Default en Claude Console. Cuando venza (o si la revocan), la hoja
+  "Leer estado de cuenta" dice **"El asistente no está configurado."** (503 por
+  `AuthenticationError` en `leer-estado`). Si ya no hay secreto, dice "…todavía no está
+  configurado.". Arreglo: crear otra clave en Claude Console y guardarla con
+  `supabase secrets set ANTHROPIC_API_KEY=… --remote=tifmifpphzufarjtckpt`; no hace falta
+  volver a desplegar. Avisar al usuario desde octubre de 2027.
 
 ## Estructura
 
