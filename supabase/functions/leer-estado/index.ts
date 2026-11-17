@@ -7,7 +7,8 @@
       servicio: no lee ni escribe datos de nadie.
    2. Pregunta a la base, con ese token, si su plan tiene la función y le
       queda cupo este mes (usar_asistente_tarjetas, sql/15).
-   3. La IA lee el documento (lector.ts) y la respuesta se limpia con
+   3. La IA lee el documento (lector.ts) y se guardan los tokens que usó
+      (registrar_tokens_asistente, sql/16). La respuesta se limpia con
       js/calc/estado-cuenta.js. Si cuadra o no lo decide la app.
    El archivo no se guarda en ningún lado.
 
@@ -16,7 +17,7 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk@1.4.0';
 import { normalizarLectura } from '../../../js/calc/estado-cuenta.js';
-import { leerConIA, ErrorLectura, TIPOS } from './lector.ts';
+import { leerConIA, ErrorLectura, TIPOS, type Tokens } from './lector.ts';
 
 const URL_BASE = Deno.env.get('SUPABASE_URL');
 const ANON = Deno.env.get('SUPABASE_ANON_KEY');
@@ -41,13 +42,26 @@ const MOTIVOS: Record<string, [number, string]> = {
 };
 
 /** Cuenta la lectura con el token del usuario: la base decide si puede. */
-async function permiso(token: string) {
-  const r = await fetch(`${URL_BASE}/rest/v1/rpc/usar_asistente_tarjetas`, {
-    method: 'POST', body: '{}',
+const rpc = (token: string, funcion: string, args: unknown) =>
+  fetch(`${URL_BASE}/rest/v1/rpc/${funcion}`, {
+    method: 'POST', body: JSON.stringify(args),
     headers: { apikey: ANON!, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
   });
+
+async function permiso(token: string) {
+  const r = await rpc(token, 'usar_asistente_tarjetas', {});
   if (!r.ok) return { permitido: false, motivo: 'sin_sesion', quedan: 0 };
   return await r.json();
+}
+
+/* Si no se puede guardar, la lectura sigue: es para medir, no para cobrar. */
+async function registrarTokens(token: string, { entrada, salida }: Tokens) {
+  try {
+    const r = await rpc(token, 'registrar_tokens_asistente', { p_entrada: entrada, p_salida: salida });
+    if (!r.ok) console.error('[leer-estado] tokens no guardados', r.status);
+  } catch (e) {
+    console.error('[leer-estado] tokens no guardados', e);
+  }
 }
 
 function errorDeIA(e: unknown) {
@@ -83,7 +97,7 @@ async function leer(token: string, cuerpo: { archivo?: string; tipo?: string }) 
 
   let crudo;
   try {
-    crudo = await leerConIA(tipo, archivo);
+    crudo = await leerConIA(tipo, archivo, (t) => registrarTokens(token, t));
   } catch (e) {
     return errorDeIA(e);
   }

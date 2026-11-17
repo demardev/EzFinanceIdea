@@ -74,8 +74,15 @@ export class ErrorLectura extends Error {
   constructor(mensaje: string, public estado = 422) { super(mensaje); }
 }
 
-/** @returns el objeto tal cual lo devolvió la IA (se limpia después). */
-export async function leerConIA(tipo: string, datos: string): Promise<unknown> {
+export type Tokens = { entrada: number; salida: number };
+
+/**
+ * @param alResponder recibe los tokens de la respuesta en cuanto llega, también
+ *                    si luego no sirve: se pagaron igual.
+ * @returns el objeto tal cual lo devolvió la IA (se limpia después).
+ */
+export async function leerConIA(tipo: string, datos: string,
+                                alResponder: (t: Tokens) => Promise<void>): Promise<unknown> {
   const cliente = new Anthropic();
   const respuesta = await cliente.messages.create({
     model: MODELO,
@@ -85,6 +92,7 @@ export async function leerConIA(tipo: string, datos: string): Promise<unknown> {
     messages: [{ role: 'user', content: [bloque(tipo, datos),
       { type: 'text', text: 'Extrae este estado de cuenta.' }] }],
   });
+  await alResponder({ entrada: respuesta.usage.input_tokens, salida: respuesta.usage.output_tokens });
 
   if (respuesta.stop_reason === 'refusal') {
     throw new ErrorLectura('El asistente no pudo leer este documento.');

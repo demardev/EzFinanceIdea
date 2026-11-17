@@ -102,6 +102,71 @@ grupos plegables (Faltan / Sobran / Distintos) y arriba: "La app dice $X al
 corte, el banco $Y: diferencia $Z, y esto la explica". Sin botones de aplicar
 todavía: eso es el paso 3.
 
+## Paso 2b — Dar de alta una tarjeta desde su estado de cuenta (después del 2)
+
+Objetivo: el usuario crea la tarjeta, sube el último estado de cuenta (y si
+quiere, capturas de "movimientos recientes" y de "Financiamientos") y la tarjeta
+queda cuadrada con el banco desde el primer día. Usa el emparejamiento del paso 2
+para no duplicar si la tarjeta ya tiene movimientos.
+
+### 2b.1 Configurar la tarjeta (código puro) — `js/calc/alta-desde-estado.js`
+
+- **Día de corte** = día de `fecha_corte`.
+- **Día límite de pago:** el banco lo corre cuando cae en fin de semana (BAC: 28
+  en sep y oct, 30 en nov porque el 28/nov/2026 fue sábado). Con 2 o más
+  estados de cuenta se toma el día que más se repite; con uno solo, se propone
+  y se le pregunta al usuario.
+- **Comprobar fechas contra hoy:** con ese día de corte, `calcularCiclo(hoy)`
+  tiene que dar como último corte la `fecha_corte` leída (o la siguiente, si el
+  estado de cuenta es del corte anterior). Si no, se avisa antes de crear nada:
+  puede ser un estado de cuenta viejo o un día de corte mal leído.
+
+### 2b.2 Saldo, sin contar dos veces — el usuario elige
+
+- **A (simple y exacta):** `saldo_inicial` = `saldo_al_corte`, con
+  `fecha_saldo_inicial` = `fecha_corte` (ya existe en tarjetas:
+  `js/calc/saldo-inicial-tarjeta.js`). Solo se crean los movimientos posteriores
+  al corte (de la captura de movimientos recientes).
+- **B (con historial):** `saldo_inicial` = `saldo_anterior` con la fecha del corte
+  anterior, y se crean también las líneas del estado de cuenta. Así queda el
+  gasto de ese mes por categoría. Las cuotas de compras a meses del estado de
+  cuenta NO se crean como cargos sueltos: las genera su compra (2b.4).
+
+### 2b.3 Crear los movimientos
+
+| Línea leída | Se crea como |
+|---|---|
+| cargo | egreso a la tarjeta |
+| crédito que es pago ("SU PAGO RECIBIDO") | transferencia a la tarjeta: **se pregunta la cuenta de origen**, el banco no la dice |
+| otro crédito (devolución, bonificación) | ingreso a la tarjeta (reembolso, sql/14) |
+| `intereses_fuera_de_lista` | egreso "Intereses" el día del corte |
+| "CR MINICUOTAS …" / "DB COMISION MINICUOTAS" | traslado a minicuotas (no movimientos sueltos) |
+
+La IA solo sugiere categoría (de las del usuario, por nombre) y una descripción
+más legible. Montos, fechas y sentido salen de la lectura, nunca de la IA.
+
+### 2b.4 Compras a cuotas
+
+- Cada "CUOTA:n/N" o "MINICUOTA … CUOTA:n/N" se agrupa por compra.
+- Con la captura de Financiamientos (fecha, concepto, cuotas n/N, monto de cuota,
+  saldo inicial, saldo faltante) se crea la compra a cuotas con `monto_total` =
+  saldo inicial, `num_cuotas` = N, `cuotas_pagadas` según el modo de saldo (A: las
+  cobradas hasta el corte; B: las anteriores al estado de cuenta) y
+  **`fecha_primera_cuota`** a partir de la fecha de la cuota n en el estado de cuenta
+  (BAC: Airpods el día 28, minicuotas el día del corte).
+- Comprobar: lo pendiente de cada compra en la app = su saldo faltante del banco.
+
+### 2b.5 Comprobación final y confirmación
+
+Antes de guardar, en memoria:
+- deuda de la app (`calcularDeuda`) = saldo actual del banco (si se dio), o
+  saldo al corte en el modo A sin movimientos posteriores;
+- `comprometido` = total de Financiamientos (si se dio).
+
+Si no cuadra, se muestra por cuánto y no se guarda nada. Si cuadra, el usuario ve
+la lista completa (tarjeta, saldo inicial, movimientos, compras a cuotas), la
+confirma, y se guarda en lote con su registro para deshacer (3.3).
+
 ## Paso 3 — Proponer y aplicar arreglos (después)
 
 ### 3.1 Acciones cerradas
@@ -144,8 +209,22 @@ user_id, fecha, acción, antes, después) para poder deshacer todo el lote.
 ## Costo y cupo
 
 Claude Haiku 5.5: $0.10 por millón de tokens de entrada y $0.50 de salida (hasta
-100K tokens de prompt). Un estado de cuenta de una página son pocos miles de tokens:
-menos de un centavo por lectura. Cupo: 30 lecturas al mes por usuario
+100K tokens de prompt). Estimado sin medir: un estado de cuenta de una página son
+2–4 mil tokens de entrada (el PDF entra como texto e imagen de cada página) y 2–4
+mil de salida (la lista más lo que el modelo piensa, que se cobra como salida):
+unos $0.002–0.003 por lectura.
+
+Lo real se guarda: `leer-estado` suma los tokens de cada respuesta de la IA
+(también las que no sirven: se pagan igual) en `uso_asistente.tokens_entrada` y
+`tokens_salida` (sql/16). Costo por usuario y mes, con los precios de Haiku 5.5:
+
+```sql
+select user_id, mes, lecturas, tokens_entrada, tokens_salida,
+       round(tokens_entrada * 0.10 / 1e6 + tokens_salida * 0.50 / 1e6, 4) as usd
+from uso_asistente order by mes desc, usd desc;
+```
+
+Si se cambia de modelo, cambiar también estos precios. Cupo: 30 lecturas al mes por usuario
 (`usar_asistente_tarjetas()`); se cuenta antes de llamar a la IA, aunque falle.
 
 ## El caso que lo originó
