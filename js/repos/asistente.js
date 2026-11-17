@@ -6,7 +6,7 @@ export function repoAsistente(cliente) {
     /**
      * @param archivo el documento en base64, sin el prefijo "data:…;base64,"
      * @param tipo    'application/pdf', 'image/png', 'image/jpeg', 'image/webp' o 'text/plain'
-     * @returns { lectura, quedan } — lectura ya limpia (calc/estado-cuenta.js)
+     * @returns { lectura, quedan: { hoy, mes } } — lectura ya limpia (calc/estado-cuenta.js)
      */
     leerEstado: (archivo, tipo) => cliente.funcion('leer-estado', { archivo, tipo }),
   };

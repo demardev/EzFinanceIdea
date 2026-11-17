@@ -49,7 +49,10 @@ function filaMovimiento(m) {
     </span></div>`;
 }
 
-/** @param revision de revisarLectura() */
+/**
+ * @param revision de revisarLectura()
+ * @param quedan   { hoy, mes } lecturas que le quedan al usuario
+ */
 export function pintarLectura(lectura, revision, quedan) {
   return `
     ${resumen(lectura, revision)}
@@ -57,5 +60,5 @@ export function pintarLectura(lectura, revision, quedan) {
       ${lectura.movimientos.length} líneas leídas</p>
     <div class="lista">${lectura.movimientos.map(filaMovimiento).join('')}</div>
     <p class="tenue-2" style="font-size:12px;margin-top:12px">
-      Te quedan ${quedan} lecturas este mes. El archivo no se guarda.</p>`;
+      Te quedan ${quedan.hoy} lecturas hoy (${quedan.mes} este mes). El archivo no se guarda.</p>`;
 }

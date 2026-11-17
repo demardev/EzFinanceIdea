@@ -66,7 +66,9 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
 - **La IA lee y propone; el código calcula, comprueba y aplica.** Lo leído de un estado
   de cuenta solo se usa si `revisarLectura()` cuadra con el saldo al corte del banco.
 - `leer-estado` lee con el token del usuario, nunca con la llave de servicio, y antes de
-  llamar a la IA pide permiso a `usar_asistente_tarjetas()` (función premium + cupo).
+  llamar a la IA pide permiso a `usar_asistente_tarjetas()` (función premium + cupo: 10 al
+  día y 30 al mes por usuario, 100 al día en toda la app) y rechaza documentos de más de
+  40 mil tokens contándolos antes (gratis). Ver "Límites" en `docs/asistente-tarjetas.md`.
 - El SDK de Anthropic solo se usa en `supabase/functions/`, fijado a una versión exacta.
   La app del navegador sigue sin dependencias. Se despliega igual que `avisar`; necesita
   el secreto `ANTHROPIC_API_KEY`.

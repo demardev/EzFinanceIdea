@@ -14,7 +14,7 @@ mano en noviembre de 2026 (ver "El caso que lo originó", al final).
 3. **Aislado por usuario:** la Edge Function lee con el token de quien llama,
    nunca con la llave de servicio. Las políticas de la base hacen el resto.
 4. **La restricción vive en la base:** `usar_asistente_tarjetas()` exige
-   `tiene_funcion('asistente_tarjetas')` y cuenta el cupo (30 lecturas al mes).
+   `tiene_funcion('asistente_tarjetas')` y cuenta el cupo (ver "Límites").
 5. **Nada se aplica sin confirmación** del usuario, y lo aplicado se puede deshacer.
 6. **El documento es datos, no instrucciones:** el texto de un estado de cuenta
    (o la descripción de un movimiento) puede intentar dar órdenes. Por eso la IA
@@ -206,6 +206,23 @@ user_id, fecha, acción, antes, después) para poder deshacer todo el lote.
   `aPagarAhora` y explicar la diferencia (pendiente de ver cómo lo recalcula BAC).
 - Chat sobre la tarjeta: solo lectura y explicaciones; sin consejos de inversión.
 
+## Límites (contra el abuso)
+
+| Límite | Dónde | Al pasarse |
+|---|---|---|
+| Sin sesión o sin el plan | `leer-estado` (`tiene_funcion`) | se rechaza sin llamar a la IA |
+| Documento de más de 40 mil tokens (~15–20 páginas) | `leer-estado` cuenta con `countTokens` (gratis) | se rechaza sin gastar ni descontar |
+| 10 lecturas al día por usuario | `usar_asistente_tarjetas()` (sql/17) | "Ya usaste las lecturas de hoy" |
+| 30 lecturas al mes por usuario | idem | "Ya usaste todas las lecturas de este mes" |
+| 100 lecturas al día en toda la app | idem (con candado para que no se pase) | "El asistente llegó a su límite de hoy" |
+| Gasto mensual | Claude Console → límite de gasto (lo pone el usuario dueño) | Anthropic deja de responder: "El asistente no respondió" |
+| Apagado de emergencia | panel de admin: quitar la función del plan premium | desaparece para todos |
+
+Peor caso por usuario con estos límites: 30 lecturas de 40 mil tokens de entrada
+($0.12) con la salida al máximo de 16 mil ($0.24) ≈ $0.36 al mes. Lo normal: ~$0.003
+por lectura.
+Los días y meses se cuentan con la hora de El Salvador.
+
 ## Costo y cupo
 
 Claude Haiku 5.5: $0.10 por millón de tokens de entrada y $0.50 de salida (hasta
@@ -224,8 +241,9 @@ select user_id, mes, lecturas, tokens_entrada, tokens_salida,
 from uso_asistente order by mes desc, usd desc;
 ```
 
-Si se cambia de modelo, cambiar también estos precios. Cupo: 30 lecturas al mes por usuario
-(`usar_asistente_tarjetas()`); se cuenta antes de llamar a la IA, aunque falle.
+Si se cambia de modelo, cambiar también estos precios. Cada lectura se descuenta del
+cupo (ver "Límites") antes de llamar a la IA y después de contar los tokens, aunque
+luego falle.
 
 ## El caso que lo originó
 

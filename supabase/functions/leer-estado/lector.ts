@@ -76,6 +76,23 @@ export class ErrorLectura extends Error {
 
 export type Tokens = { entrada: number; salida: number };
 
+/* Por encima de esto no es un estado de cuenta normal (15–20 páginas): se
+   rechaza antes de leer, sin gastar. */
+export const MAX_TOKENS_ENTRADA = 40_000;
+
+const mensajes = (tipo: string, datos: string): Anthropic.MessageParam[] => [{
+  role: 'user',
+  content: [bloque(tipo, datos), { type: 'text', text: 'Extrae este estado de cuenta.' }],
+}];
+
+/** Cuántos tokens costaría leerlo. Contar no se cobra. */
+export async function contarTokens(tipo: string, datos: string): Promise<number> {
+  const conteo = await new Anthropic().messages.countTokens({
+    model: MODELO, system: SISTEMA, messages: mensajes(tipo, datos),
+  });
+  return conteo.input_tokens;
+}
+
 /**
  * @param alResponder recibe los tokens de la respuesta en cuanto llega, también
  *                    si luego no sirve: se pagaron igual.
@@ -89,8 +106,7 @@ export async function leerConIA(tipo: string, datos: string,
     max_tokens: 16000,
     system: SISTEMA,
     output_config: { format: { type: 'json_schema', schema: ESQUEMA } },
-    messages: [{ role: 'user', content: [bloque(tipo, datos),
-      { type: 'text', text: 'Extrae este estado de cuenta.' }] }],
+    messages: mensajes(tipo, datos),
   });
   await alResponder({ entrada: respuesta.usage.input_tokens, salida: respuesta.usage.output_tokens });
 
