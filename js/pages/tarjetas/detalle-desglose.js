@@ -5,7 +5,8 @@ import { icono } from '../../iconos/render.js';
 import { textoMonto } from '../../ui/privacidad.js';
 import { formatearFecha } from '../../calc/fechas.js';
 
-function renglon(etiqueta, monto, signo = '', acento = '') {
+/** "Cargos   +$100.00": una cifra con su etiqueta. También la usa estado-cuenta-vista.js. */
+export function renglon(etiqueta, monto, signo = '', acento = '') {
   return `
     <div class="fila-entre" style="font-size:13.5px">
       <span class="tenue">${etiqueta}</span>

@@ -19,6 +19,7 @@ import { repoAdmin } from './repos/admin.js';
 import { repoPush } from './repos/push.js';
 import { repoPrestamos } from './repos/prestamos.js';
 import { repoFunciones } from './repos/funciones.js';
+import { repoAsistente } from './repos/asistente.js';
 import { abrirNuevoDesdeFab } from './movimientos/registrar.js';
 import { abrirPagoRecibo } from './pages/negocio/registrar.js';
 import { montarLogin } from './pages/login.js';
@@ -50,6 +51,7 @@ const contexto = {
   admin: repoAdmin(cliente),       // solo responde si perfiles.admin
   push: repoPush(cliente),
   prestamos: repoPrestamos(cliente),
+  asistente: repoAsistente(cliente),   // premium: lee estados de cuenta con IA
   /* Se llenan al entrar; hasta entonces la app se comporta como si no
      hubiera negocio, que es lo correcto para casi todos. */
   perfil: { negocio: false, admin: false },

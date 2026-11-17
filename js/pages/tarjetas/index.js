@@ -11,6 +11,7 @@ import { abrirFormCompra } from './cuotas-form.js';
 import { crearCompra, editarCompra, eliminarCompra } from './compras.js';
 import { abrirTraslado, deshacerTraslado } from './minicuotas.js';
 import { abrirConciliacion } from './conciliar.js';
+import { abrirLecturaEstado } from './estado-cuenta.js';
 import { calcularTodo, deLaTarjeta, entradaDe } from './calculos.js';
 import { accionesDeRegistro } from './registro.js';
 import { efectoDeSaldoInicial } from '../../calc/desglose-tarjeta.js';
@@ -142,6 +143,7 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
     if (accion === 'editar') return editar(tarjeta);
     if (accion === 'cuotas') return abrirCompra(tarjeta, {});
     if (accion === 'minicuotas') return abrirTraslado(contexto, tarjeta, datos, recargar);
+    if (accion === 'estado') return abrirLecturaEstado(contexto, tarjeta);
     const { deuda } = calcularTodo(tarjeta, datos.movimientos, datos.compras);
     return abrirSheetPago(tarjeta, deuda, datos, async (fila) => {
       await movimientos.crear(fila);
@@ -163,7 +165,8 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
 
       if (o.dataset.acciones) {
         const tarjeta = tarjetaDe(o.dataset.acciones);
-        return abrirMenuTarjeta(tarjeta, (accion) =>
+        const conAsistente = contexto.funciones?.includes('asistente_tarjetas') ?? false;
+        return abrirMenuTarjeta(tarjeta, conAsistente, (accion) =>
           Promise.resolve().then(() => actuar(accion, tarjeta)).catch(avisoError));
       }
       if (o.dataset.pagar) return actuar('pagar', tarjetaDe(o.dataset.pagar));

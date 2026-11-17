@@ -60,6 +60,17 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
 - Préstamos: los abonos son movimientos normales con `prestamo_id`, y sí se editan uno
   por uno (no son generados). La regla del atraso es acumulada (`js/calc/prestamos.js`).
 
+## Asistente de tarjetas (IA, premium)
+
+- Spec y pasos pendientes en `docs/asistente-tarjetas.md`.
+- **La IA lee y propone; el código calcula, comprueba y aplica.** Lo leído de un estado
+  de cuenta solo se usa si `revisarLectura()` cuadra con el saldo al corte del banco.
+- `leer-estado` lee con el token del usuario, nunca con la llave de servicio, y antes de
+  llamar a la IA pide permiso a `usar_asistente_tarjetas()` (función premium + cupo).
+- El SDK de Anthropic solo se usa en `supabase/functions/`, fijado a una versión exacta.
+  La app del navegador sigue sin dependencias. Se despliega igual que `avisar`; necesita
+  el secreto `ANTHROPIC_API_KEY`.
+
 ## Estructura
 
 - Ningún archivo pasa de 200 líneas, ninguna función de 40. Se parte al momento, no al final.

@@ -11,13 +11,24 @@ const ACCIONES = [
   ['conciliar', 'check', 'Conciliar con el banco'],
   ['cuotas', 'repeat', 'Nueva compra a cuotas'],
   ['minicuotas', 'rotate', 'Pasar compras a minicuotas'],
+  ['estado', 'book', 'Leer estado de cuenta'],
   ['editar', 'lapiz', 'Editar tarjeta'],
 ];
 
-/** @param alElegir (accion) => void, con la hoja ya cerrada */
-export function abrirMenuTarjeta(tarjeta, alElegir) {
-  /* Minicuotas solo existe en las tarjetas que lo permiten. */
-  const propias = ACCIONES.filter(([accion]) => accion !== 'minicuotas' || tarjeta.minicuotas);
+/* Minicuotas solo existe en las tarjetas que lo permiten, y leer el estado de
+   cuenta solo con el asistente (premium). */
+function disponible(accion, tarjeta, conAsistente) {
+  if (accion === 'minicuotas') return Boolean(tarjeta.minicuotas);
+  if (accion === 'estado') return conAsistente;
+  return true;
+}
+
+/**
+ * @param conAsistente si el plan tiene 'asistente_tarjetas'
+ * @param alElegir     (accion) => void, con la hoja ya cerrada
+ */
+export function abrirMenuTarjeta(tarjeta, conAsistente, alElegir) {
+  const propias = ACCIONES.filter(([accion]) => disponible(accion, tarjeta, conAsistente));
   const filas = propias.map(([accion, nombre, texto]) => `
     <div class="lista-fila">
       <button type="button" class="fila-cuerpo" data-accion="${accion}">
