@@ -20,6 +20,10 @@ function campos(compra, categorias) {
                     valor: String(compra.num_cuotas ?? 12), opciones: PLAZOS })}
     ${campoTexto({ nombre: 'fecha_compra', etiqueta: 'Fecha de compra',
                    valor: compra.fecha_compra ?? hoyISO(), tipo: 'date' })}
+    ${campoTexto({ nombre: 'fecha_primera_cuota', etiqueta: 'Primera cuota',
+                   valor: compra.fecha_primera_cuota ?? '', tipo: 'date', requerido: false,
+                   ayuda: 'El día que el banco cobra la primera; las demás van cada mes ese día. '
+                        + 'Vacía, la calcula la regla de la tarjeta.' })}
     ${campoSelect({ nombre: 'categoria_id', etiqueta: 'Categoría',
                     valor: compra.categoria_id ?? '',
                     opciones: [['', 'Sin categoría'], ...deEgreso.map((c) => [c.id, c.nombre])] })}
@@ -64,7 +68,7 @@ function conectarPrevia(hoja, form, tarjeta) {
   refrescar();
 }
 
-/** @param tarjeta la de la compra: su regla decide el día de las cuotas. */
+/** @param tarjeta la de la compra: su regla pone el día de las cuotas si la compra no lo dice. */
 export function abrirFormCompra(compra, datos, { tarjeta, alGuardar, alEliminar }) {
   abrirSheetFormulario({
     titulo: compra.id ? 'Editar compra a cuotas' : 'Compra a meses sin intereses',
@@ -81,11 +85,15 @@ export function abrirFormCompra(compra, datos, { tarjeta, alGuardar, alEliminar 
       if (yaPagadas < 0 || yaPagadas > Number(d.num_cuotas)) {
         throw new Error(`Las cuotas ya pagadas deben estar entre 0 y ${d.num_cuotas}.`);
       }
+      if (d.fecha_primera_cuota && d.fecha_primera_cuota < d.fecha_compra) {
+        throw new Error('La primera cuota no puede ser antes de la compra.');
+      }
       return alGuardar({
         descripcion: d.descripcion.trim(),
         monto_total: d.monto_total,
         num_cuotas: Number(d.num_cuotas),
         fecha_compra: d.fecha_compra,
+        fecha_primera_cuota: d.fecha_primera_cuota || null,
         categoria_id: d.categoria_id || null,
         comercio: d.comercio.trim() || null,
         cuotas_pagadas: yaPagadas,

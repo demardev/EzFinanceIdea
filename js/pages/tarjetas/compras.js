@@ -22,7 +22,8 @@ export async function crearCompra({ compras, movimientos }, tarjeta, datos) {
   return compra;
 }
 
-/* La tarjeta decide el día de las cuotas; editar aplica su regla de hoy. */
+/* El día de las cuotas lo dice la compra (su primera cuota) o, si no, la regla
+   de hoy de la tarjeta. */
 export async function editarCompra({ compras, movimientos }, tarjeta, compra, datos) {
   const existentes = await movimientos.listarDeCompra(compra.id);
   const plan = planRegeneracion({ ...compra, ...datos }, existentes, hoyISO(), tarjeta);
