@@ -7,7 +7,7 @@
 import { sumar, redondear } from '../dinero.js';
 import { diasEntre } from '../fechas.js';
 import { calcularCiclo, corteSiguiente, limiteDePago } from '../ciclo-tarjeta.js';
-import { calcularDeuda } from '../deuda-tarjeta.js';
+import { calcularDeuda, esReembolso } from '../deuda-tarjeta.js';
 import { ocurrenciasMensuales, montoDe } from './recurrencia.js';
 
 /**
@@ -58,9 +58,9 @@ function cortesFuturos(tarjeta, previstos, ciclo, hasta, comoPago) {
   let vence = limiteDePago(siguiente, tarjeta.dia_limite_pago);
 
   while (vence <= hasta) {
-    const cargos = movimientos.filter(
-      (m) => m.tipo === 'egreso' && m.tarjeta_id === tarjeta.id
-          && m.fecha > corte && m.fecha <= siguiente);
+    const delTramo = movimientos.filter((m) => m.fecha > corte && m.fecha <= siguiente);
+    const cargos = delTramo.filter((m) => m.tipo === 'egreso' && m.tarjeta_id === tarjeta.id);
+    const reembolsos = delTramo.filter((m) => esReembolso(m) && m.tarjeta_id === tarjeta.id);
     const recurrentes = gastosFijos.flatMap((item) =>
       ocurrenciasMensuales(item.dia_mes, corte, siguiente)
         .filter((f) => f > corte)
@@ -68,7 +68,8 @@ function cortesFuturos(tarjeta, previstos, ciclo, hasta, comoPago) {
 
     const estimados = variablesDelTramo(variables, escenarioGastos,
                                         corte > ciclo.hoy ? corte : ciclo.hoy, siguiente);
-    const monto = sumar(...cargos.map((m) => m.monto), ...recurrentes, ...estimados);
+    const monto = Math.max(0, sumar(...cargos.map((m) => m.monto), ...recurrentes,
+                                    ...estimados, ...reembolsos.map((m) => -m.monto)));
     if (monto > 0) eventos.push(comoPago(monto, vence, `corte del ${siguiente}`));
 
     corte = siguiente;

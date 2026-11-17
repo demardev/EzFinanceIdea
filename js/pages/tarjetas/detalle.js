@@ -61,7 +61,7 @@ function insignia(mov, fijos) {
 }
 
 function fila(mov, { iconos, compras, fijos }) {
-  const esPago = mov.tipo === 'transferencia';
+  const esPago = mov.tipo !== 'egreso';   // un pago o un reembolso: baja la deuda
   /* Se atenúa lo que no pesa en la deuda de hoy: lo que aún no se cobra, y
      las cuotas que ya venían pagadas al registrar la compra. */
   const futuro = mov.fecha > hoyISO();

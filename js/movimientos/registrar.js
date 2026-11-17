@@ -40,7 +40,7 @@ export function borradorDeFijo(item) {
       monto: Number(item.variabilidad === 'variable' ? item.monto_min : item.monto) || 0,
       descripcion: item.nombre,
       categoria_id: item.categoria_id ?? '',
-      cuenta_id: item.cuenta_id ?? '',
+      destino: unirDestino(item, 'cuenta_id', 'tarjeta_id'),
     };
   }
   return {

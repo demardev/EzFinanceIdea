@@ -6,16 +6,19 @@
      saldoAlCorte  dentro del último ciclo cerrado  (es lo que toca pagar)
      nuevoCiclo    después del último corte  (se cobrará en el próximo corte)
 
-   Los pagos se aplican en cascada, lo más viejo primero. Lo que sobre después
-   de saldar las tres cubetas es saldo a favor. */
+   Un reembolso (un ingreso que entra a la tarjeta) cancela primero cargos de
+   su misma cubeta, como en el estado de cuenta; lo que sobre se suma a los
+   pagos. Los pagos se aplican en cascada, lo más viejo primero. Lo que sobre
+   después de saldar las tres cubetas es saldo a favor. */
 
 import { redondear, sumar } from './dinero.js';
 import { hoyISO } from './fechas.js';
 import { calcularCiclo } from './ciclo-tarjeta.js';
 import { cargosDeTarjeta } from './saldo-inicial-tarjeta.js';
 
-const esCargo = (m) => m.tipo === 'egreso' && m.tarjeta_id;
-const esPago  = (m) => m.tipo === 'transferencia' && m.tarjeta_destino_id;
+export const esCargo     = (m) => m.tipo === 'egreso' && Boolean(m.tarjeta_id);
+export const esPago      = (m) => m.tipo === 'transferencia' && Boolean(m.tarjeta_destino_id);
+export const esReembolso = (m) => m.tipo === 'ingreso' && Boolean(m.tarjeta_id);
 
 /** Resta `disponible` de `saldo` y devuelve lo que queda de cada uno. */
 function aplicar(saldo, disponible) {
@@ -24,25 +27,33 @@ function aplicar(saldo, disponible) {
 }
 
 /**
- * @param movimientos  los de ESTA tarjeta (cargos y pagos)
+ * Las tres cubetas ya con sus reembolsos, y lo que hay para la cascada: los
+ * pagos más lo que sobró de los reembolsos. Solo lo que ya ocurrió: la cuota
+ * de noviembre no es deuda de hoy (esas van en comprometidoEnCuotas()).
+ */
+function cubetas(movimientos, { fechaCorteAnterior, fechaUltimoCorte, hoy }) {
+  const ocurridos = movimientos.filter((m) => m.fecha <= hoy);
+  const total = (tipo, prueba) => sumar(...ocurridos
+    .filter((m) => tipo(m) && prueba(m.fecha)).map((m) => m.monto));
+  const netas = [
+    (f) => f <= fechaCorteAnterior,
+    (f) => f > fechaCorteAnterior && f <= fechaUltimoCorte,
+    (f) => f > fechaUltimoCorte,
+  ].map((prueba) => aplicar(total(esCargo, prueba), total(esReembolso, prueba)));
+  return {
+    saldos: netas.map((n) => n.saldo),
+    disponible: sumar(total(esPago, () => true), ...netas.map((n) => n.resto)),
+  };
+}
+
+/**
+ * @param movimientos  los de ESTA tarjeta (cargos, pagos y reembolsos)
  * @param ciclo        { fechaCorteAnterior, fechaUltimoCorte }
  * @param limite       límite de crédito, para el porcentaje de uso
  */
 export function calcularDeuda(movimientos, ciclo, limite = 0) {
-  const { fechaCorteAnterior, fechaUltimoCorte, hoy = hoyISO() } = ciclo;
-
-  /* Un cargo con fecha futura todavía no se hizo: la cuota de noviembre no es
-     deuda de hoy. Esas van aparte, en comprometidoEnCuotas(). */
-  const cargos = movimientos.filter((m) => esCargo(m) && m.fecha <= hoy);
-
-  const enCubeta = (prueba) => sumar(...cargos.filter(prueba).map((m) => m.monto));
-
-  let vieja  = enCubeta((m) => m.fecha <= fechaCorteAnterior);
-  let corte  = enCubeta((m) => m.fecha > fechaCorteAnterior && m.fecha <= fechaUltimoCorte);
-  let nuevo  = enCubeta((m) => m.fecha > fechaUltimoCorte);
-
-  let disponible = sumar(...movimientos.filter((m) => esPago(m) && m.fecha <= hoy)
-    .map((m) => m.monto));
+  const hoy = ciclo.hoy ?? hoyISO();
+  let { saldos: [vieja, corte, nuevo], disponible } = cubetas(movimientos, { ...ciclo, hoy });
 
   ({ saldo: vieja, resto: disponible } = aplicar(vieja, disponible));
   ({ saldo: corte, resto: disponible } = aplicar(corte, disponible));
@@ -82,7 +93,7 @@ export function comprometidoEnCuotas(movimientos, hoy) {
   return sumar(...futuras.map((m) => m.monto));
 }
 
-/** Los movimientos que tocan una tarjeta: sus cargos y sus pagos. */
+/** Los movimientos que tocan una tarjeta: sus cargos, pagos y reembolsos. */
 export function movimientosDeTarjeta(movimientos, tarjetaId) {
   return movimientos.filter(
     (m) => m.tarjeta_id === tarjetaId || m.tarjeta_destino_id === tarjetaId);

@@ -14,11 +14,11 @@ import { redondear, sumar } from './dinero.js';
 import { pistasDeHoy, pistasDelCorte, posiblesCancelaciones,
          combinacionExacta } from './conciliacion-pistas.js';
 
-/** Cargos menos pagos con fecha hasta ese día, incluido. Negativo = a favor. */
+/** Cargos menos pagos y reembolsos hasta ese día, incluido. Negativo = a favor. */
 export function saldoAl(movimientos, fecha) {
   const hasta = movimientos.filter((m) => m.fecha <= fecha);
   const cargos = hasta.filter((m) => m.tipo === 'egreso').map((m) => m.monto);
-  const pagos = hasta.filter((m) => m.tipo === 'transferencia').map((m) => m.monto);
+  const pagos = hasta.filter((m) => m.tipo !== 'egreso').map((m) => m.monto);
   return redondear(sumar(...cargos) - sumar(...pagos));
 }
 

@@ -3,14 +3,11 @@
 
 import { sumar } from './dinero.js';
 import { calcularCiclo, corteQueIncluye } from './ciclo-tarjeta.js';
-import { calcularDeuda } from './deuda-tarjeta.js';
+import { calcularDeuda, esCargo, esPago, esReembolso } from './deuda-tarjeta.js';
 import { cargosDeTarjeta } from './saldo-inicial-tarjeta.js';
 
-const esCargo = (m) => m.tipo === 'egreso' && m.tarjeta_id;
-const esPago  = (m) => m.tipo === 'transferencia' && m.tarjeta_destino_id;
-
 /**
- * saldo inicial + cargos − pagos = deuda total − saldo a favor.
+ * saldo inicial + cargos − pagos − reembolsos = deuda total − saldo a favor.
  * Solo lo que ya ocurrió: la cuota de noviembre todavía no es deuda.
  *
  * @param movimientos los de la tarjeta, ya con el saldo inicial (cargosDeTarjeta)
@@ -24,6 +21,7 @@ export function desgloseDeDeuda(movimientos, ciclo) {
     saldoInicial: total((m) => m.saldoInicial),
     cargos: total((m) => esCargo(m) && !m.saldoInicial),
     pagos: total(esPago),
+    reembolsos: total(esReembolso),
     deudaTotal: deuda.deudaTotal,
     saldoAFavor: deuda.saldoAFavor,
     /* Lo que falta para dejar pagado el último corte. */

@@ -46,16 +46,22 @@ export const TIPOS = {
     etiqueta: 'Ingreso',
     icono: 'entra',
     acento: 'pos',
+    /* A una tarjeta entra un reembolso: baja la deuda sin pasar por una cuenta. */
     campos: [[MONTO, FECHA], DESCRIPCION,
-      [CATEGORIA, { clase: 'cuenta', nombre: 'cuenta_id', etiqueta: 'Entra a' }], NOTA],
+      [CATEGORIA, { clase: 'destinoMixto', nombre: 'destino', etiqueta: 'Entra a' }], NOTA],
     validar(datos) {
-      return validarBase(datos) || (datos.cuenta_id ? null : 'Elige a qué cuenta entra.');
+      return validarBase(datos) || (separar(datos.destino).id ? null : 'Elige a dónde entra.');
     },
     aFila(datos) {
-      return { tipo: 'ingreso', ...comunes(datos), ...SIN_RUTEO, cuenta_id: datos.cuenta_id };
+      const destino = separar(datos.destino);
+      return {
+        tipo: 'ingreso', ...comunes(datos), ...SIN_RUTEO,
+        cuenta_id:  destino.clase === 'cuenta'  ? destino.id : null,
+        tarjeta_id: destino.clase === 'tarjeta' ? destino.id : null,
+      };
     },
     aFormulario(mov) {
-      return { cuenta_id: mov.cuenta_id ?? '' };
+      return { destino: unir(mov, 'cuenta_id', 'tarjeta_id') };
     },
   },
 

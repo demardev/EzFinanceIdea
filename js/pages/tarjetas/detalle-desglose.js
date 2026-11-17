@@ -34,6 +34,7 @@ export function bloqueDesglose(d) {
       ${d.saldoInicial > 0 ? renglon('Saldo pendiente al empezar', d.saldoInicial) : ''}
       ${renglon('Cargos', d.cargos, '+')}
       ${renglon('Pagos', d.pagos, '−', 'pos')}
+      ${d.reembolsos > 0 ? renglon('Reembolsos', d.reembolsos, '−', 'pos') : ''}
       ${renglon('<strong>Deuda total</strong>', d.deudaTotal)}
       ${veredicto(d)}
     </div>`;
