@@ -83,6 +83,25 @@ describir('estado de cuenta: limpiar lo que devuelve la IA', (caso) => {
       'sentido desconocido');
   });
 
+  /* Con la forma obligatoria, la IA devuelve algo aunque el PDF sea un recibo
+     de luz: todo en cero y sin movimientos, que "cuadra" (0 = 0). */
+  caso('rechaza un documento que no es estado de cuenta', () => {
+    const falla = (lectura) => {
+      try { normalizarLectura(lectura); return ''; } catch (e) { return e.message; }
+    };
+    const vacia = { ...SEPTIEMBRE, fecha_corte: null, saldo_anterior: 0, saldo_al_corte: 0,
+                    intereses_fuera_de_lista: 0, pago_contado: null, movimientos: [] };
+    cierto(falla({ ...vacia, es_estado_de_cuenta: false }).includes('no parece'));
+    cierto(falla({ ...SEPTIEMBRE, es_estado_de_cuenta: false }).includes('no parece'),
+      'aunque traiga datos, si la IA dice que no es, no es');
+    cierto(falla(vacia).includes('fecha de corte'), 'sin fecha de corte no se puede usar');
+  });
+
+  caso('un estado de cuenta real sigue pasando', () => {
+    igual(normalizarLectura({ ...SEPTIEMBRE, es_estado_de_cuenta: true }).fecha_corte,
+          '2026-09-09');
+  });
+
   caso('un saldo a favor (negativo) sí se acepta', () => {
     igual(normalizarLectura({ ...SEPTIEMBRE, saldo_al_corte: -12.5 }).saldo_al_corte, -12.5);
   });

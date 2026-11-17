@@ -90,7 +90,7 @@ async function leer(token: string, cuerpo: { archivo?: string; tipo?: string }) 
   try {
     return responder(200, { lectura: normalizarLectura(crudo), quedan: uso.quedan });
   } catch (e) {
-    return responder(422, { error: `La lectura no se puede usar: ${(e as Error).message}` });
+    return responder(422, { error: (e as Error).message });
   }
 }
 

@@ -52,11 +52,19 @@ function movimiento(m, i) {
  */
 export function normalizarLectura(crudo) {
   if (!crudo || typeof crudo !== 'object') throw new Error('La lectura vino vacía.');
+  /* La forma es obligatoria, así que la IA contesta aunque el documento sea
+     otra cosa: todo en cero "cuadraría". Por eso dice si lo es, y sin fecha de
+     corte tampoco se acepta. */
+  if (crudo.es_estado_de_cuenta === false) {
+    throw new Error('Ese documento no parece un estado de cuenta de tarjeta.');
+  }
   if (!Array.isArray(crudo.movimientos)) throw new Error('La lectura no trae movimientos.');
+  const fechaCorte = fechaValida(crudo.fecha_corte, 'la fecha de corte');
+  if (!fechaCorte) throw new Error('No se encontró la fecha de corte en el documento.');
   return {
     banco: crudo.banco ? String(crudo.banco).trim() : null,
     moneda: crudo.moneda ? String(crudo.moneda).trim() : null,
-    fecha_corte: fechaValida(crudo.fecha_corte, 'la fecha de corte'),
+    fecha_corte: fechaCorte,
     fecha_limite_pago: fechaValida(crudo.fecha_limite_pago, 'la fecha límite'),
     saldo_anterior: numero(crudo.saldo_anterior, 'el saldo anterior'),
     saldo_al_corte: numero(crudo.saldo_al_corte, 'el saldo al corte'),
