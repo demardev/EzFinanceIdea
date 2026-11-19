@@ -2,13 +2,16 @@
    PDF, una foto o el texto; la IA lo lee en la Edge Function y aquí se ve lo
    leído con su veredicto: ¿da el saldo al corte del banco?
 
-   Paso 1: solo lee y comprueba, no toca tus datos. El paso 2 (comparar con tus
-   movimientos y proponer arreglos) está en docs/asistente-tarjetas.md. */
+   Si cuadra, "Comparar con mis movimientos" dice qué falta, sobra o está
+   distinto en ese corte (paso 2). No toca tus datos: los arreglos son el
+   paso 3 (docs/asistente-tarjetas.md). */
 
 import { abrirSheet } from '../../ui/sheet.js';
 import { escapar } from '../../ui/texto.js';
 import { revisarLectura } from '../../calc/estado-cuenta.js';
+import { emparejarEstado } from '../../calc/emparejar-estado.js';
 import { pintarLectura } from './estado-cuenta-vista.js';
+import { pintarComparacion } from './comparacion-vista.js';
 
 const ACEPTA = 'application/pdf,image/png,image/jpeg,image/webp,text/plain';
 const MAX_BYTES = 7 * 1024 * 1024;
@@ -39,8 +42,25 @@ function aBase64(archivo) {
 const mensaje = (texto, clase = 'tenue') =>
   `<p class="${clase}" style="font-size:13px">${escapar(texto)}</p>`;
 
+const BOTON_COMPARAR = `
+  <button type="button" class="btn btn-bloque" data-comparar style="margin-top:12px">
+    Comparar con mis movimientos</button>
+  <div data-comparacion class="pila" style="margin-top:12px"></div>`;
+
+/** Debajo de una lectura que cuadra: compararla con los datos de ESTE momento. */
+function conectarComparar(bloque, lectura, { tarjeta, obtenerDatos }) {
+  bloque.insertAdjacentHTML('beforeend', BOTON_COMPARAR);
+  const boton = bloque.querySelector('[data-comparar]');
+  boton.addEventListener('click', () => {
+    const { movimientos, compras } = obtenerDatos();
+    bloque.querySelector('[data-comparacion]').innerHTML =
+      pintarComparacion(emparejarEstado({ lectura, tarjeta, movimientos, compras }));
+    boton.remove();
+  });
+}
+
 /** Lee UN archivo y lo pinta en su propio bloque. */
-async function leer({ asistente }, archivo, bloque) {
+async function leer(ctx, archivo, bloque) {
   if (archivo.size > MAX_BYTES) {
     bloque.innerHTML = mensaje('El archivo es muy grande (máximo 7 MB).', 'warn');
     return;
@@ -48,8 +68,10 @@ async function leer({ asistente }, archivo, bloque) {
   bloque.innerHTML = mensaje('Leyendo… puede tardar unos segundos.');
   try {
     const tipo = archivo.type || 'text/plain';
-    const { lectura, quedan } = await asistente.leerEstado(await aBase64(archivo), tipo);
-    bloque.innerHTML = pintarLectura(lectura, revisarLectura(lectura), quedan);
+    const { lectura, quedan } = await ctx.contexto.asistente.leerEstado(await aBase64(archivo), tipo);
+    const revision = revisarLectura(lectura);
+    bloque.innerHTML = pintarLectura(lectura, revision, quedan);
+    if (revision.cuadra) conectarComparar(bloque, lectura, ctx);
   } catch (e) {
     bloque.innerHTML = mensaje(e.message || 'No se pudo leer el estado de cuenta.', 'warn');
   }
@@ -57,7 +79,7 @@ async function leer({ asistente }, archivo, bloque) {
 
 /* Uno tras otro, no en paralelo: cada lectura descuenta cupo y así, si se
    acaba, los que faltan lo dicen en vez de fallar todos a la vez. */
-async function leerVarios(contexto, archivos, resultado) {
+async function leerVarios(ctx, archivos, resultado) {
   const bloques = archivos.map((archivo) => {
     const seccion = document.createElement('section');
     seccion.className = 'pila';
@@ -65,10 +87,11 @@ async function leerVarios(contexto, archivos, resultado) {
     resultado.append(seccion);
     return seccion.lastElementChild;
   });
-  for (let i = 0; i < archivos.length; i += 1) await leer(contexto, archivos[i], bloques[i]);
+  for (let i = 0; i < archivos.length; i += 1) await leer(ctx, archivos[i], bloques[i]);
 }
 
-export function abrirLecturaEstado(contexto, tarjeta) {
+/** @param obtenerDatos () => { movimientos, compras } con los datos de ahora */
+export function abrirLecturaEstado(contexto, tarjeta, obtenerDatos) {
   const { hoja } = abrirSheet({ titulo: `Estado de cuenta · ${escapar(tarjeta.nombre)}`, cuerpo: CUERPO });
   const entrada = hoja.querySelector('[data-estado-archivo]');
   const resultado = hoja.querySelector('[data-estado-resultado]');
@@ -78,7 +101,7 @@ export function abrirLecturaEstado(contexto, tarjeta) {
     resultado.innerHTML = archivos.length > MAX_ARCHIVOS
       ? mensaje(`Son ${archivos.length} archivos: se leen los primeros ${MAX_ARCHIVOS}.`, 'warn') : '';
     entrada.disabled = true;
-    await leerVarios(contexto, archivos.slice(0, MAX_ARCHIVOS), resultado);
+    await leerVarios({ contexto, tarjeta, obtenerDatos }, archivos.slice(0, MAX_ARCHIVOS), resultado);
     entrada.disabled = false;
     entrada.value = '';
   });

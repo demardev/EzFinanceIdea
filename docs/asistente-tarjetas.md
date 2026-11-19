@@ -44,12 +44,22 @@ Pendiente de probar con IA real: los 3 PDF de BAC (sep, oct y nov de 2026) deben
 salir "cuadra". Si alguno no cuadra, ajustar el prompt de `lector.ts` (no el
 código de comprobación) y medirlo de nuevo con los tres.
 
-## Paso 2 — Comparar con tus movimientos (por hacer)
+## Paso 2 — Comparar con tus movimientos (hecho, salvo 2.2)
 
 Objetivo: con una lectura que cuadra, decir qué falta, qué sobra y qué está
 distinto en la app para ese corte, y por qué la app no da el saldo del banco.
 
 ### 2.1 Emparejar (código puro, sin IA) — `js/calc/emparejar-estado.js`
+
+Hecho: `emparejar-estado.js` (resultado, saldos y explicación) y
+`emparejar-reglas.js` (partidas y pasos), con pruebas en
+`js/pruebas/emparejar-estado.js` sobre tus movimientos reales
+(`js/pruebas/movimientos-bac.js`). Cada diferencia trae `efecto` (cuánto mueve el
+saldo de la app frente al del banco) y siempre se cumple
+`arrastre + Σ efectos = diferencia`; lo que no, sale como `sinExplicar`.
+Orden de los pasos: cuotas por número → monto exacto ±3 días → mismo monto con otra
+fecha → otro monto con concepto parecido ±3 días. Lo que queda: faltan / sobran.
+Diseño original:
 
 Entrada: la lectura, los movimientos de la tarjeta (`cargosDeTarjeta()`), sus
 compras a cuotas y el ciclo.
@@ -88,14 +98,14 @@ compras a cuotas y el ciclo.
    distintos = [Apple 0.88 vs 20.88, Movistar 09/nov vs 04/nov, cuotas corridas].
    (*El Supercell de 18.48 es del corte siguiente: probarlo con el de diciembre.)
 
-### 2.2 Ambigüedades (IA, opcional)
+### 2.2 Ambigüedades (IA, opcional — por hacer)
 
 Lo que no empareja por monto (p. ej. "APPLE.COM/BILL $8.99" = "DUOLINGO" en la
 app) se le manda a la IA **solo con esas líneas y esos movimientos**, y devuelve
 pares `{ linea, movimiento_id, confianza }`. El código acepta solo pares con el
 mismo monto y sentido; si no, quedan como faltan/sobran. Cuesta otra lectura del cupo.
 
-### 2.3 Pantalla
+### 2.3 Pantalla (hecha: `js/pages/tarjetas/comparacion-vista.js`)
 
 Debajo del veredicto de la lectura: "Comparar con mis movimientos". Muestra tres
 grupos plegables (Faltan / Sobran / Distintos) y arriba: "La app dice $X al

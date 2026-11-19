@@ -143,7 +143,7 @@ export async function montarTarjetas(contenedor, contexto, pantalla) {
     if (accion === 'editar') return editar(tarjeta);
     if (accion === 'cuotas') return abrirCompra(tarjeta, {});
     if (accion === 'minicuotas') return abrirTraslado(contexto, tarjeta, datos, recargar);
-    if (accion === 'estado') return abrirLecturaEstado(contexto, tarjeta);
+    if (accion === 'estado') return abrirLecturaEstado(contexto, tarjeta, () => datos);
     const { deuda } = calcularTodo(tarjeta, datos.movimientos, datos.compras);
     return abrirSheetPago(tarjeta, deuda, datos, async (fila) => {
       await movimientos.crear(fila);
