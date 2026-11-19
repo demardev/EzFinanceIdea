@@ -49,7 +49,9 @@ export function planRegeneracion(compra, cuotasExistentes, hoy = hoyISO(), tarje
   const restantes = compra.num_cuotas - cobradas.length;
   const aBorrar = pendientes.map((c) => c.id);
 
-  if (restantes <= 0) {
+  /* Con todas cobradas y el mismo plazo (restantes = 0) sí se puede: corregir
+     la fecha solo mueve las cobradas. Lo que no se puede es acortar. */
+  if (restantes < 0) {
     return {
       yaCobradas: cobradas.length,
       aBorrar: [],

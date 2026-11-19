@@ -57,6 +57,9 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
   preguntar `funcionesDe(userId)` antes de leer algo de una función de pago.
 - El panel de admin es otra página (`admin/`), con PIN. Toda función `admin_*` exige
   `exigir_admin()`: bandera admin **y** PIN puesto hace menos de 30 minutos.
+- **PIN olvidado:** se guarda cifrado (bcrypt), no se recupera. Se borra la fila del admin en
+  `admin_acceso` (`delete from admin_acceso where user_id = '<id>'`) y el panel vuelve a
+  pedir "PIN nuevo", como la primera vez (`admin_poner_pin` sin PIN actual). Pasó el 18/nov/2026.
 - Préstamos: los abonos son movimientos normales con `prestamo_id`, y sí se editan uno
   por uno (no son generados). La regla del atraso es acumulada (`js/calc/prestamos.js`).
 
@@ -69,6 +72,10 @@ verificar en **cada** pantalla, incluidas las que aún no existen.
   llamar a la IA pide permiso a `usar_asistente_tarjetas()` (función premium + cupo: 10 al
   día y 30 al mes por usuario, 100 al día en toda la app) y rechaza documentos de más de
   40 mil tokens contándolos antes (gratis). Ver "Límites" en `docs/asistente-tarjetas.md`.
+- Los arreglos (`js/calc/arreglos-estado.js`) solo se guardan con confirmación, se comprueban
+  antes en memoria y se pueden deshacer mientras la hoja esté abierta. Nunca borran lo que
+  sobra ni registran pagos (piden la cuenta). Las cuotas no se editan una por una: se mueve
+  la primera cuota de su compra y se ajustan las ya pagadas.
 - El SDK de Anthropic solo se usa en `supabase/functions/`, fijado a una versión exacta.
   La app del navegador sigue sin dependencias. Se despliega igual que `avisar`; necesita
   el secreto `ANTHROPIC_API_KEY`.

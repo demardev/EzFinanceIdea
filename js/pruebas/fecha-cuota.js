@@ -78,4 +78,17 @@ describir('primera cuota escrita en la compra', (caso) => {
     const { fecha_primera_cuota, ...sinFecha } = AIRPODS;
     igual(fechaDeCuota(sinFecha, 1, BAC), '2025-11-08');
   });
+
+  /* La minicuota de junio de BAC: sus 6 cuotas ya habían pasado (la última el
+     08/nov) y hubo que moverlas al día 9. Con el mismo plazo, se puede. */
+  caso('con todas las cuotas ya cobradas y el mismo plazo, se mueven igual', () => {
+    const junio = compra('2026-06-09', { id: 'mc6', num_cuotas: 6, monto_total: 261.72 });
+    const viejas = generarCuotas({ ...junio, fecha_primera_cuota: '2026-06-08' })
+      .map((c, i) => ({ ...c, id: `j${i + 1}` }));
+    const plan = planRegeneracion({ ...junio, fecha_primera_cuota: '2026-07-09' }, viejas,
+                                  '2026-11-18', BAC);
+    igual(plan.aviso, '');
+    igual(plan.aCrear, []);
+    igual(plan.aMover.map((m) => m.fecha).at(-1), '2026-12-09');
+  });
 });

@@ -79,5 +79,6 @@ export function emparejarEstado({ lectura, tarjeta, movimientos, compras }) {
     .map((x) => x.efecto));
   return { periodo, emparejados, distintos, faltan, sobran, saldoApp,
            saldoBanco: lectura.saldo_al_corte, diferencia, arrastre,
+           totalSobran: sumar(...sobran.map((x) => x.efecto)),
            sinExplicar: redondear(diferencia - explicado) };
 }

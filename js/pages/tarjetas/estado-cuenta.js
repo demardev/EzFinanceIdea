@@ -3,15 +3,14 @@
    leído con su veredicto: ¿da el saldo al corte del banco?
 
    Si cuadra, "Comparar con mis movimientos" dice qué falta, sobra o está
-   distinto en ese corte (paso 2). No toca tus datos: los arreglos son el
-   paso 3 (docs/asistente-tarjetas.md). */
+   distinto en ese corte y propone arreglos (comparar.js). Nada se guarda sin
+   que lo confirmes (docs/asistente-tarjetas.md). */
 
 import { abrirSheet } from '../../ui/sheet.js';
 import { escapar } from '../../ui/texto.js';
 import { revisarLectura } from '../../calc/estado-cuenta.js';
-import { emparejarEstado } from '../../calc/emparejar-estado.js';
 import { pintarLectura } from './estado-cuenta-vista.js';
-import { pintarComparacion } from './comparacion-vista.js';
+import { conectarComparar } from './comparar.js';
 
 const ACEPTA = 'application/pdf,image/png,image/jpeg,image/webp,text/plain';
 const MAX_BYTES = 7 * 1024 * 1024;
@@ -41,23 +40,6 @@ function aBase64(archivo) {
 
 const mensaje = (texto, clase = 'tenue') =>
   `<p class="${clase}" style="font-size:13px">${escapar(texto)}</p>`;
-
-const BOTON_COMPARAR = `
-  <button type="button" class="btn btn-bloque" data-comparar style="margin-top:12px">
-    Comparar con mis movimientos</button>
-  <div data-comparacion class="pila" style="margin-top:12px"></div>`;
-
-/** Debajo de una lectura que cuadra: compararla con los datos de ESTE momento. */
-function conectarComparar(bloque, lectura, { tarjeta, obtenerDatos }) {
-  bloque.insertAdjacentHTML('beforeend', BOTON_COMPARAR);
-  const boton = bloque.querySelector('[data-comparar]');
-  boton.addEventListener('click', () => {
-    const { movimientos, compras } = obtenerDatos();
-    bloque.querySelector('[data-comparacion]').innerHTML =
-      pintarComparacion(emparejarEstado({ lectura, tarjeta, movimientos, compras }));
-    boton.remove();
-  });
-}
 
 /** Lee UN archivo y lo pinta en su propio bloque. */
 async function leer(ctx, archivo, bloque) {
@@ -90,8 +72,11 @@ async function leerVarios(ctx, archivos, resultado) {
   for (let i = 0; i < archivos.length; i += 1) await leer(ctx, archivos[i], bloques[i]);
 }
 
-/** @param obtenerDatos () => { movimientos, compras } con los datos de ahora */
-export function abrirLecturaEstado(contexto, tarjeta, obtenerDatos) {
+/**
+ * @param obtenerDatos () => { movimientos, compras, categorias } con los datos de ahora
+ * @param alCambiar    () => Promise, para recargar después de aplicar arreglos
+ */
+export function abrirLecturaEstado(contexto, tarjeta, obtenerDatos, alCambiar) {
   const { hoja } = abrirSheet({ titulo: `Estado de cuenta · ${escapar(tarjeta.nombre)}`, cuerpo: CUERPO });
   const entrada = hoja.querySelector('[data-estado-archivo]');
   const resultado = hoja.querySelector('[data-estado-resultado]');
@@ -101,7 +86,8 @@ export function abrirLecturaEstado(contexto, tarjeta, obtenerDatos) {
     resultado.innerHTML = archivos.length > MAX_ARCHIVOS
       ? mensaje(`Son ${archivos.length} archivos: se leen los primeros ${MAX_ARCHIVOS}.`, 'warn') : '';
     entrada.disabled = true;
-    await leerVarios({ contexto, tarjeta, obtenerDatos }, archivos.slice(0, MAX_ARCHIVOS), resultado);
+    await leerVarios({ contexto, tarjeta, obtenerDatos, alCambiar },
+                     archivos.slice(0, MAX_ARCHIVOS), resultado);
     entrada.disabled = false;
     entrada.value = '';
   });

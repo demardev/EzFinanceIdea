@@ -1,6 +1,6 @@
 /* Cómo se ve la comparación de un estado de cuenta con tus movimientos
    (calc/emparejar-estado.js). Solo pinta: las cifras vienen hechas.
-   Todavía no aplica nada: los arreglos son el paso 3 (docs/asistente-tarjetas.md). */
+   Los arreglos van aparte (arreglos-vista.js). */
 
 import { escapar } from '../../ui/texto.js';
 import { textoMonto } from '../../ui/privacidad.js';
@@ -75,7 +75,5 @@ export function pintarComparacion(r) {
             'Están en tus movimientos de ese corte y no en el estado de cuenta. Si son de los '
             + 'últimos días, el banco pudo ponerlos en el siguiente.', r.sobran, filaSobra)}
     ${grupo('iguales', 'Iguales', 'Coinciden en monto y fecha.', r.emparejados,
-            (e) => fila(escapar(e.linea.concepto), fecha(e.linea.fecha), firmado(e.linea)))}
-    <p class="tenue-2" style="font-size:12px">Para arreglar las diferencias, por ahora edítalas
-      a mano en tus movimientos.</p>`;
+            (e) => fila(escapar(e.linea.concepto), fecha(e.linea.fecha), firmado(e.linea)))}`;
 }

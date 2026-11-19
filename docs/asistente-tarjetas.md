@@ -177,7 +177,29 @@ Si no cuadra, se muestra por cuánto y no se guarda nada. Si cuadra, el usuario 
 la lista completa (tarjeta, saldo inicial, movimientos, compras a cuotas), la
 confirma, y se guarda en lote con su registro para deshacer (3.3).
 
-## Paso 3 — Proponer y aplicar arreglos (después)
+## Paso 3 — Proponer y aplicar arreglos (hecho, salvo 3.3 persistente)
+
+Hecho: `js/calc/arreglos-estado.js` (proponer, aplicar en memoria y comprobar, con
+pruebas en `js/pruebas/arreglos-estado.js`), `js/pages/tarjetas/arreglos.js`
+(guardar y deshacer), `arreglos-vista.js` y `comparar.js` (la pantalla). Lo que
+cambió frente al diseño de abajo:
+
+- **Ya pagadas:** al mover la primera cuota se ajusta también `cuotas_pagadas` para
+  que hoy cuenten como cobradas las mismas cuotas que antes (el banco ya cobró las
+  que cobró). Es lo que se hizo a mano con BAC: Airpods 10→9, minicuota de junio 3→2.
+- **Categoría** por nombre, sin IA: intereses → "Intereses" u "Otro gasto";
+  créditos → "Reembolso"; otros cargos sin categoría. (La IA para esto, pendiente.)
+- `agregar_pago` y `quitar` no existen: un pago que falta queda como "manual" (pide
+  la cuenta), y lo que sobra nunca se borra solo (suele ser del corte siguiente).
+- "BONIFICACION PAGO SALDO" dice "pago" pero es bonificación: va como reembolso.
+- La comprobación (3.2) muestra en vivo qué pasaría con los marcados.
+- **Deshacer** funciona mientras la hoja siga abierta: se guarda cómo revertir cada
+  arreglo; las cuotas movidas se restauran desde una copia, no regenerando.
+  El registro persistente (`asistente_cambios`) sigue pendiente.
+- `planRegeneracion()` ahora deja mover las cuotas de una compra cuyas cuotas ya se
+  cobraron todas si el plazo no cambia (antes lo rechazaba como "acortar el plazo").
+
+Diseño original:
 
 ### 3.1 Acciones cerradas
 

@@ -47,6 +47,7 @@ describir('emparejar: el corte de noviembre ya cuadrado', (caso) => {
     igual(r.saldoApp, 550.41);
     igual(r.diferencia, 126.54);
     igual(r.arrastre, 0);
+    igual(r.totalSobran, 126.54);
     igual(r.sinExplicar, 0);
   });
 });
