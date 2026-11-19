@@ -37,8 +37,8 @@ function manual({ item, motivo }) {
 /** "Con los marcados la app cuadra" o lo que todavía quedaría. */
 export function pintarComprobacion(despues, marcados) {
   if (!marcados) return '<p class="tenue-2" style="font-size:12.5px">Marca al menos un arreglo.</p>';
-  const pendientes = despues.faltan.length + despues.distintos.length;
-  if (despues.diferencia === 0) {
+  const pendientes = despues.faltan.length + despues.distintos.length + despues.sobran.length;
+  if (despues.diferencia === 0 && !pendientes) {
     return `<p class="pos" style="font-size:13px">${icono('check', 13)} Con estos arreglos la app
       queda igual que el banco al corte.</p>`;
   }
@@ -46,13 +46,14 @@ export function pintarComprobacion(despues, marcados) {
     const arrastre = despues.arrastre !== 0 ? `<p class="warn" style="font-size:12.5px">
       ${icono('alerta', 13)} Además, la app ya no cuadraba en el corte anterior
       (${textoMonto(despues.arrastre, { signo: true })}): compara también ese estado de cuenta.</p>` : '';
-    return `<p class="pos" style="font-size:13px">${icono('check', 13)} Con estos arreglos solo
-      quedan ${plural(despues.sobran.length, 'movimiento', 'movimientos')} que el banco no puso en
-      este corte (${textoMonto(despues.totalSobran, { signo: true })}): si son de los últimos días,
-      saldrán en el siguiente.</p>${arrastre}`;
+    const siguiente = despues.delSiguiente.length
+      ? ` Solo quedan ${plural(despues.delSiguiente.length, 'compra', 'compras')} que el banco aplicó
+        después del corte (${textoMonto(despues.totalDelSiguiente, { signo: true })}): están bien.` : '';
+    return `<p class="pos" style="font-size:13px">${icono('check', 13)} Con estos arreglos tu app
+      queda bien.${siguiente}</p>${arrastre}`;
   }
   return `<p class="warn" style="font-size:13px">${icono('alerta', 13)} Con estos arreglos todavía
-    ${pendientes ? `quedan ${plural(pendientes, 'diferencia', 'diferencias')} por arreglar a mano`
+    ${pendientes ? `quedan ${plural(pendientes, 'diferencia', 'diferencias')} por revisar a mano`
       : `quedan ${textoMonto(despues.sinExplicar)} sin explicar`}.</p>`;
 }
 

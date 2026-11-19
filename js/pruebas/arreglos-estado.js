@@ -98,7 +98,8 @@ describir('arreglos: aplicados en memoria dejan la tarjeta cuadrada', (caso) => 
   });
 
   caso('solo sobra lo que el banco puso en el corte siguiente', () => {
-    igual(r.sobran.map((s) => s.movimiento.id).sort(), ['m31', 'm39', 'm42', 'm43', 'm44']);
+    igual(r.sobran, []);
+    igual(r.delSiguiente.map((s) => s.movimiento.id).sort(), ['m31', 'm39', 'm42', 'm43', 'm44']);
     igual(r.sinExplicar, 0);
   });
 

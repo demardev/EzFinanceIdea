@@ -63,6 +63,11 @@ el pago del 12/sep en dos líneas, $149.07 + $1.42, y la app lo tiene como uno d
 $150.49) → mismo monto con otra fecha → otro monto con concepto parecido ±3 días.
 Lo que queda: faltan / sobran. Si el total cuadra pero quedan líneas sueltas, la
 pantalla dice que se compensan entre sí.
+Lo que sobra de los **últimos 3 días del corte** (que no sea cuota ni traslado) va
+aparte, en `delSiguiente`: el banco lo aplicó después del corte y sale en el
+siguiente estado de cuenta (BAC: 1893, Wendys, Parqueo, Puma y Supercell $58.11 del
+7–9/nov salieron el 10/nov). Si la diferencia es solo eso, la pantalla dice "Tu app
+está bien".
 Diseño original:
 
 Entrada: la lectura, los movimientos de la tarjeta (`cargosDeTarjeta()`), sus

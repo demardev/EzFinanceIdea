@@ -54,8 +54,18 @@ function grupo(id, titulo, sub, items, pintar) {
                        cuerpo: `<div class="lista">${items.map(pintar).join('')}</div>` });
 }
 
+const compras = (n) => (n === 1 ? '1 compra' : `${n} compras`);
+
 function veredicto(r) {
   const hayDiferencias = r.faltan.length + r.sobran.length + r.distintos.length > 0;
+  const soloDelSiguiente = !hayDiferencias && r.arrastre === 0 && r.sinExplicar === 0
+    && r.diferencia !== 0 && r.diferencia === r.totalDelSiguiente;
+  if (soloDelSiguiente) {
+    return `<p class="pos" style="font-size:13px">${icono('check', 13)} Tu app está bien.</p>
+      <p class="tenue" style="font-size:12.5px">La diferencia es solo de ${compras(r.delSiguiente.length)}
+      que hiciste en los últimos días del corte y que el banco aplicó después: van a salir en tu
+      próximo estado de cuenta.</p>`;
+  }
   if (r.diferencia === 0 && !hayDiferencias) {
     return `<p class="pos" style="font-size:13px">${icono('check', 13)} La app cuadra con el banco
       y cada línea coincide.</p>`;
@@ -92,9 +102,12 @@ export function pintarComparacion(r) {
             r.faltan, filaFalta)}
     ${grupo('distintos', 'Distintos', 'Están en los dos, pero con otro monto, fecha o cuota.',
             r.distintos, filaDistinta)}
+    ${grupo('siguiente', 'Del corte siguiente en el banco',
+            'Ya los tienes y están bien. Los hiciste en los últimos días del corte, pero el banco '
+            + 'los aplicó después: saldrán en tu próximo estado de cuenta.', r.delSiguiente, filaSobra)}
     ${grupo('sobran', 'Sobran en la app',
-            'Están en tus movimientos de ese corte y no en el estado de cuenta. Si son de los '
-            + 'últimos días, el banco pudo ponerlos en el siguiente.', r.sobran, filaSobra)}
+            'Están en tus movimientos de este corte y no en el estado de cuenta: revisa si se '
+            + 'registraron dos veces, si son de otra tarjeta o si tienen otra fecha.', r.sobran, filaSobra)}
     ${grupo('iguales', 'Iguales', 'Coinciden en monto y fecha.', r.emparejados,
             (e) => fila(escapar(e.linea.concepto), subIgual(e), firmado(e.linea)))}
     <p class="tenue-2" style="font-size:12px">Cada monto es lo que esa línea pesa en tu deuda:

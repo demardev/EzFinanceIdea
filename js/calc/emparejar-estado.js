@@ -7,6 +7,9 @@
    minicuotas cuentan como cargo el día que las hiciste y salen con un crédito
    el día del traslado, y las cuotas cuentan el día que se cobran.
 
+   `sobran` son movimientos del corte que el banco no trae; si son de los
+   últimos días van aparte, en `delSiguiente`: suelen estar bien.
+
    Cada diferencia trae `efecto`: cuánto mueve el saldo de la app frente al del
    banco. arrastre + la suma de los efectos = diferencia, siempre; lo que no
    cuadre de esa suma es `sinExplicar` (debería ser 0). */
@@ -52,6 +55,7 @@ function efectoDe(par, periodo) {
 }
 
 const DIAS_ALREDEDOR = 5;   // de la app solo se miran partidas cerca del periodo
+const DIAS_AL_FINAL = 3;    // lo de estos últimos días el banco puede aplicarlo en el siguiente
 
 /**
  * @param lectura    de normalizarLectura() (calc/estado-cuenta.js)
@@ -73,17 +77,26 @@ export function emparejarEstado({ lectura, tarjeta, movimientos, compras }) {
   const emparejados = pares.filter((p) => !p.motivo).map(conEfecto);
   const distintos = pares.filter((p) => p.motivo).map(conEfecto);
   const faltan = lineas.map((linea) => ({ linea, movimiento: null, efecto: efectoDe({ linea }, periodo) }));
-  const sobran = libres.filter((a) => a.fecha > periodo.desde && a.fecha <= periodo.hasta)
+  const sueltas = libres.filter((a) => a.fecha > periodo.desde && a.fecha <= periodo.hasta)
     .map((app) => ({ linea: null, movimiento: app.movimiento, deTraslado: Boolean(app.deTraslado),
                      efecto: efectoDe({ app }, periodo) }));
+  /* Lo de los últimos días del corte que el banco no trae casi siempre está bien:
+     el banco lo aplicó uno o dos días después y sale en el siguiente estado de
+     cuenta. Las cuotas no: el banco las cobra en su fecha. */
+  const ultimosDias = sumarDias(periodo.hasta, -DIAS_AL_FINAL);
+  const esDelSiguiente = (s) => s.movimiento.fecha > ultimosDias && !s.movimiento.compra_id
+    && !s.deTraslado && !s.movimiento.saldoInicial;
+  const delSiguiente = sueltas.filter(esDelSiguiente);
+  const sobran = sueltas.filter((s) => !esDelSiguiente(s));
 
   const saldoApp = saldoAl(todas, periodo.hasta);
   const diferencia = redondear(saldoApp - lectura.saldo_al_corte);
   const arrastre = redondear(saldoAl(todas, periodo.desde) - lectura.saldo_anterior);
-  const explicado = sumar(arrastre, ...[...emparejados, ...distintos, ...faltan, ...sobran]
+  const explicado = sumar(arrastre, ...[...emparejados, ...distintos, ...faltan, ...sueltas]
     .map((x) => x.efecto));
-  return { periodo, emparejados, distintos, faltan, sobran, saldoApp,
+  return { periodo, emparejados, distintos, faltan, sobran, delSiguiente, saldoApp,
            saldoBanco: lectura.saldo_al_corte, diferencia, arrastre,
            totalSobran: sumar(...sobran.map((x) => x.efecto)),
+           totalDelSiguiente: sumar(...delSiguiente.map((x) => x.efecto)),
            sinExplicar: redondear(diferencia - explicado) };
 }

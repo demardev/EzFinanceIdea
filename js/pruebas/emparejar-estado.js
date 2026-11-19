@@ -30,8 +30,10 @@ describir('emparejar: el corte de noviembre ya cuadrado', (caso) => {
     igual(r.distintos, []);
   });
 
-  caso('sobra solo lo que el banco puso en el corte siguiente', () => {
-    igual(ids(r.sobran), DEL_SIGUIENTE);
+  /* "¿Por qué si ya los tengo?": no sobran, el banco los aplicó después del corte. */
+  caso('lo que el banco puso en el corte siguiente va aparte, no como "sobra"', () => {
+    igual(r.sobran, []);
+    igual(ids(r.delSiguiente), DEL_SIGUIENTE);
   });
 
   caso('intereses, bonificación y cuotas se emparejan', () => {
@@ -47,7 +49,7 @@ describir('emparejar: el corte de noviembre ya cuadrado', (caso) => {
     igual(r.saldoApp, 550.41);
     igual(r.diferencia, 126.54);
     igual(r.arrastre, 0);
-    igual(r.totalSobran, 126.54);
+    igual(r.totalDelSiguiente, 126.54);
     igual(r.sinExplicar, 0);
   });
 });
@@ -87,8 +89,9 @@ describir('emparejar: el corte de noviembre antes de cuadrarlo', (caso) => {
     igual(corridas.sort(), ['m17', 'm8']);
   });
 
-  caso('y sobran las cuotas que el banco todavía no cobra', () => {
-    igual(ids(r.sobran), [...DEL_SIGUIENTE, 'm41', 'm53'].sort());
+  caso('y sobran las cuotas que el banco todavía no cobra (esas no son "del siguiente")', () => {
+    igual(ids(r.sobran), ['m41', 'm53']);
+    igual(ids(r.delSiguiente), DEL_SIGUIENTE);
   });
 
   caso('todas las diferencias juntas explican el saldo', () => {
@@ -127,7 +130,8 @@ describir('emparejar: una línea que equivale a varias del otro lado', (caso) =>
     const r = comparar([...MOVIMIENTOS.filter((m) => !['m15', 'm16'].includes(m.id)), juntos]);
     igual(r.faltan, []);
     igual(r.distintos, []);
-    igual(r.sobran.map((s) => s.movimiento.id).sort(), DEL_SIGUIENTE);
+    igual(r.sobran, []);
+    igual(ids(r.delSiguiente), DEL_SIGUIENTE);
     igual(r.emparejados.filter((e) => e.movimiento.id === 'm1516').length, 2);
     igual(r.sinExplicar, 0);
   });
@@ -137,7 +141,8 @@ describir('emparejar: una línea que equivale a varias del otro lado', (caso) =>
                     { ...MOVIMIENTOS.find((m) => m.id === 'm13'), id: 'm13b', monto: 71.45 }];
     const r = comparar([...MOVIMIENTOS.filter((m) => m.id !== 'm13'), ...partes]);
     igual(r.faltan, []);
-    igual(r.sobran.map((s) => s.movimiento.id).sort(), DEL_SIGUIENTE);
+    igual(r.sobran, []);
+    igual(ids(r.delSiguiente), DEL_SIGUIENTE);
     igual(r.sinExplicar, 0);
   });
 
