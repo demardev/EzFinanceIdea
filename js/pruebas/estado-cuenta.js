@@ -48,6 +48,52 @@ describir('estado de cuenta: ¿lo leído cuadra?', (caso) => {
   });
 });
 
+/* Pasó con el PDF real de noviembre: la IA leyó todo bien menos los intereses
+   del pie ("INTERESES CORRIENTES DEL MES/DÓLARES: 4.62"), que dejó en 0. Ahora
+   copia aparte todos los montos fuera de la lista; si uno de intereses es justo
+   lo que falta, el código lo usa y lo dice. */
+describir('estado de cuenta: intereses que la IA dejó solo en el pie', (caso) => {
+  const PIE = [
+    { concepto: 'Pago mínimo', monto: 10.00 },
+    { concepto: 'Pago contado', monto: 419.25 },
+    { concepto: 'INTERESES CORRIENTES DEL MES/LOCAL', monto: 0 },
+    { concepto: 'INTERESES CORRIENTES DEL MES/DÓLARES', monto: 4.62 },
+    { concepto: 'Saldo al corte', monto: 423.87 },
+  ];
+  const sinIntereses = { ...NOVIEMBRE, intereses_fuera_de_lista: 0, montos_fuera_de_lista: PIE };
+
+  caso('si los intereses del pie son lo que falta, se usan y se avisa', () => {
+    const r = revisarLectura(normalizarLectura(sinIntereses));
+    cierto(r.cuadra);
+    igual(r.intereses, 4.62);
+    igual(r.interesesDelPie, 4.62);
+  });
+
+  caso('con los intereses bien leídos no se toca nada', () => {
+    const r = revisarLectura(normalizarLectura({ ...NOVIEMBRE, montos_fuera_de_lista: PIE }));
+    cierto(r.cuadra);
+    igual(r.interesesDelPie, 0);
+  });
+
+  caso('un monto del pie que no es de intereses no se usa aunque coincida', () => {
+    const pie = [{ concepto: 'Cashback asignado', monto: 4.62 }];
+    cierto(!revisarLectura(normalizarLectura({ ...sinIntereses, montos_fuera_de_lista: pie })).cuadra);
+  });
+
+  caso('si los intereses del pie no son lo que falta, no se inventa nada', () => {
+    const pie = [{ concepto: 'Intereses del mes', monto: 3.00 }];
+    const r = revisarLectura(normalizarLectura({ ...sinIntereses, montos_fuera_de_lista: pie }));
+    cierto(!r.cuadra);
+    igual(r.intereses, 0);
+  });
+
+  caso('los montos del pie se limpian (sin ceros, sin basura)', () => {
+    const l = normalizarLectura(sinIntereses);
+    igual(l.montos_fuera_de_lista.length, 4);
+    igual(normalizarLectura(NOVIEMBRE).montos_fuera_de_lista, []);
+  });
+});
+
 describir('estado de cuenta: limpiar lo que devuelve la IA', (caso) => {
   caso('redondea a centavos y quita espacios', () => {
     const l = normalizarLectura({ ...SEPTIEMBRE, saldo_al_corte: 150.4900001,

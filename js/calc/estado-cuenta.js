@@ -72,17 +72,41 @@ export function normalizarLectura(crudo) {
     pago_contado: crudo.pago_contado === null || crudo.pago_contado === undefined
       ? null : numero(crudo.pago_contado, 'el pago de contado'),
     movimientos: crudo.movimientos.map(movimiento).filter((m) => m.monto > 0),
+    montos_fuera_de_lista: (Array.isArray(crudo.montos_fuera_de_lista) ? crudo.montos_fuera_de_lista : [])
+      .filter((m) => m && typeof m.monto === 'number' && Number.isFinite(m.monto))
+      .map((m) => ({ concepto: String(m.concepto ?? '').trim(), monto: redondear(Math.abs(m.monto)) }))
+      .filter((m) => m.monto > 0),
   };
 }
 
-/** ¿Lo leído da el saldo al corte del banco? `diferencia` = calculado − banco. */
+const ES_INTERES = /inter[eé]s/i;
+
+/**
+ * Red de seguridad: si la IA dejó los intereses en 0 pero copió al pie uno de
+ * intereses que es exactamente lo que falta para cuadrar, ese es. Solo con
+ * esa coincidencia exacta: si no, no se toca nada.
+ */
+function interesesDelPie(lectura, faltante) {
+  if (lectura.intereses_fuera_de_lista > 0 || faltante <= 0) return 0;
+  const delPie = lectura.montos_fuera_de_lista.find(
+    (m) => ES_INTERES.test(m.concepto) && m.monto === faltante);
+  return delPie ? delPie.monto : 0;
+}
+
+/**
+ * ¿Lo leído da el saldo al corte del banco? `diferencia` = calculado − banco.
+ * `interesesDelPie` > 0 cuando hubo que tomar los intereses del pie (se avisa).
+ */
 export function revisarLectura(lectura) {
   const total = (sentido) => sumar(...lectura.movimientos
     .filter((m) => m.sentido === sentido).map((m) => m.monto));
   const cargos = total('cargo');
   const creditos = total('credito');
-  const intereses = lectura.intereses_fuera_de_lista;
-  const calculado = redondear(lectura.saldo_anterior + cargos - creditos + intereses);
+  const sinPie = sumar(lectura.saldo_anterior, cargos, -creditos, lectura.intereses_fuera_de_lista);
+  const delPie = interesesDelPie(lectura, redondear(lectura.saldo_al_corte - sinPie));
+  const intereses = sumar(lectura.intereses_fuera_de_lista, delPie);
+  const calculado = sumar(sinPie, delPie);
   const diferencia = redondear(calculado - lectura.saldo_al_corte);
-  return { cargos, creditos, intereses, calculado, diferencia, cuadra: diferencia === 0 };
+  return { cargos, creditos, intereses, calculado, diferencia, cuadra: diferencia === 0,
+           interesesDelPie: delPie };
 }

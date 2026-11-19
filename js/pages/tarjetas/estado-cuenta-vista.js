@@ -9,8 +9,11 @@ import { renglon } from './detalle-desglose.js';
 
 function veredicto(revision, lectura) {
   if (revision.cuadra) {
+    const delPie = revision.interesesDelPie > 0
+      ? `<p class="tenue-2" style="font-size:12.5px">Los intereses (${textoMonto(revision.interesesDelPie)})
+          se tomaron del pie del documento.</p>` : '';
     return `<p class="pos" style="font-size:13px">${icono('check', 13)}
-      Lo leído cuadra con el saldo al corte del banco.</p>`;
+      Lo leído cuadra con el saldo al corte del banco.</p>${delPie}`;
   }
   const sobra = revision.diferencia > 0;
   return `<p class="warn" style="font-size:13px">${icono('alerta', 13)}
