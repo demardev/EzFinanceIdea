@@ -43,9 +43,12 @@ function periodoDe(lectura) {
 
 /** Cuánto mueve cada cosa el saldo de la app frente al del banco, en este corte. */
 function efectoDe(par, periodo) {
-  const enPeriodo = par.app && par.app.fecha > periodo.desde && par.app.fecha <= periodo.hasta;
+  /* En un grupo (una partida = varias del otro lado), la que se repite cuenta una vez. */
+  const enPeriodo = par.app && par.resto !== 'app'
+    && par.app.fecha > periodo.desde && par.app.fecha <= periodo.hasta;
   const deLaApp = enPeriodo ? conSigno(par.app) : 0;
-  return redondear(deLaApp - (par.linea ? conSigno(par.linea) : 0));
+  const delBanco = par.linea && par.resto !== 'linea' ? conSigno(par.linea) : 0;
+  return redondear(deLaApp - delBanco);
 }
 
 const DIAS_ALREDEDOR = 5;   // de la app solo se miran partidas cerca del periodo
@@ -64,7 +67,9 @@ export function emparejarEstado({ lectura, tarjeta, movimientos, compras }) {
   const { pares, lineas, libres } = emparejarPartidas(partidasDelBanco(lectura), cerca, periodo);
 
   const conEfecto = (par) => ({ linea: par.linea, movimiento: par.app?.movimiento ?? null,
-    motivo: par.motivo, deTraslado: Boolean(par.app?.deTraslado), efecto: efectoDe(par, periodo) });
+    motivo: par.motivo, deTraslado: Boolean(par.app?.deTraslado), agrupado: Boolean(par.resto)
+      || pares.some((o) => o !== par && o.resto && (o.app === par.app || o.linea === par.linea)),
+    efecto: efectoDe(par, periodo) });
   const emparejados = pares.filter((p) => !p.motivo).map(conEfecto);
   const distintos = pares.filter((p) => p.motivo).map(conEfecto);
   const faltan = lineas.map((linea) => ({ linea, movimiento: null, efecto: efectoDe({ linea }, periodo) }));

@@ -87,6 +87,52 @@ function paso(lineas, libres, buscar) {
   return pares;
 }
 
+const centavos = (n) => Math.round(n * 100);
+
+/** De 2 a 4 de `candidatas` que suman exactamente `objetivo`, o null. */
+function combinacion(candidatas, objetivo) {
+  const lista = candidatas.slice(0, 12);
+  const meta = centavos(objetivo);
+  const buscar = (desde, elegidas, suma) => {
+    if (suma === meta && elegidas.length >= 2) return elegidas;
+    if (suma >= meta || elegidas.length === 4) return null;
+    for (let i = desde; i < lista.length; i += 1) {
+      const hallada = buscar(i + 1, [...elegidas, lista[i]], suma + centavos(lista[i].monto));
+      if (hallada) return hallada;
+    }
+    return null;
+  };
+  return buscar(0, [], 0);
+}
+
+/**
+ * Una partida de un lado que equivale a varias del otro, del mismo día y en el
+ * mismo sentido: el banco partió un pago en dos líneas, o lo registraste en
+ * dos movimientos. Cada par lleva `resto` en todos menos el primero, para que
+ * la partida que se repite cuente una sola vez.
+ */
+function juntos(lineas, libres, { hasta, enPeriodo }) {
+  const pares = [];
+  const cerca = (linea, app) => (linea.fecha
+    ? distancia(linea, app, hasta) <= TOLERANCIA_DIAS : enPeriodo(app));
+  const quitar = (lista, items) => items.forEach((x) => lista.splice(lista.indexOf(x), 1));
+  for (const app of [...libres]) {
+    const grupo = combinacion(lineas.filter((l) => l.sentido === app.sentido && cerca(l, app)), app.monto);
+    if (!grupo) continue;
+    grupo.forEach((linea, i) => pares.push({ linea, app, motivo: null, resto: i ? 'app' : null }));
+    quitar(lineas, grupo);
+    quitar(libres, [app]);
+  }
+  for (const linea of [...lineas]) {
+    const grupo = combinacion(libres.filter((a) => a.sentido === linea.sentido && cerca(linea, a)), linea.monto);
+    if (!grupo) continue;
+    grupo.forEach((app, i) => pares.push({ linea, app, motivo: null, resto: i ? 'linea' : null }));
+    quitar(libres, grupo);
+    quitar(lineas, [linea]);
+  }
+  return pares;
+}
+
 /** La más cercana en fecha entre las que cumplen `prueba`. */
 const masCercana = (libres, prueba, linea, hasta) => libres.filter(prueba)
   .sort((x, y) => distancia(linea, x, hasta) - distancia(linea, y, hasta))[0];
@@ -110,6 +156,7 @@ export function emparejarPartidas(lineasBanco, partidasApp, { desde, hasta }) {
       ? distancia(linea, a, hasta) <= TOLERANCIA_DIAS : enPeriodo(a)), linea, hasta);
     return app ? { app } : null;
   });
+  const agrupados = juntos(lineas, libres, { hasta, enPeriodo });
   const porFecha = paso(lineas, libres, (linea, apps) => {
     const app = masCercana(apps, mismo(linea), linea, hasta);
     return app ? { app, motivo: 'fecha' } : null;
@@ -120,5 +167,5 @@ export function emparejarPartidas(lineasBanco, partidasApp, { desde, hasta }) {
       && seParecen(linea.concepto, a.movimiento.descripcion), linea, hasta);
     return app ? { app, motivo: 'monto' } : null;
   });
-  return { pares: [...cuotas, ...exactos, ...porFecha, ...porMonto], lineas, libres };
+  return { pares: [...cuotas, ...exactos, ...agrupados, ...porFecha, ...porMonto], lineas, libres };
 }

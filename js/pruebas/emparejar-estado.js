@@ -116,3 +116,35 @@ describir('emparejar: montos distintos y traslados a minicuotas', (caso) => {
     cierto(!r.faltan.some((f) => f.linea.concepto.startsWith('CR MINICUOTAS')));
   });
 });
+
+/* Pasó con el estado de cuenta de octubre: el banco anotó el pago del 12/sep en
+   dos líneas ($149.07 + $1.42) y la app lo tiene como uno de $150.49. Decía
+   "cuadra" pero mostraba dos que faltan y uno que sobra. */
+describir('emparejar: una línea que equivale a varias del otro lado', (caso) => {
+  caso('un pago de la app = dos líneas del banco del mismo día', () => {
+    const juntos = { id: 'm1516', tipo: 'transferencia', monto: 236.03, fecha: '2026-10-27',
+                     descripcion: 'Pago BAC ECONOMIA', tarjeta_destino_id: 'bac', cuenta_id: 'k' };
+    const r = comparar([...MOVIMIENTOS.filter((m) => !['m15', 'm16'].includes(m.id)), juntos]);
+    igual(r.faltan, []);
+    igual(r.distintos, []);
+    igual(r.sobran.map((s) => s.movimiento.id).sort(), DEL_SIGUIENTE);
+    igual(r.emparejados.filter((e) => e.movimiento.id === 'm1516').length, 2);
+    igual(r.sinExplicar, 0);
+  });
+
+  caso('una línea del banco = dos movimientos de la app del mismo día', () => {
+    const partes = [{ ...MOVIMIENTOS.find((m) => m.id === 'm13'), id: 'm13a', monto: 100 },
+                    { ...MOVIMIENTOS.find((m) => m.id === 'm13'), id: 'm13b', monto: 71.45 }];
+    const r = comparar([...MOVIMIENTOS.filter((m) => m.id !== 'm13'), ...partes]);
+    igual(r.faltan, []);
+    igual(r.sobran.map((s) => s.movimiento.id).sort(), DEL_SIGUIENTE);
+    igual(r.sinExplicar, 0);
+  });
+
+  caso('no junta cosas de días lejanos aunque sumen igual', () => {
+    const lejos = { id: 'mx', tipo: 'transferencia', monto: 236.03, fecha: '2026-11-08',
+                    descripcion: 'Pago', tarjeta_destino_id: 'bac', cuenta_id: 'k' };
+    const r = comparar([...MOVIMIENTOS.filter((m) => !['m15', 'm16'].includes(m.id)), lejos]);
+    igual(r.faltan.length, 2);
+  });
+});

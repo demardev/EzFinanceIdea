@@ -57,8 +57,12 @@ Hecho: `emparejar-estado.js` (resultado, saldos y explicación) y
 (`js/pruebas/movimientos-bac.js`). Cada diferencia trae `efecto` (cuánto mueve el
 saldo de la app frente al del banco) y siempre se cumple
 `arrastre + Σ efectos = diferencia`; lo que no, sale como `sinExplicar`.
-Orden de los pasos: cuotas por número → monto exacto ±3 días → mismo monto con otra
-fecha → otro monto con concepto parecido ±3 días. Lo que queda: faltan / sobran.
+Orden de los pasos: cuotas por número → monto exacto ±3 días → **juntos** (una
+partida de un lado = 2 a 4 del otro, mismo sentido, ±3 días, suma exacta: BAC anotó
+el pago del 12/sep en dos líneas, $149.07 + $1.42, y la app lo tiene como uno de
+$150.49) → mismo monto con otra fecha → otro monto con concepto parecido ±3 días.
+Lo que queda: faltan / sobran. Si el total cuadra pero quedan líneas sueltas, la
+pantalla dice que se compensan entre sí.
 Diseño original:
 
 Entrada: la lectura, los movimientos de la tarjeta (`cargosDeTarjeta()`), sus
